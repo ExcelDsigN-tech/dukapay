@@ -1,4 +1,4 @@
-name: RemitLend CI
+name: DukaPay CI
 
 on:
   push:
@@ -114,7 +114,7 @@ jobs:
         env:
           POSTGRES_USER: pguser
           POSTGRES_PASSWORD: pgpass
-          POSTGRES_DB: remitlend_test
+          POSTGRES_DB: dukapay_test
         ports:
           - 5432:5432
         options: >-
@@ -137,7 +137,7 @@ jobs:
         run: npm run migrate:up
         working-directory: backend
         env:
-          DATABASE_URL: postgres://pguser:pgpass@localhost:5432/remitlend_test
+          DATABASE_URL: postgres://pguser:pgpass@localhost:5432/dukapay_test
       - name: Migrate all the way down (reversibility check)
         run: |
           # Count migrations and roll them all back one by one
@@ -147,12 +147,12 @@ jobs:
           done
         working-directory: backend
         env:
-          DATABASE_URL: postgres://pguser:pgpass@localhost:5432/remitlend_test
+          DATABASE_URL: postgres://pguser:pgpass@localhost:5432/dukapay_test
       - name: Migrate up again (ordering + idempotency check)
         run: npm run migrate:up
         working-directory: backend
         env:
-          DATABASE_URL: postgres://pguser:pgpass@localhost:5432/remitlend_test
+          DATABASE_URL: postgres://pguser:pgpass@localhost:5432/dukapay_test
       - name: Verify no plaintext PII columns exist
         run: |
           echo "Checking for plaintext PII columns..."
@@ -166,7 +166,7 @@ jobs:
           )
           FOUND=0
           for col in "${PII_COLUMNS[@]}"; do
-            RESULT=$(psql postgres://pguser:pgpass@localhost:5432/remitlend_test -tAc \
+            RESULT=$(psql postgres://pguser:pgpass@localhost:5432/dukapay_test -tAc \
               "SELECT column_name FROM information_schema.columns WHERE column_name = '$col';" 2>/dev/null)
             if [ -n "$RESULT" ]; then
               echo "::error::Plaintext PII column found: $col"

@@ -5,6 +5,7 @@ members = [
   "loan_manager",
   "lending_pool",
   "multisig_governance",
+  "agent_registry",
 ]
 exclude = [
   "fuzz",
