@@ -3,8 +3,10 @@ use soroban_sdk::{Address, Env, Symbol};
 
 pub fn agent_registered(env: &Env, agent: &Address, info: &AgentInfo) {
     let topics = (Symbol::new(env, "AgentRegistered"), agent.clone());
-    env.events()
-        .publish(topics, (info.kyc_ref.clone(), info.bond_amount, info.region.clone()));
+    env.events().publish(
+        topics,
+        (info.kyc_ref.clone(), info.bond_amount, info.region.clone()),
+    );
 }
 
 pub fn agent_status_changed(env: &Env, agent: &Address, from: AgentStatus, to: AgentStatus) {

@@ -1,6 +1,6 @@
 use crate::{AgentRegistry, AgentRegistryClient, AgentStatus, RegistryError};
 use soroban_sdk::testutils::{Address as _, Events as _};
-use soroban_sdk::{Address, Env, Symbol};
+use soroban_sdk::{Address, Env, FromVal, Symbol};
 
 fn setup() -> (Env, AgentRegistryClient<'static>, Address, Address) {
     let env = Env::default();
@@ -18,7 +18,7 @@ fn agent(env: &Env) -> Address {
 }
 
 fn kycs(env: &Env) -> Symbol {
-    Symbol::new(env, "kyc-001")
+    Symbol::new(env, "kyc_001")
 }
 
 fn region(env: &Env) -> Symbol {
@@ -28,7 +28,7 @@ fn region(env: &Env) -> Symbol {
 fn last_event_topic0(env: &Env) -> Symbol {
     let events = env.events().all();
     let event = events.get(events.len() - 1).unwrap();
-    soroban_sdk::Symbol::from_val(&env, &event.1.get(0).unwrap())
+    Symbol::from_val(env, &event.1.get(0).unwrap())
 }
 
 #[test]
@@ -36,12 +36,13 @@ fn test_register_creates_pending_agent() {
     let (env, client, _owner, _op) = setup();
     let a = agent(&env);
     client.register(&a, &kycs(&env), &region(&env), &100, &1_000_000);
+    let topic = last_event_topic0(&env);
 
     let info = client.get_agent(&a);
     assert_eq!(info.status, AgentStatus::Pending);
     assert_eq!(info.bond_amount, 100);
     assert_eq!(info.reputation, 0);
-    assert_eq!(last_event_topic0(&env), Symbol::new(&env, "AgentRegistered"));
+    assert_eq!(topic, Symbol::new(&env, "AgentRegistered"));
 }
 
 #[test]
@@ -84,10 +85,11 @@ fn test_activate_sets_active_and_emits_event() {
     let a = agent(&env);
     client.register(&a, &kycs(&env), &region(&env), &100, &1_000_000);
     client.activate(&a);
+    let topic = last_event_topic0(&env);
 
     let info = client.get_agent(&a);
     assert_eq!(info.status, AgentStatus::Active);
-    assert_eq!(last_event_topic0(&env), Symbol::new(&env, "AgentStatusChanged"));
+    assert_eq!(topic, Symbol::new(&env, "AgentStatusChanged"));
 }
 
 #[test]

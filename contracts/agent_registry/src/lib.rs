@@ -116,7 +116,11 @@ impl AgentRegistry {
         if bond_amount <= 0 {
             return Err(RegistryError::InvalidBond);
         }
-        if env.storage().persistent().has(&DataKey::Agent(agent.clone())) {
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::Agent(agent.clone()))
+        {
             return Err(RegistryError::AgentAlreadyRegistered);
         }
         let info = AgentInfo {
@@ -168,11 +172,7 @@ impl AgentRegistry {
     }
 
     /// Operator updates an agent's reputation score (post-transaction trust).
-    pub fn set_reputation(
-        env: Env,
-        agent: Address,
-        reputation: i128,
-    ) -> Result<(), RegistryError> {
+    pub fn set_reputation(env: Env, agent: Address, reputation: i128) -> Result<(), RegistryError> {
         Self::require_operator(&env)?;
         let mut info = Self::get_info(&env, &agent)?;
         info.reputation = reputation;
@@ -181,7 +181,11 @@ impl AgentRegistry {
     }
 
     /// Operator renews an agent's license.
-    pub fn renew_license(env: Env, agent: Address, license_expiry: u64) -> Result<(), RegistryError> {
+    pub fn renew_license(
+        env: Env,
+        agent: Address,
+        license_expiry: u64,
+    ) -> Result<(), RegistryError> {
         Self::require_operator(&env)?;
         let mut info = Self::get_info(&env, &agent)?;
         info.license_expiry = license_expiry;
