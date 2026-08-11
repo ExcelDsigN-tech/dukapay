@@ -16,6 +16,14 @@
       },
       "multisig_governance": {
         "wasm": "../contracts/target/wasm32-unknown-unknown/release/multisig_governance.wasm"
+      },
+      "agent_registry": {
+        "wasm": "../contracts/target/wasm32-unknown-unknown/release/agent_registry.wasm"
+      },
+      "agent_vault": {
+        "wasm": "../contracts/target/wasm32-unknown-unknown/release/agent_vault.wasm",
+        "max_haircut_bps": 8000,
+        "min_collateral": 1000000000
       }
     }
   }

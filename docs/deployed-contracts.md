@@ -19,6 +19,8 @@ Explorer: `https://stellar.expert/explorer/testnet`
 | `remittance_nft` | _not yet recorded_ | — | — |
 | `multisig_governance` | _not yet recorded_ | — | — |
 | `token` (USDC-like pool token) | _not yet recorded_ | — | — |
+| `agent_registry` | _not yet recorded_ | — | — |
+| `agent_vault` | _not yet recorded_ | — | — |
 
 > **How to fill this in**: after running `scripts/deploy.ts`, copy the printed contract IDs into the table above and open a PR. Include the deploy date (YYYY-MM-DD) and the short git commit SHA or release tag.
 
@@ -33,6 +35,8 @@ Explorer: `https://stellar.expert/explorer/testnet`
 | `remittance_nft` | `REMITTANCE_NFT_CONTRACT_ID` |
 | `multisig_governance` | `MULTISIG_GOVERNANCE_CONTRACT_ID` |
 | `token` | `POOL_TOKEN_ADDRESS` |
+| `agent_registry` | `AGENT_REGISTRY_CONTRACT_ID` |
+| `agent_vault` | `AGENT_VAULT_CONTRACT_ID` |
 
 #### Frontend (`frontend/.env`)
 

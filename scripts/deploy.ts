@@ -130,6 +130,20 @@ async function createInstance(
     return extractContractId(result.resultMetaXdr);
 }
 
+// Convert an argument to ScVal. Public-key / contract-address strings
+// (G…/C… keys) become Address ScVals so contract functions taking `Address`
+// parameters decode correctly; everything else goes through nativeToScVal,
+// which also understands { type, value } hints (u32, i128, …).
+function toContractScVal(arg: unknown): xdr.ScVal {
+    if (
+        typeof arg === 'string' &&
+        (StrKey.isValidEd25519PublicKey(arg) || StrKey.isValidContract(arg))
+    ) {
+        return Address.fromString(arg).toScVal();
+    }
+    return nativeToScVal(arg);
+}
+
 // Call a contract function with positional arguments.
 async function invoke(
     server: Rpc.Server,
@@ -147,7 +161,7 @@ async function invoke(
                     new xdr.InvokeContractArgs({
                         contractAddress: Address.fromString(contractId).toScAddress(),
                         functionName: method,
-                        args: args.map(arg => nativeToScVal(arg)),
+                        args: args.map(toContractScVal),
                     }),
                 ),
                 auth: [],
@@ -205,6 +219,18 @@ async function main() {
         account,
         passphrase,
     );
+    const registryWasmHash = await uploadWasm(
+        server,
+        path.resolve(__dirname, config.contracts.agent_registry.wasm),
+        account,
+        passphrase,
+    );
+    const vaultWasmHash = await uploadWasm(
+        server,
+        path.resolve(__dirname, config.contracts.agent_vault.wasm),
+        account,
+        passphrase,
+    );
 
     // ── 2. Instantiate contracts ────────────────────────────────────────────────
     console.log('\n[2/4] Creating contract instances…');
@@ -224,6 +250,14 @@ async function main() {
     console.log('  Governance');
     const govContractId = await createInstance(server, govWasmHash, contractSalt('governance'), account, passphrase);
     console.log(`    → ${govContractId}`);
+
+    console.log('  AgentRegistry');
+    const registryContractId = await createInstance(server, registryWasmHash, contractSalt('agent_registry'), account, passphrase);
+    console.log(`    → ${registryContractId}`);
+
+    console.log('  AgentVault');
+    const vaultContractId = await createInstance(server, vaultWasmHash, contractSalt('agent_vault'), account, passphrase);
+    console.log(`    → ${vaultContractId}`);
 
     // ── 3. Initialize in dependency order ──────────────────────────────────────
     //
@@ -266,16 +300,39 @@ async function main() {
     console.log('  Governance.initialize(target=LoanManager)');
     await invoke(server, govContractId, 'initialize', [adminAddr, managerContractId], account, passphrase);
 
+    // AgentRegistry — no cross-contract deps. Deployer acts as operator for now.
+    console.log('  AgentRegistry.init(owner=admin, operator=admin)');
+    await invoke(server, registryContractId, 'init', [adminAddr, adminAddr], account, passphrase);
+
+    // AgentVault — USDC collateral vault backing agent float.
+    console.log('  AgentVault.init(owner=admin, operator=admin, token, max_haircut, min_collateral)');
+    await invoke(
+        server,
+        vaultContractId,
+        'init',
+        [
+            adminAddr,
+            adminAddr,
+            config.token,
+            { type: 'u32', value: config.contracts.agent_vault.max_haircut_bps },
+            { type: 'i128', value: config.contracts.agent_vault.min_collateral },
+        ],
+        account,
+        passphrase,
+    );
+
     // ── 4. Persist contract IDs ─────────────────────────────────────────────────
     console.log('\n[4/4] Writing contract addresses to .env files…');
 
     const envBlock = [
         ``,
-        `# RemitLend contracts — ${network} — ${new Date().toISOString()}`,
+        `# DukaPay contracts — ${network} — ${new Date().toISOString()}`,
         `NEXT_PUBLIC_NFT_CONTRACT_ID=${nftContractId}`,
         `NEXT_PUBLIC_POOL_CONTRACT_ID=${poolContractId}`,
         `NEXT_PUBLIC_MANAGER_CONTRACT_ID=${managerContractId}`,
         `NEXT_PUBLIC_GOVERNANCE_CONTRACT_ID=${govContractId}`,
+        `AGENT_REGISTRY_CONTRACT_ID=${registryContractId}`,
+        `AGENT_VAULT_CONTRACT_ID=${vaultContractId}`,
     ].join('\n');
 
     await fs.appendFile(path.join(__dirname, '../frontend/.env.local'), envBlock);
@@ -286,6 +343,8 @@ async function main() {
     console.log(`  LendingPool    : ${poolContractId}`);
     console.log(`  LoanManager    : ${managerContractId}`);
     console.log(`  Governance     : ${govContractId}`);
+    console.log(`  AgentRegistry  : ${registryContractId}`);
+    console.log(`  AgentVault     : ${vaultContractId}`);
 }
 
 main().catch(error => {
