@@ -2,7 +2,7 @@
 
 ## Overview
 
-RemitLend list endpoints use keyset (seek-based) pagination to provide stable pagination under concurrent writes. This document specifies the API contract that both backend and frontend must maintain.
+DukaPay list endpoints use keyset (seek-based) pagination to provide stable pagination under concurrent writes. This document specifies the API contract that both backend and frontend must maintain.
 
 ## Problem
 

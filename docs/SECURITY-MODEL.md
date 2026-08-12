@@ -1,6 +1,6 @@
-# RemitLend Authentication & Authorization Model
+# DukaPay Authentication & Authorization Model
 
-This document describes the security model for the RemitLend backend API: how
+This document describes the security model for the DukaPay backend API: how
 identities are established, how roles map to scopes, and which scope guard
 protects each route group. See also [SECURITY.md](../SECURITY.md) for the
 vulnerability-disclosure policy.
@@ -18,7 +18,7 @@ vulnerability-disclosure policy.
    `Keypair.verify`, resolves the role for that public key (see [Role
    resolution](#role-resolution) below), and mints a JWT.
 4. The JWT is returned both in the JSON body and set as a `httpOnly`,
-   `SameSite=strict` cookie named `remitlend_jwt` (overridable via
+   `SameSite=strict` cookie named `dukapay_jwt` (overridable via
    `JWT_COOKIE_NAME` env var). The cookie is used for SSE/EventSource
    connections that cannot attach `Authorization` headers.
 5. JWT lifetime: **24 hours** (`JWT_EXPIRES_IN = "24h"`).
@@ -38,7 +38,7 @@ JWT payload shape (`JwtPayload` in `authService.ts`):
 
 Subsequent requests supply the JWT via:
 - `Authorization: Bearer <token>` header, or
-- the `remitlend_jwt` cookie.
+- the `dukapay_jwt` cookie.
 
 ### 2. API-key authentication (for backend services / admin tooling)
 

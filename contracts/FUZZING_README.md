@@ -1,10 +1,10 @@
-# Fuzz Testing Setup for RemitLend Contracts
+# Fuzz Testing Setup for DukaPay Contracts
 
-This document describes the comprehensive fuzz testing setup implemented for the RemitLend smart contracts.
+This document describes the comprehensive fuzz testing setup implemented for the DukaPay smart contracts.
 
 ## Overview
 
-Fuzz testing has been implemented to find edge cases and potential vulnerabilities in the RemitLend contracts that traditional unit tests might miss. The setup uses property-based testing to verify invariants across all contract operations.
+Fuzz testing has been implemented to find edge cases and potential vulnerabilities in the DukaPay contracts that traditional unit tests might miss. The setup uses property-based testing to verify invariants across all contract operations.
 
 ## Architecture
 

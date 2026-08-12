@@ -1,6 +1,6 @@
 # Fuzz Testing Invariants
 
-This document defines the invariants that should always hold true for each contract in the remitlend system.
+This document defines the invariants that should always hold true for each contract in the dukapay system.
 
 ## LendingPool Contract
 

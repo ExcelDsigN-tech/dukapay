@@ -1,10 +1,10 @@
-# RemitLend Smart Contracts
+# DukaPay Smart Contracts
 
-Soroban smart contracts for the RemitLend decentralized lending platform on Stellar. These contracts handle NFT minting, loan management, and lending pool operations.
+Soroban smart contracts for the DukaPay decentralized lending platform on Stellar. These contracts handle NFT minting, loan management, and lending pool operations.
 
 ## Overview
 
-RemitLend uses three core smart contracts:
+DukaPay uses three core smart contracts:
 
 1. **Remittance NFT** - Stores credit scores and remittance history as NFTs
 2. **Loan Manager** - Manages the complete loan lifecycle

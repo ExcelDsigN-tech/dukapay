@@ -1,4 +1,4 @@
-# RemitLend Deployment Scripts
+# DukaPay Deployment Scripts
 
 Automated scripts for building and deploying Soroban smart contracts.
 

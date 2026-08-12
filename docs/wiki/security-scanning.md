@@ -1,6 +1,6 @@
 # Security Scanning
 
-RemitLend uses Trivy to scan container images for known vulnerabilities (CVEs) during the deployment process to staging and production.
+DukaPay uses Trivy to scan container images for known vulnerabilities (CVEs) during the deployment process to staging and production.
 
 ## Exception Process (.trivyignore)
 

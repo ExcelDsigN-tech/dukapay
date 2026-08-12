@@ -59,7 +59,7 @@ The backend exposes interactive Swagger UI at [http://localhost:3001/docs](http:
 ### Quick Start with Docker (Recommended)
 
 ```bash
-git clone https://github.com/ExcelDsigN-tech/remitlend.git dukapay
+git clone https://github.com/ExcelDsigN-tech/dukapay.git dukapay
 cd dukapay
 cp backend/.env.example backend/.env
 docker compose up --build

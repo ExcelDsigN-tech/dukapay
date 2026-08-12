@@ -1,8 +1,8 @@
-# RemitLend – Mobile Web3 Landing Page Design
+# DukaPay – Mobile Web3 Landing Page Design
 
 ## Project Overview
 
-RemitLend's landing page is the gateway to the platform — a mobile-first experience designed to convert first-time visitors into active participants. The design introduces users to the decentralized financial ecosystem while emphasizing its integration with the Stellar Network, balancing high-impact visuals with clear, benefit-driven messaging.
+DukaPay's landing page is the gateway to the platform — a mobile-first experience designed to convert first-time visitors into active participants. The design introduces users to the decentralized financial ecosystem while emphasizing its integration with the Stellar Network, balancing high-impact visuals with clear, benefit-driven messaging.
 
 ---
 
@@ -16,7 +16,7 @@ Designed the mobile hero section to establish trust and drive action immediately
 - Social proof metrics displayed prominently: $1.2B+ TVL and 4.8% Avg. Yield
 - Minimal copy, maximum signal — users understand the value proposition within seconds
 
-### The RemitLend Arsenal — Feature Suite
+### The DukaPay Arsenal — Feature Suite
 
 Developed a scannable vertical feature list highlighting core value propositions with custom iconography and concise benefit-driven copy:
 

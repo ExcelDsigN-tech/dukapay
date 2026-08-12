@@ -1,8 +1,8 @@
-# RemitLend – Lenders Dashboard Design
+# DukaPay – Lenders Dashboard Design
 
 ## Project Overview
 
-RemitLend's Lender Command Center is a high-performance dashboard built for liquidity providers managing complex yield strategies. The interface prioritizes real-time data accuracy, seamless asset deployment, and a consistent gamification loop — keeping lenders informed, in control, and engaged.
+DukaPay's Lender Command Center is a high-performance dashboard built for liquidity providers managing complex yield strategies. The interface prioritizes real-time data accuracy, seamless asset deployment, and a consistent gamification loop — keeping lenders informed, in control, and engaged.
 
 ---
 
@@ -38,7 +38,7 @@ Integrated **Pool Health bars** and risk-level indicators within the Prime Lendi
 
 ### Gamified Retention
 
-Integrated the **RemitLend Quests** sidebar to tie financial actions directly to XP rewards, maintaining the gamification loop established across the platform. Featured quests include:
+Integrated the **DukaPay Quests** sidebar to tie financial actions directly to XP rewards, maintaining the gamification loop established across the platform. Featured quests include:
 
 - Whale Migration — reward for deploying above a threshold liquidity amount
 - Iron Resolve — reward for maintaining an active position over a set duration
@@ -95,7 +95,7 @@ Integrated the **RemitLend Quests** sidebar to tie financial actions directly to
 - Pool health score from governance data
 - Deposit CTA
 
-### RemitLend Quests Sidebar
+### DukaPay Quests Sidebar
 - Active quest list with XP reward previews
 - Progress bars tied to on-chain lender actions
 - Completion animation on quest finish

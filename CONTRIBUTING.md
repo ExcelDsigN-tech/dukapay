@@ -1,8 +1,8 @@
-# Contributing to RemitLend
+# Contributing to DukaPay
 
-First off, thank you for considering contributing to RemitLend! It's people like you who make RemitLend a powerful tool for providing fair lending access to migrant workers worldwide.
+First off, thank you for considering contributing to DukaPay! It's people like you who make DukaPay a powerful tool for providing fair lending access to migrant workers worldwide.
 
-This document provides a set of guidelines for contributing to RemitLend and its packages. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+This document provides a set of guidelines for contributing to DukaPay and its packages. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
 
 ## 📋 Table of Contents
 
@@ -134,4 +134,4 @@ Refer to [`contracts/FUZZING_README.md`](contracts/FUZZING_README.md) for full s
 - **Rust**: Follow standard Rust naming conventions and maintain idiomatic code.
 
 ---
-Thank you for contributing to RemitLend! 🚀
+Thank you for contributing to DukaPay! 🚀

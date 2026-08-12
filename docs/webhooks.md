@@ -1,6 +1,6 @@
 # Webhook Integration Guide
 
-RemitLend can deliver real-time event notifications to external services via
+DukaPay can deliver real-time event notifications to external services via
 webhooks. This guide covers everything an external integrator needs to
 subscribe, receive, and verify webhook deliveries.
 
@@ -32,7 +32,7 @@ Authorization: Bearer <your-jwt-token>
 
 ```json
 {
-  "url": "https://your-service.com/webhooks/remitlend",
+  "url": "https://your-service.com/webhooks/dukapay",
   "events": ["LoanApproved", "LoanRepaid", "LoanDefaulted"],
   "description": "My loan tracking service (optional)"
 }
@@ -51,7 +51,7 @@ Authorization: Bearer <your-jwt-token>
   "success": true,
   "data": {
     "id": "sub_abc123",
-    "url": "https://your-service.com/webhooks/remitlend",
+    "url": "https://your-service.com/webhooks/dukapay",
     "events": ["LoanApproved", "LoanRepaid", "LoanDefaulted"],
     "active": true,
     "createdAt": "2026-05-28T12:00:00.000Z"
@@ -307,12 +307,12 @@ While deactivated:
 
 ## Verifying HMAC Signatures
 
-Each delivery includes an `X-RemitLend-Signature` header containing an
+Each delivery includes an `X-DukaPay-Signature` header containing an
 HMAC-SHA256 signature of the **raw request body**.
 
 **Header format:**
 ```
-X-RemitLend-Signature: sha256=<hex-encoded-hmac>
+X-DukaPay-Signature: sha256=<hex-encoded-hmac>
 ```
 
 The value is `sha256=` followed by the lowercase hex-encoded HMAC-SHA256
@@ -372,4 +372,4 @@ for additional language examples.
 
 ## Need Help?
 
-Contact the RemitLend team or open an issue on GitHub for integration support.
+Contact the DukaPay team or open an issue on GitHub for integration support.

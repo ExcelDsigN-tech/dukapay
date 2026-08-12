@@ -1,13 +1,13 @@
 # Webhook Signature Verification
 
-Every outbound webhook delivery from RemitLend includes an
-`X-RemitLend-Signature` header that allows subscribers to verify the
+Every outbound webhook delivery from DukaPay includes an
+`X-DukaPay-Signature` header that allows subscribers to verify the
 payload was not tampered with in transit.
 
 ## Header format
 
 ```
-X-RemitLend-Signature: sha256=<hex-encoded-hmac>
+X-DukaPay-Signature: sha256=<hex-encoded-hmac>
 ```
 
 The value is `sha256=` followed by the lowercase hex-encoded
@@ -36,7 +36,7 @@ function verifySignature(secret, rawBody, signatureHeader) {
 // Express example — YOUR_SUBSCRIPTION_SECRET is the per-subscription
 // secret returned when you registered the webhook, not an env var.
 app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
-  const sig = req.headers["x-remitlend-signature"];
+  const sig = req.headers["x-dukapay-signature"];
   if (!verifySignature(YOUR_SUBSCRIPTION_SECRET, req.body, sig)) {
     return res.status(401).send("Invalid signature");
   }
@@ -61,7 +61,7 @@ def verify_signature(secret: str, raw_body: bytes, header: str) -> bool:
 
 - The `Authorization: Bearer <secret>` header is also present for
   backwards compatibility with existing subscribers that have not yet
-  adopted HMAC verification, but **`X-RemitLend-Signature` is the
+  adopted HMAC verification, but **`X-DukaPay-Signature` is the
   authoritative integrity check**.
 - Always parse the raw body bytes *before* JSON-decoding; most
   frameworks let you configure a raw-body parser for webhook routes.

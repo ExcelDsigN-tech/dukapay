@@ -28,7 +28,7 @@ Status: Current 650/1000 score tracking toward the "Silver" tier.
 
 Hierarchy: Five-tier system from "Seed" (15% interest) to "Platinum" (5% interest).
 
-5. RemitLend Kingdom (Archon)
+5. DukaPay Kingdom (Archon)
 I worked on the high-level user experience, integrating daily investment quests into the dashboard.
 
 Engagement: XP tracking for "Level 14 Archon" status.
