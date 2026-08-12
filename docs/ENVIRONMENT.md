@@ -51,6 +51,8 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `LENDING_POOL_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed lending pool contract address | `backend/src/config/stellar.ts` |
 | `MULTISIG_GOVERNANCE_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed multisig governance contract address | `backend/src/config/contracts.ts` |
 | `POOL_TOKEN_ADDRESS` | ✓ | ✓ | ✓ | — | Pool token contract address | `backend/src/config/stellar.ts` |
+| `AGENT_REGISTRY_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed agent registry contract address | `scripts/deploy.ts` |
+| `AGENT_VAULT_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed agent vault contract address | `scripts/deploy.ts` |
 | `STELLAR_USDC_ISSUER` | — | ✓ | ✓ | — | USDC asset issuer address | `backend/src/config/stellar.ts` |
 | `STELLAR_EURC_ISSUER` | — | ✓ | ✓ | — | EURC asset issuer address | `backend/src/config/stellar.ts` |
 | `STELLAR_PHP_ISSUER` | — | ✓ | ✓ | — | PHP asset issuer address | `backend/src/config/stellar.ts` |
