@@ -1,5 +1,5 @@
 {
-  "name": "remitlend-scripts",
+  "name": "dukapay-scripts",
   "version": "1.0.0",
   "description": "Deployment and maintenance scripts for RemitLend contracts",
   "main": "index.js",
