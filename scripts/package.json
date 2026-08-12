@@ -1,7 +1,7 @@
 {
   "name": "dukapay-scripts",
   "version": "1.0.0",
-  "description": "Deployment and maintenance scripts for RemitLend contracts",
+  "description": "Deployment and maintenance scripts for DukaPay contracts",
   "main": "index.js",
   "scripts": {
     "deploy": "ts-node deploy.ts",
