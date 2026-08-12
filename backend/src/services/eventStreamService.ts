@@ -8,7 +8,15 @@ export interface LoanEventPayload {
   eventType: string;
   loanId?: number | undefined;
   address?: string | undefined;
+  /** Exact stroop amount, as decoded from the chain — never a float. */
   amount?: string | undefined;
+  /**
+   * Display-precision string derived from `amount` via the shared money
+   * policy (`backend/src/money/decimal.ts`'s `fromStroops`). Consumers
+   * should render this for display and never re-derive one themselves from
+   * `amount` with ad-hoc float math.
+   */
+  amountDisplay?: string | undefined;
   ledger: number;
   ledgerClosedAt: string;
   txHash: string;

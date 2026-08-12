@@ -61,7 +61,7 @@ export const getRemittances = asyncHandler(async (req: Request, res: Response) =
   }
 
   // Parse keyset pagination params
-  const snapshotSeq = req.query.snapshot_seq;
+  const snapshotSeq = typeof req.query.snapshot_seq === 'string' ? req.query.snapshot_seq : null;
   const cursorStr = typeof req.query.cursor === 'string' ? req.query.cursor : null;
   const limitParam = typeof req.query.limit === 'string' ? req.query.limit : null;
 
@@ -151,13 +151,7 @@ export const getRemittances = asyncHandler(async (req: Request, res: Response) =
     queryParams: params,
   });
 
-  const [result, countResult] = await Promise.all([
-    query(queryText, params),
-    query(
-      `SELECT COUNT(*) as count FROM remittances WHERE ${whereClause.replace(` AND seq <= $${params.length - 1}`, '')}`,
-      params.slice(0, -2),
-    ),
-  ]);
+  const result = await query(queryText, params);
 
   const hasNext = result.rows.length > limit;
   const remittances = hasNext ? result.rows.slice(0, limit) : result.rows;
@@ -211,7 +205,7 @@ export const getRemittance = asyncHandler(async (req: Request, res: Response) =>
   const remittance = await remittanceService.getRemittance(id);
 
   // Verify the user owns this remittance
-  if (senderAddress !== senderAddress) {
+  if (remittance.senderId !== senderAddress) {
     throw AppError.forbidden('You do not have access to this remittance');
   }
 
@@ -248,7 +242,7 @@ export const submitRemittanceTransaction = asyncHandler(async (req: Request, res
   try {
     const remittance = await remittanceService.getRemittance(id);
 
-    if (remittance.senderId !== remittance.senderId) {
+    if (remittance.senderId !== senderAddress) {
       throw AppError.forbidden('You do not have access to this remittance');
     }
 

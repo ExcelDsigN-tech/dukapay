@@ -122,8 +122,8 @@ export const up = async (pgm) => {
  */
 export const down = async (pgm) => {
   // Drop seek indexes
-  pgm.dropIndex('contract_events', 'idx_contract_events_seek');
-  pgm.dropIndex('remittances', 'idx_remittances_seek');
+  pgm.dropIndex('contract_events', [], { name: 'idx_contract_events_seek' });
+  pgm.dropIndex('remittances', [], { name: 'idx_remittances_seek' });
 
   const disputesTableExists = await pgm.db.query(`
     SELECT EXISTS (
@@ -133,7 +133,7 @@ export const down = async (pgm) => {
   `);
 
   if (disputesTableExists.rows[0].exists) {
-    pgm.dropIndex('loan_disputes', 'idx_loan_disputes_seek');
+    pgm.dropIndex('loan_disputes', [], { name: 'idx_loan_disputes_seek' });
   }
 
   // Drop seq columns

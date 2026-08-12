@@ -330,6 +330,12 @@ describe('GET /api/loans/:loanId', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.loanId).toBe('123');
     expect(response.body.summary.principal).toBe(1000);
+    expect(response.body.summary.accruedInterest).toBeGreaterThan(0);
+    expect(response.body.summary.totalOwed).toBe(
+      response.body.summary.principal +
+        response.body.summary.accruedInterest -
+        response.body.summary.totalRepaid,
+    );
   });
 
   it('should return 403 when the loan belongs to another borrower', async () => {
@@ -385,6 +391,9 @@ describe('GET /api/loans/:loanId/amortization-schedule', () => {
       totalInterest: 120,
       totalDue: 1120,
     });
+    expect(response.body.amortization.totalDue).toBe(
+      response.body.amortization.principal + response.body.amortization.totalInterest,
+    );
     expect(Array.isArray(response.body.amortization.schedule)).toBe(true);
     expect(response.body.amortization.schedule.length).toBeGreaterThan(0);
   });

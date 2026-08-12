@@ -81,7 +81,7 @@ export async function buildUnsignedRepaymentXdr({
 
   const borrowerScVal = new Address(borrower).toScVal();
   const loanIdScVal = nativeToScVal(BigInt(loanId), { type: "u64" });
-  const amountScVal = nativeToScVal(BigInt(Math.floor(amount / 10)), { type: "i128" });
+  const amountScVal = nativeToScVal(BigInt(Math.floor(amount)), { type: "i128" });
 
   const tx = new TransactionBuilder(source, {
     fee: "10000",

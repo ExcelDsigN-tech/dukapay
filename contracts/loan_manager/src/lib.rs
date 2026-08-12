@@ -360,14 +360,36 @@ impl LoanManager {
             .checked_mul(Self::DEFAULT_TERM_LEDGERS as i128)
             .ok_or(LoanError::AmountTooLarge)?;
 
-        let total_interest = numerator / denominator;
-        let interest_delta = total_interest / PRECISION;
-        let new_residual = total_interest % PRECISION;
+        // All stroop-quantity division routes through the shared `money`
+        // crate so contracts, backend and frontend apply identical rounding
+        // semantics. Floor is used here (not half-even) because the
+        // remainder is explicitly carried forward as `interest_residual`
+        // rather than discarded, so no precision is lost across calls.
+        let total_interest = money::round_div(numerator, denominator, money::RoundingMode::Floor)
+            .map_err(|_| LoanError::AmountTooLarge)?;
+        let interest_delta =
+            money::round_div(total_interest, PRECISION, money::RoundingMode::Floor)
+                .map_err(|_| LoanError::AmountTooLarge)?;
+        let new_residual = total_interest
+            .checked_sub(
+                interest_delta
+                    .checked_mul(PRECISION)
+                    .ok_or(LoanError::AmountTooLarge)?,
+            )
+            .ok_or(LoanError::AmountTooLarge)?;
 
         // Add the previous residual to the new calculation
         let combined_residual = loan.interest_residual + new_residual;
-        let additional_interest = combined_residual / PRECISION;
-        let final_residual = combined_residual % PRECISION;
+        let additional_interest =
+            money::round_div(combined_residual, PRECISION, money::RoundingMode::Floor)
+                .map_err(|_| LoanError::AmountTooLarge)?;
+        let final_residual = combined_residual
+            .checked_sub(
+                additional_interest
+                    .checked_mul(PRECISION)
+                    .ok_or(LoanError::AmountTooLarge)?,
+            )
+            .ok_or(LoanError::AmountTooLarge)?;
 
         let total_accrued_delta = interest_delta
             .checked_add(additional_interest)
@@ -455,10 +477,14 @@ impl LoanManager {
             return 0;
         }
 
-        let ratio = collateral_amount
-            .checked_mul(Self::MAX_RATIO_BPS as i128)
-            .expect("collateral ratio overflow")
-            / total_debt;
+        let ratio = money::round_div(
+            collateral_amount
+                .checked_mul(Self::MAX_RATIO_BPS as i128)
+                .expect("collateral ratio overflow"),
+            total_debt,
+            money::RoundingMode::Floor,
+        )
+        .expect("collateral ratio overflow");
 
         ratio.min(u32::MAX as i128) as u32
     }
@@ -604,13 +630,20 @@ impl LoanManager {
         let overdue_ledgers = current_ledger - late_fee_start;
         // Late fee is calculated on original principal amount only, not remaining debt.
         // This ensures the 25% late fee cap is meaningful regardless of payment state.
-        let incremental_fee = loan
+        let late_fee_numerator = loan
             .amount
             .checked_mul(Self::late_fee_rate_bps(env) as i128)
             .and_then(|value| value.checked_mul(overdue_ledgers as i128))
-            .and_then(|value| value.checked_div(10_000))
-            .and_then(|value| value.checked_div(Self::DEFAULT_TERM_LEDGERS as i128))
             .expect("late fee overflow");
+        let late_fee_denominator = 10_000i128
+            .checked_mul(Self::DEFAULT_TERM_LEDGERS as i128)
+            .expect("late fee overflow");
+        let incremental_fee = money::round_div(
+            late_fee_numerator,
+            late_fee_denominator,
+            money::RoundingMode::Floor,
+        )
+        .expect("late fee overflow");
 
         // Global debt cap: Total outstanding (principal + interest + late fees)
         // cannot exceed original_principal * MAX_PENALTY_MULTIPLIER.
@@ -679,16 +712,25 @@ impl LoanManager {
                 continue;
             }
 
+            // Note: this is a hand-rolled largest-remainder allocation rather
+            // than `money::split_pro_rata` because each bucket must also be
+            // capped at its own `due` amount (a category can't be overpaid),
+            // which the generic allocator does not support. The division
+            // itself still routes through the shared `money::round_div`
+            // helper so the rounding semantics stay identical across layers.
             let scaled = amount
                 .checked_mul(due)
                 .expect("repayment allocation overflow");
-            let payment = scaled
-                .checked_div(total_debt)
+            let payment = money::round_div(scaled, total_debt, money::RoundingMode::Floor)
                 .expect("repayment allocation underflow");
 
             payments[idx] = payment;
             remainders[idx] = scaled
-                .checked_rem(total_debt)
+                .checked_sub(
+                    payment
+                        .checked_mul(total_debt)
+                        .expect("repayment allocation overflow"),
+                )
                 .expect("repayment allocation underflow");
             allocated = allocated
                 .checked_add(payment)
@@ -1605,7 +1647,15 @@ impl LoanManager {
         let collateral_amount = loan.collateral_amount;
         let configured_bonus = collateral_amount
             .checked_mul(Self::liquidation_bonus_bps(&env) as i128)
-            .and_then(|value| value.checked_div(Self::MAX_RATIO_BPS as i128))
+            .ok_or(())
+            .and_then(|value| {
+                money::round_div(
+                    value,
+                    Self::MAX_RATIO_BPS as i128,
+                    money::RoundingMode::Floor,
+                )
+                .map_err(|_| ())
+            })
             .expect("liquidation bonus overflow");
 
         // Ensure bonus cap is enforced - bonus BPS should never exceed MAX_LIQUIDATION_BONUS_BPS
@@ -1973,12 +2023,14 @@ impl LoanManager {
 
                 // Return excess collateral proportionally if new amount is smaller
                 if new_amount < remaining_principal {
-                    let collateral_to_return = loan
-                        .collateral_amount
-                        .checked_mul(excess_principal)
-                        .expect("multiplication overflow")
-                        .checked_div(remaining_principal)
-                        .expect("division by zero");
+                    let collateral_to_return = money::round_div(
+                        loan.collateral_amount
+                            .checked_mul(excess_principal)
+                            .expect("multiplication overflow"),
+                        remaining_principal,
+                        money::RoundingMode::Floor,
+                    )
+                    .expect("division by zero");
                     if collateral_to_return > 0 {
                         token_client.transfer(
                             &env.current_contract_address(),
@@ -2617,7 +2669,8 @@ impl LoanManager {
         let remaining_principal = Self::remaining_principal(&loan);
         let extension_fee = remaining_principal
             .checked_mul(Self::EXTENSION_FEE_BPS as i128)
-            .and_then(|v| v.checked_div(10_000))
+            .ok_or(())
+            .and_then(|v| money::round_div(v, 10_000, money::RoundingMode::Floor).map_err(|_| ()))
             .expect("extension fee overflow");
 
         // Collect extension fee from borrower if any

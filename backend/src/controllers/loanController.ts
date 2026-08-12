@@ -12,6 +12,7 @@ import logger from '../utils/logger.js';
 import { cacheService } from '../services/cacheService.js';
 import { notificationService } from '../services/notificationService.js';
 import { invalidateOnRepay, invalidateOnLoanRequest } from '../utils/cacheKeys.js';
+import { roundToCents } from '../money/decimal.js';
 
 // ─── Test/Dev Only ────────────────────────────────────────────────────────────
 
@@ -225,7 +226,7 @@ const getLatestLedger = async (): Promise<number> => {
   return result.rows[0]?.last_indexed_ledger ?? 0;
 };
 
-const roundToCents = (value: number): number => Math.floor((value + Number.EPSILON) * 100) / 100;
+export { roundToCents };
 
 const addDays = (date: Date, days: number): Date => {
   const result = new Date(date);
@@ -560,7 +561,7 @@ export const getLoanDetails = asyncHandler(async (req: Request, res: Response) =
   const accruedInterest = isPending
     ? 0
     : (principal * rateBps * elapsedLedgers) / (10000 * termLedgers);
-  const totalOwed = principal - accruedInterest - totalRepaid;
+  const totalOwed = principal + accruedInterest - totalRepaid;
 
   res.json({
     success: true,

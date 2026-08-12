@@ -132,6 +132,21 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 
 ---
 
+## Pinned Infrastructure Image Versions
+
+The `docker-compose.yml` and `docker-compose.staging.yml` files pin dependency
+images to specific minor versions to prevent silent environment drift.
+
+| Service  | Image                  | Used in                                               |
+| -------- | ---------------------- | ----------------------------------------------------- |
+| Postgres | `postgres:16.9-alpine` | `docker-compose.yml`, `docker-compose.staging.yml`    |
+| Redis    | `redis:7.4-alpine`     | `docker-compose.yml`, `docker-compose.staging.yml`    |
+
+When upgrading either dependency, update **both** compose files and this table
+in the same PR.
+
+---
+
 ## `.env.example` vs `ENVIRONMENT.md` Drift
 
 A CI job (`env-docs-check`) runs on every PR to ensure the keys listed in `.env.example` files are present in this document. The check performs a sorted diff and fails if any key is missing from either side.

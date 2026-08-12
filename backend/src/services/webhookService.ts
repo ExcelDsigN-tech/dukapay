@@ -2,6 +2,11 @@ import crypto from 'node:crypto';
 import { query } from '../db/connection.js';
 import logger from '../utils/logger.js';
 
+// #1520 — this array is the single source of truth for which event types
+// external webhook subscribers can register for. docs/webhooks.md's
+// "Supported Event Types" section is a human-readable mirror of this list
+// (kept manually in sync) — update both together whenever an entry is
+// added, removed, or renamed here.
 export const SUPPORTED_WEBHOOK_EVENT_TYPES = [
   'LoanRequested',
   'LoanApproved',
