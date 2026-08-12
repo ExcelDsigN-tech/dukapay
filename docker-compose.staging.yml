@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/${OWNER}/remitlend-backend:${TAG:-staging-latest}
+    image: ghcr.io/${OWNER}/dukapay-backend:${TAG:-staging-latest}
     env_file:
       - ./backend/.env.staging
     environment:
@@ -34,7 +34,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/${OWNER}/remitlend-frontend:${TAG:-staging-latest}
+    image: ghcr.io/${OWNER}/dukapay-frontend:${TAG:-staging-latest}
     ports:
       - "3000:3000"
     environment:

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# RemitLend Build Script
+# DukaPay Build Script
 # This script builds and optimizes the Soroban smart contracts.
 
 # Navigate to the contracts directory
