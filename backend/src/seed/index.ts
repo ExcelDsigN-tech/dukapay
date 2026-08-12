@@ -72,7 +72,7 @@ interface NotificationSeed {
 }
 
 const NOW = new Date('2026-03-26T12:00:00.000Z');
-const CONTRACT_ID = 'CDDUMMYREMITLENDCONTRACT0000000000000000000000000000000000';
+const CONTRACT_ID = 'CDDUMMYDUKAPAYCONTRACT0000000000000000000000000000000000';
 const DEV_LENDER = 'GDEVLENDERACCOUNT000000000000000000000000000000000000000000';
 const ACTIVE_TERM_LEDGERS = 17280;
 
@@ -81,7 +81,7 @@ const devUsers: DevUser[] = [
     userId: 'GDEVUSERALICE000000000000000000000000000000000000000000001',
     publicKey: 'GDEVUSERALICE000000000000000000000000000000000000000000001',
     displayName: 'Alice Remit',
-    email: 'alice@remitlend.dev',
+    email: 'alice@dukapay.dev',
     score: 782,
     metadata: { role: 'borrower', country: 'NG', segment: 'power-user' },
   },
@@ -89,7 +89,7 @@ const devUsers: DevUser[] = [
     userId: 'GDEVUSERBOLA000000000000000000000000000000000000000000002',
     publicKey: 'GDEVUSERBOLA000000000000000000000000000000000000000000002',
     displayName: 'Bola Credit',
-    email: 'bola@remitlend.dev',
+    email: 'bola@dukapay.dev',
     score: 701,
     metadata: { role: 'borrower', country: 'GH', segment: 'growing' },
   },
@@ -97,7 +97,7 @@ const devUsers: DevUser[] = [
     userId: 'GDEVUSERCHIDI00000000000000000000000000000000000000000003',
     publicKey: 'GDEVUSERCHIDI00000000000000000000000000000000000000000003',
     displayName: 'Chidi Default',
-    email: 'chidi@remitlend.dev',
+    email: 'chidi@dukapay.dev',
     score: 611,
     metadata: { role: 'borrower', country: 'KE', segment: 'high-risk' },
   },
@@ -105,7 +105,7 @@ const devUsers: DevUser[] = [
     userId: 'GDEVUSERDARA000000000000000000000000000000000000000000004',
     publicKey: 'GDEVUSERDARA000000000000000000000000000000000000000000004',
     displayName: 'Dara Pending',
-    email: 'dara@remitlend.dev',
+    email: 'dara@dukapay.dev',
     score: 690,
     metadata: { role: 'borrower', country: 'NG', segment: 'new-user' },
   },
@@ -113,7 +113,7 @@ const devUsers: DevUser[] = [
     userId: 'GDEVUSEREFE0000000000000000000000000000000000000000000005',
     publicKey: 'GDEVUSEREFE0000000000000000000000000000000000000000000005',
     displayName: 'Efe Lender',
-    email: 'efe@remitlend.dev',
+    email: 'efe@dukapay.dev',
     score: 820,
     metadata: { role: 'lender', country: 'ZA', segment: 'pool-provider' },
   },

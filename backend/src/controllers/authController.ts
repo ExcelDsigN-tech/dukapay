@@ -106,7 +106,7 @@ export const login = (req: Request, res: Response): void => {
   }
 
   const token = generateJwtToken(publicKey);
-  const cookieName = process.env.JWT_COOKIE_NAME ?? 'remitlend_jwt';
+  const cookieName = process.env.JWT_COOKIE_NAME ?? 'dukapay_jwt';
 
   // Set secure, HTTP-only cookie to avoid leaking tokens in URL query parameters
   // for EventSource (SSE) connections.
@@ -168,7 +168,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     await revokeToken(req.user.jti, req.user.exp);
   }
 
-  const cookieName = process.env.JWT_COOKIE_NAME ?? 'remitlend_jwt';
+  const cookieName = process.env.JWT_COOKIE_NAME ?? 'dukapay_jwt';
   res.clearCookie(cookieName, { path: '/' });
 
   res.status(200).json({

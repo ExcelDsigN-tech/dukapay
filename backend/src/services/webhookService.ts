@@ -255,10 +255,10 @@ async function postWebhook(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        // X-RemitLend-Signature uses the GitHub/Stripe-style "sha256=<hex>"
+        // X-DukaPay-Signature uses the GitHub/Stripe-style "sha256=<hex>"
         // format so subscribers can verify payload integrity (see
         // docs/wiki/webhook-signatures.md for the verification recipe).
-        ...(signature && { 'x-remitlend-signature': `sha256=${signature}` }),
+        ...(signature && { 'x-dukapay-signature': `sha256=${signature}` }),
       },
       body,
       signal: controller.signal,

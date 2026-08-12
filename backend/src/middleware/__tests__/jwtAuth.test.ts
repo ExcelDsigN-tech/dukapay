@@ -119,7 +119,7 @@ describe('jwtAuth middleware', () => {
       mockIsTokenRevoked.mockResolvedValue(false);
 
       mockRequest.headers = {
-        cookie: 'remitlend_jwt=valid-cookie-token',
+        cookie: 'dukapay_jwt=valid-cookie-token',
       };
 
       await requireJwtAuth(mockRequest as Request, mockResponse as Response, mockNext);
@@ -199,7 +199,7 @@ describe('jwtAuth middleware', () => {
       mockIsTokenRevoked.mockResolvedValue(false);
 
       mockRequest.headers = {
-        cookie: 'remitlend_jwt=url%40encoded%2Btoken',
+        cookie: 'dukapay_jwt=url%40encoded%2Btoken',
       };
 
       await requireJwtAuth(mockRequest as Request, mockResponse as Response, mockNext);
@@ -211,7 +211,7 @@ describe('jwtAuth middleware', () => {
     it('should return null for empty cookie value and throw 401', async () => {
       mockExtractBearerToken.mockReturnValue(null);
       mockRequest.headers = {
-        cookie: 'remitlend_jwt=  ',
+        cookie: 'dukapay_jwt=  ',
       };
 
       await expect(() =>

@@ -6,6 +6,6 @@ describe('Health Check Endpoint', () => {
     const response = await request(app).get('/');
 
     expect(response.status).toBe(200);
-    expect(response.text).toBe('RemitLend Backend is running');
+    expect(response.text).toBe('DukaPay Backend is running');
   });
 });

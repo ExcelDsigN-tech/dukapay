@@ -17,9 +17,9 @@ export const swaggerSpec = swaggerJSDoc({
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'RemitLend API',
+      title: 'DukaPay API',
       version: '1.0.0',
-      description: 'Backend API for RemitLend lending, scoring, remittance, and indexer flows.',
+      description: 'Backend API for DukaPay lending, scoring, remittance, and indexer flows.',
     },
     servers: [
       {

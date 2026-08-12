@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `services/` layer contains the core business logic of the RemitLend backend. Each service encapsulates a specific domain concern and provides a clean interface for controllers, middleware, and background jobs. Services handle database access, external API calls (blockchain, cache), and stateful operations like webhook retries and score reconciliation.
+The `services/` layer contains the core business logic of the DukaPay backend. Each service encapsulates a specific domain concern and provides a clean interface for controllers, middleware, and background jobs. Services handle database access, external API calls (blockchain, cache), and stateful operations like webhook retries and score reconciliation.
 
 ### Services Index
 

@@ -124,7 +124,7 @@ app.use(metricsMiddleware);
 app.use(pauseGuard);
 
 app.get('/', (_req: Request, res: Response) => {
-  res.send('RemitLend Backend is running');
+  res.send('DukaPay Backend is running');
 });
 
 /**

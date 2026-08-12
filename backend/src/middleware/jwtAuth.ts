@@ -8,7 +8,7 @@ import {
   type JwtPayload,
 } from '../services/authService.js';
 
-const DEFAULT_JWT_COOKIE_NAME = 'remitlend_jwt';
+const DEFAULT_JWT_COOKIE_NAME = 'dukapay_jwt';
 
 function extractCookieToken(cookieHeader: string | undefined): string | null {
   if (!cookieHeader) {

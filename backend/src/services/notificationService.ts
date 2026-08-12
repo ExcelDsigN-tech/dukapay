@@ -81,27 +81,27 @@ function buildEmailTemplate(
 ): { subject: string; html: string } {
   const templates: Record<NotificationType, { subject: string; html: string }> = {
     loan_approved: {
-      subject: 'Your loan has been approved — RemitLend',
+      subject: 'Your loan has been approved — DukaPay',
       html: `<h2>Loan Approved</h2><p>${message}</p><p>Log in to view your loan details and repayment schedule.</p>`,
     },
     repayment_due: {
-      subject: 'Repayment reminder — RemitLend',
+      subject: 'Repayment reminder — DukaPay',
       html: `<h2>Repayment Due Soon</h2><p>${message}</p><p>Please ensure funds are available to avoid a default.</p>`,
     },
     repayment_confirmed: {
-      subject: 'Repayment confirmed — RemitLend',
+      subject: 'Repayment confirmed — DukaPay',
       html: `<h2>Repayment Confirmed</h2><p>${message}</p><p>Thank you for your payment.</p>`,
     },
     loan_defaulted: {
-      subject: 'Loan default notice — RemitLend',
+      subject: 'Loan default notice — DukaPay',
       html: `<h2>Loan Defaulted</h2><p>${message}</p><p>Contact support immediately if you believe this is an error.</p>`,
     },
     loan_liquidated: {
-      subject: 'Your loan has been liquidated — RemitLend',
+      subject: 'Your loan has been liquidated — DukaPay',
       html: `<h2>Loan Liquidated</h2><p>${message}</p><p>Contact support if you have questions about the outcome.</p>`,
     },
     score_changed: {
-      subject: 'Your credit score has changed — RemitLend',
+      subject: 'Your credit score has changed — DukaPay',
       html: `<h2>Credit Score Update</h2><p>${message}</p><p>Log in to see your updated score and history.</p>`,
     },
   };
@@ -129,7 +129,7 @@ async function sendEmail(email: string, message: string, type?: NotificationType
 
   const template = type
     ? buildEmailTemplate(type, message)
-    : { subject: 'Notification from RemitLend', html: `<p>${message}</p>` };
+    : { subject: 'Notification from DukaPay', html: `<p>${message}</p>` };
 
   try {
     const sgMail = await import('@sendgrid/mail');
@@ -482,7 +482,7 @@ class NotificationService {
         await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: `[RemitLend] ${title}: ${message}` }),
+          body: JSON.stringify({ text: `[DukaPay] ${title}: ${message}` }),
         });
       } catch (err) {
         logger.withContext().error('[Admin] Webhook POST failed', { webhookUrl, err });
