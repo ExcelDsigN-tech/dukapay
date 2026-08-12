@@ -1,6 +1,6 @@
 # End-to-End Test Suite
 
-This directory contains Playwright e2e specs for RemitLend. Each spec file owns
+This directory contains Playwright e2e specs for DukaPay. Each spec file owns
 a single user flow so that mock shapes stay consistent and coverage gaps are
 easy to spot.
 

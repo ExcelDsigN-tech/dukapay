@@ -110,7 +110,7 @@ export const useUserStore = create<UserStore>()(
         setError: (error) => set({ error, isLoading: false }, false, "user/setError"),
       }),
       {
-        name: "remitlend-user",
+        name: "dukapay-user",
         // Only persist the user object — not transient loading/error state
         partialize: (state) => ({
           user: state.user,

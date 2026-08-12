@@ -6,7 +6,7 @@ const MOCK_ADDRESS = "GCJPBXSE6WCQDCEYZW6C3YVZCSSCHC4AE72L5KWKCYL2CLLL7NH5VSCI";
 test.beforeEach(async ({ page }: { page: Page }) => {
   await page.addInitScript((address: string) => {
     window.localStorage.setItem(
-      "remitlend-wallet",
+      "dukapay-wallet",
       JSON.stringify({
         state: {
           status: "connected",
@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }: { page: Page }) => {
       }),
     );
     window.localStorage.setItem(
-      "remitlend-user",
+      "dukapay-user",
       JSON.stringify({
         state: {
           user: {

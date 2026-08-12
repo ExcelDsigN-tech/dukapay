@@ -1,6 +1,6 @@
 export type Theme = "light" | "dark" | "system";
 
-export const THEME_STORAGE_KEY = "remitlend-theme";
+export const THEME_STORAGE_KEY = "dukapay-theme";
 
 export function getSystemTheme(): Theme {
   if (typeof window === "undefined") {

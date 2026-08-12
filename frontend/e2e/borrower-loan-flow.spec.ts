@@ -38,7 +38,7 @@ test.describe.skip("Borrower Loan Request Flow", () => {
 
     const walletStateJson = JSON.stringify(walletState);
     await page.addInitScript((stateJson: string) => {
-      window.localStorage.setItem("remitlend-wallet", stateJson);
+      window.localStorage.setItem("dukapay-wallet", stateJson);
     }, walletStateJson);
 
     // Mock User Profile
@@ -97,7 +97,7 @@ test.describe.skip("Borrower Loan Request Flow", () => {
 
     // Verify wallet is connected via mocked localStorage
     const walletPersist = await page.evaluate(() =>
-      window.localStorage.getItem("remitlend-wallet"),
+      window.localStorage.getItem("dukapay-wallet"),
     );
     const parsed = JSON.parse(walletPersist || "{}");
 
@@ -356,7 +356,7 @@ test.describe.skip("Borrower Loan Request Flow", () => {
 
     const updatedWalletStateJson = JSON.stringify(updatedWalletState);
     await page.evaluate((stateJson: string) => {
-      window.localStorage.setItem("remitlend-wallet", stateJson);
+      window.localStorage.setItem("dukapay-wallet", stateJson);
     }, updatedWalletStateJson);
 
     // Submit repayment

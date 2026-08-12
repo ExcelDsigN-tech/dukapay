@@ -5,7 +5,7 @@ test.describe.skip("Landing Page", () => {
   test("should load the landing page successfully", async ({ page }) => {
     await page.goto("/en"); // Localized home
     // Check for title or specific branding
-    await expect(page).toHaveTitle(/remitlend/i);
+    await expect(page).toHaveTitle(/dukapay/i);
 
     // Verify main content structure (Dashboard heading in [locale]/page.tsx)
     await expect(page.getByRole("heading", { name: /Dashboard/i })).toBeVisible();
@@ -23,7 +23,7 @@ test.describe.skip("Landing Page", () => {
   test("should show localized help text for new visitors", async ({ page }) => {
     await page.goto("/en");
     await expect(
-      page.locator("text=Welcome to RemitLend. Please connect your wallet"),
+      page.locator("text=Welcome to DukaPay. Please connect your wallet"),
     ).toBeVisible();
   });
 });

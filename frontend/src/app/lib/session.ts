@@ -3,8 +3,8 @@
 import { useUserStore } from "../stores/useUserStore";
 import { useWalletStore } from "../stores/useWalletStore";
 
-const USER_STORAGE_KEY = "remitlend-user";
-const WALLET_STORAGE_KEY = "remitlend-wallet";
+const USER_STORAGE_KEY = "dukapay-user";
+const WALLET_STORAGE_KEY = "dukapay-wallet";
 
 let logoutTriggered = false;
 

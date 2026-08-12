@@ -9,7 +9,7 @@ type PageMetadataInput = {
 
 const LOCALES = ["en", "es", "tl"] as const;
 const DEFAULT_SITE_URL = "https://remitlend.com";
-const SITE_NAME = "RemitLend";
+const SITE_NAME = "DukaPay";
 const OG_IMAGE_PATH = "/og-image.png";
 
 export function getSiteUrl() {

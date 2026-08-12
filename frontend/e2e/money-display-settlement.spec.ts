@@ -42,11 +42,11 @@ test.describe.skip("Money display/settlement agreement (issue #1378)", () => {
   test.beforeEach(async ({ page }: { page: Page }) => {
     const walletStateJson = JSON.stringify(connectedWalletState("5000.00"));
     await page.addInitScript((stateJson: string) => {
-      window.localStorage.setItem("remitlend-wallet", stateJson);
+      window.localStorage.setItem("dukapay-wallet", stateJson);
     }, walletStateJson);
     await page.addInitScript(() => {
       window.localStorage.setItem(
-        "remitlend-user",
+        "dukapay-user",
         JSON.stringify({
           state: {
             user: {

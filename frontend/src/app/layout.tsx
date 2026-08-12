@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
-  title: "RemitLend - Borderless P2P Lending & Remittance",
+  title: "DukaPay - Borderless P2P Lending & Remittance",
   description:
     "Global peer-to-peer lending and instant remittances powered by blockchain technology. Send money and grow your wealth across borders.",
 };

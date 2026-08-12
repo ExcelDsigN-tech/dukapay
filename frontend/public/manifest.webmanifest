@@ -1,6 +1,6 @@
 {
-  "name": "RemitLend",
-  "short_name": "RemitLend",
+  "name": "DukaPay",
+  "short_name": "DukaPay",
   "description": "Decentralized lending for migrant workers — remittance-based credit scoring",
   "start_url": "/en",
   "display": "standalone",

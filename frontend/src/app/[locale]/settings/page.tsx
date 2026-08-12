@@ -379,7 +379,7 @@ function NotificationsSection() {
               checked={prefs.inApp}
               onChange={() => toggle("inApp")}
               label="In-App Notifications"
-              description="Show notifications inside RemitLend"
+              description="Show notifications inside DukaPay"
             />
             <Toggle
               checked={prefs.email}

@@ -125,7 +125,7 @@ export const useWalletStore = create<WalletStore>()(
           set({ isLoadingBalances }, false, "wallet/setLoadingBalances"),
       }),
       {
-        name: "remitlend-wallet",
+        name: "dukapay-wallet",
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           status: state.status,

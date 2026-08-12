@@ -323,7 +323,7 @@ export const useGamificationStore = create<GamificationStore>()(
         },
       }),
       {
-        name: "remitlend-gamification",
+        name: "dukapay-gamification",
       },
     ),
     { name: "GamificationStore" },

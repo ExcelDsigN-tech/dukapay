@@ -33,11 +33,11 @@ test.describe.skip("Borrower Repayment Flow", () => {
   test.beforeEach(async ({ page }: { page: Page }) => {
     const walletStateJson = JSON.stringify(connectedWalletState("5000.00"));
     await page.addInitScript((stateJson: string) => {
-      window.localStorage.setItem("remitlend-wallet", stateJson);
+      window.localStorage.setItem("dukapay-wallet", stateJson);
     }, walletStateJson);
     await page.addInitScript(() => {
       window.localStorage.setItem(
-        "remitlend-user",
+        "dukapay-user",
         JSON.stringify({
           state: {
             user: {
@@ -111,7 +111,7 @@ test.describe.skip("Borrower Repayment Flow", () => {
     // Wallet balance after paying 500 USDC.
     const updatedWalletStateJson = JSON.stringify(connectedWalletState("4500.00"));
     await page.evaluate((stateJson: string) => {
-      window.localStorage.setItem("remitlend-wallet", stateJson);
+      window.localStorage.setItem("dukapay-wallet", stateJson);
     }, updatedWalletStateJson);
 
     await page.click('button:has-text("Review Repayment")');

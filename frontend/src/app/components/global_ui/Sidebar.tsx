@@ -84,7 +84,7 @@ export function Sidebar({ onClose, className }: SidebarProps) {
             <SendHorizontal className="h-5 w-5 text-white" />
           </div>
           <span className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            RemitLend
+            DukaPay
           </span>
         </Link>
         {onClose && (

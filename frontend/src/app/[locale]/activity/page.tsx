@@ -125,7 +125,7 @@ export default function ActivityPage() {
         ? `https://stellar.expert/explorer/public/tx/${item.txHash}`
         : "",
     }));
-    downloadCsv(`remitlend-activity-${today}.csv`, rowsToCsv(rows));
+    downloadCsv(`dukapay-activity-${today}.csv`, rowsToCsv(rows));
   }
 
   if (!isConnected) {
@@ -210,7 +210,7 @@ export default function ActivityPage() {
                   isFilteredView
                     ? "Try a different filter to see more loan and remittance history."
                     : t("emptyState.description") ||
-                      "Your transaction history will appear here once you start using RemitLend."
+                      "Your transaction history will appear here once you start using DukaPay."
                 }
                 actionLabel={isFilteredView ? undefined : "Send your first remittance"}
                 actionHref={isFilteredView ? undefined : `/${locale}/send-remittance`}

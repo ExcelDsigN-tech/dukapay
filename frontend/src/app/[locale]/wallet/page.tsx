@@ -333,7 +333,7 @@ function TransactionHistoryCard({
       };
     });
 
-    downloadCsv(`remitlend-activity-${today}.csv`, rowsToCsv(rows));
+    downloadCsv(`dukapay-activity-${today}.csv`, rowsToCsv(rows));
   }
 
   return (
