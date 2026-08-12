@@ -1,10 +1,10 @@
 # Soroban Contract State Machine
 
-This document details the state management and lifecycle of loans within the Remitlend Soroban smart contracts.
+This document details the state management and lifecycle of loans within the DukaPay Soroban smart contracts.
 
 ## Overview
 
-The core logic of Remitlend resides in two primary contracts:
+The core logic of DukaPay resides in two primary contracts:
 1. **Loan Manager**: Manages the loan lifecycle (Request -> Approve -> Repay/Default).
 2. **Remittance NFT**: Tracks user credit scores and locks/unlocks NFTs as collateral.
 

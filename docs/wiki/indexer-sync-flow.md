@@ -1,6 +1,6 @@
 # Indexer <-> Database Sync Flow
 
-This document explains how Remitlend synchronizes on-chain Soroban events with the off-chain PostgreSQL database for fast querying and credit score updates.
+This document explains how DukaPay synchronizes on-chain Soroban events with the off-chain PostgreSQL database for fast querying and credit score updates.
 
 ## Role of the Event Indexer
 

@@ -1,6 +1,6 @@
 # Frontend Standard Library & Design Patterns
 
-This guide documents the UI components and design patterns used in the Remitlend frontend.
+This guide documents the UI components and design patterns used in the DukaPay frontend.
 
 ## Tech Stack
 - **Framework**: Next.js 16 (App Router)
