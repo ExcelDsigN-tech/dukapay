@@ -1,4 +1,4 @@
-//! Cross-layer money policy shared by every RemitLend contract.
+//! Cross-layer money policy shared by every DukaPay contract.
 //!
 //! This crate is the single place where stroop-denominated `i128` amounts are
 //! divided, rounded, or split pro-rata. Every contract that touches a stroop

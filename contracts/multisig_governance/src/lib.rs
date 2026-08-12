@@ -156,8 +156,8 @@ impl GovernanceContract {
     // ── Initialization ────────────────────────────────────────────────────────
 
     /// Initialize the governance contract.
-    /// `admin`           — current RemitLend admin.
-    /// `target_contract` — the RemitLend contract whose admin will be updated
+    /// `admin`           — current DukaPay admin.
+    /// `target_contract` — the DukaPay contract whose admin will be updated
     ///                     when finalize_admin_transfer is called.
     pub fn initialize(
         env: Env,
@@ -358,7 +358,7 @@ impl GovernanceContract {
     ///   1. now >= executable_after   (timelock elapsed)
     ///   2. approval_count >= threshold
     ///
-    /// Calls set_admin on the target RemitLend contract via cross-contract
+    /// Calls set_admin on the target DukaPay contract via cross-contract
     /// invocation. The target must expose:
     ///   pub fn set_admin(env: Env, new_admin: Address)
     /// and must verify the caller is this governance contract address.
@@ -403,7 +403,7 @@ impl GovernanceContract {
 
         let new_admin = pending.proposed_admin.clone();
 
-        // 1. Interactions: Cross-contract call to update global admin in the RemitLend protocol contract.
+        // 1. Interactions: Cross-contract call to update global admin in the DukaPay protocol contract.
         // If this call fails (panics/traps), the entire transaction will rollback by default in Soroban.
         // We call this FIRST to ensure the remote state change is attempted before committing local changes.
         env.invoke_contract::<()>(

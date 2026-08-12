@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Fuzz Testing Campaign Script for RemitLend Contracts
+# Fuzz Testing Campaign Script for DukaPay Contracts
 # This script runs comprehensive fuzz testing on all contracts
 
 set -e
 
-echo "🔍 Starting RemitLend Fuzz Testing Campaign"
+echo "🔍 Starting DukaPay Fuzz Testing Campaign"
 echo "=========================================="
 
 # Configuration
@@ -56,7 +56,7 @@ generate_report() {
     local report_file="$REPORT_DIR/summary_$(date +%Y%m%d_%H%M%S).md"
     
     cat > "$report_file" << EOF
-# RemitLend Fuzz Testing Report
+# DukaPay Fuzz Testing Report
 
 **Date:** $(date)
 **Fuzz Time per Target:** ${FUZZ_TIME}s
