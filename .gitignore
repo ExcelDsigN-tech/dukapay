@@ -22,3 +22,6 @@ checks.md
 
 # Teacher-only bug-hunt answer key (never commit)
 BUG_HUNT_ANSWER_KEY.md
+.agents
+data
+skills-lock.json
