@@ -22,7 +22,7 @@ interface ErrorFallbackProps {
   variant?: "page" | "section";
 }
 
-const REPORT_ISSUE_URL = "https://github.com/LabsCrypt/remitlend/issues/new";
+const REPORT_ISSUE_URL = "https://github.com/ExcelDsigN-tech/dukapay/issues/new";
 
 export function ErrorFallback({
   error,

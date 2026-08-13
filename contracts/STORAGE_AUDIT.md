@@ -1,7 +1,7 @@
 # Storage Audit
 
 > **Audit date:** 2026-03-25
-> **Pinned commit:** [`079dccf`](https://github.com/LabsCrypt/remitlend/commit/079dccf6b09f7a87ad61c790d923220d3da44317)
+> **Pinned commit:** [`079dccf`](https://github.com/ExcelDsigN-tech/dukapay/commit/079dccf6b09f7a87ad61c790d923220d3da44317)
 >
 > This document may drift as storage keys are added or removed.
 > Re-validate whenever contract storage changes land and update the date and
