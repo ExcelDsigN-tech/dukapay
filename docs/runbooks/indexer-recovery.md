@@ -168,7 +168,7 @@ Use this after a hotfix deployment to clear the quarantine backlog.
 
 ## 6. Escalation Contacts
 
-For incidents that cannot be resolved with the steps above, escalate via the [contributor Telegram group](https://t.me/+DOylgFv1jyJlNzM0).
+For incidents that cannot be resolved with the steps above, escalate to the on-call platform maintainer.
 
 When escalating, include:
 

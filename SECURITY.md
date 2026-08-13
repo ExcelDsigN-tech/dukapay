@@ -20,7 +20,7 @@ We take the security of our smart contracts, backend, and frontend seriously.
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-If you believe you have found a security vulnerability, please reach out to us via the [Contributor Telegram](https://t.me/+DOylgFv1jyJlNzM0) and request a private, encrypted contact channel for full disclosure. 
+If you believe you have found a security vulnerability, please contact us directly to request a private, encrypted channel for full disclosure. 
 
 ### What to include
 
