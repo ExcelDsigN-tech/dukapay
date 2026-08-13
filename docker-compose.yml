@@ -5,13 +5,13 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: remitlend
+      POSTGRES_DB: dukapay
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d remitlend"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dukapay"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -33,7 +33,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/remitlend
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/dukapay
       - REDIS_URL=redis://redis:6379
       - PII_KEK_ID=${PII_KEK_ID:-default-kek}
       - PII_KMS_ENDPOINT=${PII_KMS_ENDPOINT:-}

@@ -213,7 +213,7 @@ jobs:
             # Start DB first and wait for readiness
             docker-compose -f docker-compose.yml -f docker-compose.staging.resolved.yml up -d db
             for i in $(seq 1 30); do
-              if docker-compose -f docker-compose.yml -f docker-compose.staging.resolved.yml exec -T db pg_isready -U postgres -d remitlend >/dev/null 2>&1; then
+              if docker-compose -f docker-compose.yml -f docker-compose.staging.resolved.yml exec -T db pg_isready -U postgres -d dukapay >/dev/null 2>&1; then
                 echo "DB is ready"
                 break
               fi
@@ -221,7 +221,7 @@ jobs:
             done
 
             # If DB not ready after wait, fail
-            if ! docker-compose -f docker-compose.yml -f docker-compose.staging.resolved.yml exec -T db pg_isready -U postgres -d remitlend >/dev/null 2>&1; then
+            if ! docker-compose -f docker-compose.yml -f docker-compose.staging.resolved.yml exec -T db pg_isready -U postgres -d dukapay >/dev/null 2>&1; then
               echo "DB did not become ready"
               exit 1
             fi
