@@ -17,7 +17,7 @@ This document provides a set of guidelines for contributing to DukaPay and its p
 
 ## Code of Conduct
 
-By participating in this project, you agree to maintain a respectful, inclusive, and harassment-free environment for everyone. We are committed to providing a welcoming experience for contributors of all backgrounds and skill levels.
+By participating in this project, you agree to maintain a respectful, inclusive, and harassment-free environment for everyone. We are committed to providing a welcoming experience for contributors of all backgrounds and skill levels. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Development Workflow
 
