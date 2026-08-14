@@ -5,7 +5,8 @@
     "noEmit": false,
     "allowImportingTsExtensions": false,
     "declaration": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "rootDir": "./src"
   },
   "exclude": ["src/**/*.test.ts", "src/**/__tests__/**", "jest.config.ts"]
 }
