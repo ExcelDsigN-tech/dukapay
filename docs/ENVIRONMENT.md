@@ -106,7 +106,7 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | Variable                           | Dev | Staging | Prod | Default                                   | Description                                            | Source                                      |
 | ---------------------------------- | --- | ------- | ---- | ----------------------------------------- | ------------------------------------------------------ | ------------------------------------------- |
 | `NEXT_PUBLIC_API_URL`              | ✓   | ✓       | ✓    | `http://localhost:3001`                   | Backend API base URL                                   | `frontend/src/app/hooks/useApi.ts`          |
-| `NEXT_PUBLIC_APP_URL`              | ✓   | ✓       | ✓    | `https://remitlend.com`                   | Public-facing app URL used for absolute links          | `frontend/src/lib/canonicalUrl.ts`          |
+| `NEXT_PUBLIC_APP_URL`              | ✓   | ✓       | ✓    | `https://dukapay.com`                   | Public-facing app URL used for absolute links          | `frontend/src/lib/canonicalUrl.ts`          |
 | `NEXT_PUBLIC_SENTRY_DSN`           | —   | ✓       | ✓    | —                                         | Sentry DSN for frontend error tracking                 | `frontend/src/sentry.client.config.ts`      |
 | `SENTRY_DSN`                       | —   | ✓       | ✓    | —                                         | Sentry DSN server-side                                 | `frontend/src/sentry.server.config.ts`      |
 | `SENTRY_ORG`                       | —   | ✓       | ✓    | —                                         | Sentry organization slug                               | `frontend/sentry.client.config.ts`          |
