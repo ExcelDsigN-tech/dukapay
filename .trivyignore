@@ -17,3 +17,10 @@ CVE-2023-39325
 # Justification: Used only for internal logging serialization; untrusted JSON inputs are sanitized prior to parsing.
 # Review-by: 2026-10-15 (Pending v1.33.0 protobuf library release)
 CVE-2024-24786
+
+# CVE-2026-59873: node-tar gzip bomb DoS in tar prior to 7.5.19.
+# Justification: Detection is in npm's bundled tar (/usr/local/lib/node_modules/npm/node_modules/tar) shipped
+# inside the node:22-alpine base image. The backend application does not depend on tar (npm ls tar is empty)
+# and never extracts user-supplied archives, so there is no runtime path to the advisory.
+# Review-by: 2027-01-01 (Track upstream node:22-alpine bump that ships npm with tar >= 7.5.19)
+CVE-2026-59873
