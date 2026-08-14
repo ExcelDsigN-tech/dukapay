@@ -364,5 +364,43 @@
     "targetContract": "Target na kontrata",
     "expiresAt": "Mawawalan ng bisa",
     "timeToExecutable": "Oras hanggang sa maipatupad"
+  },
+  "Landing": {
+    "hero": {
+      "eyebrow": "Pananalapi nang walang hangganan",
+      "title": "Pumasok sa Citadel",
+      "tagline": "Magpahiram, umutang, at maglipat ng halaga sa kabila ng hangganan sa Stellar Network.",
+      "cta": "Pumasok sa Citadel",
+      "subCta": "Ikonekta ang wallet",
+      "tvl": "$1.2B+",
+      "tvlLabel": "Kabuuang naka-lock na halaga",
+      "yield": "4.8%",
+      "yieldLabel": "Average na kita"
+    },
+    "arsenal": {
+      "eyebrow": "Ang DukaPay Arsenal",
+      "title": "Lahat ng kailangan mo para lumago",
+      "subtitle": "Isang platform. Tatlong paraan para pagtrabahuhin ang iyong kapital.",
+      "lendTitle": "Magpahiram para kumita",
+      "lendDesc": "Kumita ng passive yield sa iyong mga deposito",
+      "questsTitle": "Gamified na Quest",
+      "questsDesc": "Kumita ng XP rewards para sa mga financial action",
+      "vaultsTitle": "Ligtas na Vaults",
+      "vaultsDesc": "Audited na smart contract infrastructure"
+    },
+    "verified": {
+      "eyebrow": "Verified Growth",
+      "title": "Itinayo para mapagkatiwalaan",
+      "audit": "Sertipikado",
+      "auditDesc": "Na-audit ng mga independiyenteng security firm",
+      "stellarTitle": "Stellar Network",
+      "stellarDesc": "Mababang bayad, mabilis na settlement, on-chain transparency"
+    },
+    "gates": {
+      "eyebrow": "Bubukas na ang mga Pintuan",
+      "title": "Kunin ang iyong lugar sa loob ng Citadel",
+      "subtitle": "Ikonekta ang iyong wallet para makakuha ng access.",
+      "cta": "Kunin ang Access"
+    }
   }
 }

@@ -364,5 +364,43 @@
     "targetContract": "Target contract",
     "expiresAt": "Expires at",
     "timeToExecutable": "Time to executable"
+  },
+  "Landing": {
+    "hero": {
+      "eyebrow": "Borderless Finance",
+      "title": "Enter the Citadel",
+      "tagline": "Lend, borrow, and move value across borders on the Stellar Network.",
+      "cta": "Enter the Citadel",
+      "subCta": "Connect Wallet",
+      "tvl": "$1.2B+",
+      "tvlLabel": "Total Value Locked",
+      "yield": "4.8%",
+      "yieldLabel": "Avg. Yield"
+    },
+    "arsenal": {
+      "eyebrow": "The DukaPay Arsenal",
+      "title": "Everything You Need to Grow",
+      "subtitle": "One platform. Three ways to put your capital to work.",
+      "lendTitle": "Lend to Earn",
+      "lendDesc": "Earn passive yield on deposited assets",
+      "questsTitle": "Gamified Quests",
+      "questsDesc": "Earn XP rewards for financial actions",
+      "vaultsTitle": "Secure Vaults",
+      "vaultsDesc": "Audited smart contract infrastructure"
+    },
+    "verified": {
+      "eyebrow": "Verified Growth",
+      "title": "Built to be trusted",
+      "audit": "Certified",
+      "auditDesc": "Audited by independent security firms",
+      "stellarTitle": "Stellar Network",
+      "stellarDesc": "Low fees, high-speed settlement, on-chain transparency"
+    },
+    "gates": {
+      "eyebrow": "The Gates are Opening",
+      "title": "Claim your place inside the Citadel",
+      "subtitle": "Connect your wallet to claim access.",
+      "cta": "Claim Access"
+    }
   }
 }

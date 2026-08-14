@@ -364,5 +364,43 @@
     "targetContract": "Contrato objetivo",
     "expiresAt": "Expira",
     "timeToExecutable": "Tiempo hasta ejecutable"
+  },
+  "Landing": {
+    "hero": {
+      "eyebrow": "Finanzas sin fronteras",
+      "title": "Entra a la Ciudadela",
+      "tagline": "Presta, toma prestado y mueve valor a través de las fronteras en la red Stellar.",
+      "cta": "Entra a la Ciudadela",
+      "subCta": "Conectar billetera",
+      "tvl": "$1.2B+",
+      "tvlLabel": "Valor total bloqueado",
+      "yield": "4.8%",
+      "yieldLabel": "Rendimiento promedio"
+    },
+    "arsenal": {
+      "eyebrow": "El Arsenal DukaPay",
+      "title": "Todo lo que necesitas para crecer",
+      "subtitle": "Una plataforma. Tres formas de poner tu capital a trabajar.",
+      "lendTitle": "Presta para ganar",
+      "lendDesc": "Gana rendimiento pasivo sobre tus depósitos",
+      "questsTitle": "Misiones gamificadas",
+      "questsDesc": "Gana recompensas XP por acciones financieras",
+      "vaultsTitle": "Bóvedas seguras",
+      "vaultsDesc": "Infraestructura de contratos inteligentes auditada"
+    },
+    "verified": {
+      "eyebrow": "Crecimiento verificado",
+      "title": "Construido para inspirar confianza",
+      "audit": "Certificado",
+      "auditDesc": "Auditado por firmas de seguridad independientes",
+      "stellarTitle": "Red Stellar",
+      "stellarDesc": "Comisiones bajas, liquidación rápida y transparencia on-chain"
+    },
+    "gates": {
+      "eyebrow": "Las puertas están abriéndose",
+      "title": "Reclama tu lugar dentro de la Ciudadela",
+      "subtitle": "Conecta tu billetera para reclamar tu acceso.",
+      "cta": "Reclamar acceso"
+    }
   }
 }
