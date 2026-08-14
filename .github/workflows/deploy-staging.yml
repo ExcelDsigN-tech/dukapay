@@ -145,7 +145,7 @@ jobs:
             'test -f /app/dist/index.js && echo "dist/index.js present"'
           echo "Verifying all production dependencies resolve (catches --omit=dev drift)..."
           docker run --rm "${REPO}:staging-${{ github.sha }}" node -e \
-            'const pkg=require("/app/package.json"); Object.keys(pkg.dependencies||{}).forEach(d=>require.resolve(d,{paths:["/app"]})); console.log("All production dependencies resolve");'
+            'const pkg=require("/app/package.json"); Object.keys(pkg.dependencies||{}).filter(d=>!d.startsWith("@types/")).forEach(d=>require.resolve(d,{paths:["/app"]})); console.log("All production dependencies resolve");'
           echo "Backend staging image passed the boot-validity smoke test."
 
       - name: Verify PII redaction in staging image
