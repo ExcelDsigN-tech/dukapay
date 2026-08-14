@@ -7,6 +7,7 @@ import { DashboardShell } from "./components/global_ui/DashboardShell";
 import { Toaster } from "./components/ui/Toaster";
 import { LevelUpModal } from "./components/gamification/LevelUpModal";
 import { GlobalXPGain } from "./components/global_ui/GlobalXPGain";
+import { StaleServiceWorkerCleanup } from "./components/dev/StaleServiceWorkerCleanup";
 import { ErrorBoundary } from "./components/global_ui/ErrorBoundary";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -60,6 +61,7 @@ export default async function RootLayout({
             <Toaster />
             <LevelUpModal />
             <GlobalXPGain />
+            <StaleServiceWorkerCleanup />
           </QueryProvider>
         </NextIntlClientProvider>
       </body>
