@@ -56,6 +56,7 @@ export const ERROR_CODE_MESSAGES: Record<string, string> = {
   DATABASE_ERROR: "Database error occurred",
   EXTERNAL_SERVICE_ERROR: "External service error occurred",
   BLOCKCHAIN_ERROR: "Blockchain operation failed",
+  SERVICE_UNAVAILABLE: "Service temporarily unavailable. Please try again",
   BORROWER_MISMATCH: "Borrower wallet mismatch",
   INSUFFICIENT_BALANCE: "Insufficient account balance",
   LOAN_ALREADY_REPAID: "Loan has already been repaid",
