@@ -67,6 +67,20 @@ export const ERROR_CODE_MESSAGES: Record<string, string> = {
 
 const DEFAULT_HORIZON_URL = "https://horizon-testnet.stellar.org";
 
+/**
+ * Backend ErrorCode values whose frontend category is more specific than
+ * "unknown". Codes not listed here fall back to the default below.
+ */
+const ERROR_CODE_CATEGORY: Record<string, TransactionErrorCategory> = {
+  INSUFFICIENT_BALANCE: "insufficient_balance",
+  RATE_LIMIT_EXCEEDED: "network_timeout",
+  SERVICE_UNAVAILABLE: "network_timeout",
+  EXTERNAL_SERVICE_ERROR: "network_timeout",
+  DATABASE_ERROR: "network_timeout",
+  INTERNAL_ERROR: "network_timeout",
+  BLOCKCHAIN_ERROR: "network_timeout",
+};
+
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -81,7 +95,66 @@ function toErrorMessage(error: unknown): string {
   }
 }
 
+/**
+ * Extract a structured backend ErrorCode from the error value, if present.
+ * Handles both a bare `{ code }` object and the backend error envelope
+ * `{ error: { code, message } }` produced by the API error handler.
+ */
+function extractErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+
+  const candidate = error as { code?: unknown; error?: { code?: unknown } };
+  const code = candidate.code ?? candidate.error?.code;
+  return typeof code === "string" && code.length > 0 ? code : undefined;
+}
+
+function mapKnownErrorCode(code: string): TransactionErrorDetails | undefined {
+  const message = ERROR_CODE_MESSAGES[code];
+  if (!message) return undefined;
+
+  const category = ERROR_CODE_CATEGORY[code] ?? "unknown";
+  const retryable = category === "network_timeout";
+  const cancelledByUser = false;
+
+  if (category === "insufficient_balance") {
+    return {
+      category,
+      title: "Insufficient balance",
+      message,
+      guidance: "Reduce the amount or fund your wallet, then try again.",
+      retryable,
+      cancelledByUser,
+    };
+  }
+
+  if (category === "network_timeout") {
+    return {
+      category,
+      title: "Service temporarily unavailable",
+      message,
+      guidance: "Check connectivity and retry. If it keeps failing, try again in a few minutes.",
+      retryable,
+      cancelledByUser,
+    };
+  }
+
+  return {
+    category,
+    title: "Transaction failed",
+    message,
+    guidance: "Review the details and try again.",
+    retryable,
+    cancelledByUser,
+  };
+}
+
 export function mapTransactionError(error: unknown): TransactionErrorDetails {
+  const code = extractErrorCode(error);
+  if (code) {
+    const mapped = mapKnownErrorCode(code);
+    if (mapped) return mapped;
+  }
+
   const rawMessage = toErrorMessage(error);
   const normalized = rawMessage.toLowerCase();
 

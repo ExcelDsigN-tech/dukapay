@@ -110,6 +110,23 @@ export const queryKeys = {
 // ─── Base fetch helper ────────────────────────────────────────────────────────
 
 /**
+ * Error thrown by apiFetch for non-2xx responses. Carries the structured
+ * backend ErrorCode (e.g. "INSUFFICIENT_BALANCE") when the API provided one,
+ * so callers can map it to a user-friendly message.
+ */
+export class ApiRequestError extends Error {
+  readonly code?: string;
+  readonly status: number;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/**
  * Thin fetch wrapper that:
  * - Prepends the API base URL
  * - Sets JSON Content-Type
@@ -155,7 +172,12 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       throw new Error("Session expired. Please sign in again.");
     }
     const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.message ?? `Request failed with status ${response.status}`);
+    const code = (error as { error?: { code?: string } }).error?.code;
+    throw new ApiRequestError(
+      error.message ?? `Request failed with status ${response.status}`,
+      response.status,
+      code,
+    );
   }
 
   return response.json() as Promise<T>;

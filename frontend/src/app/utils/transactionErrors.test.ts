@@ -86,6 +86,50 @@ describe("mapTransactionError", () => {
   });
 });
 
+describe("mapTransactionError with backend error codes", () => {
+  it("maps a bare { code } object to the known category", () => {
+    const result = mapTransactionError({ code: "INSUFFICIENT_BALANCE" });
+    expect(result).toMatchObject({
+      category: "insufficient_balance",
+      message: "Insufficient account balance",
+      retryable: false,
+    });
+  });
+
+  it("maps the backend error envelope { error: { code } }", () => {
+    const result = mapTransactionError({
+      success: false,
+      message: "Insufficient account balance",
+      error: { code: "INSUFFICIENT_BALANCE" },
+    });
+    expect(result.category).toBe("insufficient_balance");
+    expect(result.message).toMatch(/balance/);
+  });
+
+  it("maps SERVICE_UNAVAILABLE to a retryable network category", () => {
+    const result = mapTransactionError({ code: "SERVICE_UNAVAILABLE" });
+    expect(result).toMatchObject({
+      category: "network_timeout",
+      retryable: true,
+    });
+    expect(result.message).toMatch(/unavailable/i);
+  });
+
+  it("maps an ApiRequestError instance carrying a code", () => {
+    const error = new Error("Loan not found");
+    (error as Error & { code?: string }).code = "LOAN_NOT_FOUND";
+
+    const result = mapTransactionError(error);
+    expect(result.category).toBe("unknown");
+    expect(result.message).toMatch(/not found/i);
+  });
+
+  it("falls back to message matching for unknown codes", () => {
+    const result = mapTransactionError({ code: "NOPE", message: "User rejected the request" });
+    expect(result.category).toBe("wallet_rejected");
+  });
+});
+
 describe("ERROR_CODE_MESSAGES", () => {
   it("provides a message for every known backend error code", () => {
     const expectedCodes = [
