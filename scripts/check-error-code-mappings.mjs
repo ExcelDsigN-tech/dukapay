@@ -27,7 +27,7 @@ if (!enumMatch) {
 
 const enumBody = enumMatch[1];
 const errorCodeKeys = [];
-const keyRegex = /^\s*([A_Z0-9_]+)\s*=/gm;
+const keyRegex = /^\s*([A-Z0-9_]+)\s*=/gm;
 let match;
 
 while ((match = keyRegex.exec(enumBody)) !== null) {
