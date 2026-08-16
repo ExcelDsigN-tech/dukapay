@@ -32,34 +32,51 @@ function parseEnvKeys(filePath) {
   return keys;
 }
 
-function parseDocKeys(filePath) {
-  const content = readFileSync(filePath, "utf-8");
+function parseDocKeysInSection(content, sectionTitle) {
+  const lines = content.split("\n");
+  const sectionStart = lines.findIndex((l) => l.startsWith(sectionTitle));
+  if (sectionStart === -1) return null;
+
   const keys = [];
-  for (const line of content.split("\n")) {
+  for (let i = sectionStart + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith("## ") || line.startsWith("---") && i > sectionStart + 1) break;
     const match = line.match(/^\|\s*`([A-Z_][A-Z0-9_]*)`\s*\|/);
-    if (match) {
-      keys.push(match[1]);
-    }
+    if (match) keys.push(match[1]);
   }
   return keys;
 }
 
+const docPath = join(root, "docs", "ENVIRONMENT.md");
+const docContent = readFileSync(docPath, "utf-8");
+
 const envFiles = [
-  { path: join(root, "backend", ".env.example"), label: "backend/.env.example" },
-  { path: join(root, "frontend", ".env.example"), label: "frontend/.env.example" },
+  { path: join(root, "backend", ".env.example"), label: "backend/.env.example", section: "## Backend (" },
+  { path: join(root, "frontend", ".env.example"), label: "frontend/.env.example", section: "## Frontend (" },
+  { path: join(root, "scripts", ".env.example"), label: "scripts/.env.example", section: "## Contracts / Scripts (" },
 ];
 
-const docPath = join(root, "docs", "ENVIRONMENT.md");
-const docKeys = new Set(parseDocKeys(docPath));
+// DEMO_MODE is documented in its own "## Demo Mode" section but is a backend
+// variable. Fold it into the backend section's expected key set.
+const demoModeSection = parseDocKeysInSection(docContent, "## Demo Mode") ?? [];
 
 let exitCode = 0;
 
-for (const { path, label } of envFiles) {
+for (const { path, label, section } of envFiles) {
+  const docKeys = parseDocKeysInSection(docContent, section);
+  if (docKeys === null) {
+    console.error(`\n❌ docs/ENVIRONMENT.md is missing the section starting '${section}'`);
+    exitCode = 1;
+    continue;
+  }
+
+  const expected = section.startsWith("## Backend")
+    ? new Set([...docKeys, ...demoModeSection])
+    : new Set(docKeys);
+
   const envKeys = parseEnvKeys(path);
-  const missingInDoc = envKeys.filter((k) => !docKeys.has(k));
-  const unexpected = [...docKeys].filter(
-    (k) => !envKeys.includes(k) && (label.includes("backend") ? !k.startsWith("NEXT_PUBLIC_") : k.startsWith("NEXT_PUBLIC_"))
-  );
+  const missingInDoc = envKeys.filter((k) => !expected.has(k));
+  const unexpected = [...expected].filter((k) => !envKeys.includes(k));
 
   if (missingInDoc.length > 0) {
     console.error(`\n❌ [${label}] Keys missing from docs/ENVIRONMENT.md:`);
@@ -71,17 +88,6 @@ for (const { path, label } of envFiles) {
     console.error(`\n⚠️  [${label}] Keys in docs/ENVIRONMENT.md but not in .env.example:`);
     for (const k of unexpected) console.error(`   - ${k}`);
   }
-}
-
-// Also check that doc has the backend and frontend sections
-const docContent = readFileSync(docPath, "utf-8");
-if (!docContent.includes("## Backend")) {
-  console.error("\n❌ docs/ENVIRONMENT.md is missing '## Backend' section");
-  exitCode = 1;
-}
-if (!docContent.includes("## Frontend")) {
-  console.error("\n❌ docs/ENVIRONMENT.md is missing '## Frontend' section");
-  exitCode = 1;
 }
 
 if (exitCode === 0) {

@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel superseded runs for the same branch/PR to avoid wasting CI minutes
+# on commits that have already been replaced by newer ones.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   supply-chain-audit:
     runs-on: ubuntu-latest
@@ -55,6 +61,7 @@ jobs:
   backend:
     needs: [supply-chain-audit, money-policy]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js 20
@@ -133,6 +140,7 @@ jobs:
     needs: [supply-chain-audit, migration-paths]
     if: github.event_name == 'push' || needs.migration-paths.outputs.migrations == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
@@ -209,6 +217,7 @@ jobs:
   frontend:
     needs: [supply-chain-audit, money-policy]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js 20
@@ -261,6 +270,7 @@ jobs:
     needs: [supply-chain-audit, frontend]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'frontend/')
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js 20
@@ -314,6 +324,7 @@ jobs:
   contracts:
     needs: money-policy
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
