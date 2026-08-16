@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel superseded runs for the same branch/PR to avoid wasting CI minutes
+# on commits that have already been replaced by newer ones.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   supply-chain-audit:
     runs-on: ubuntu-latest
