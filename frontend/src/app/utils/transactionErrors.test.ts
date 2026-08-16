@@ -204,9 +204,7 @@ describe("pollTransactionStatus", () => {
       status: "success",
       message: "Transaction confirmed on-chain.",
     });
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://horizon.example/transactions/abc123",
-    );
+    expect(global.fetch).toHaveBeenCalledWith("https://horizon.example/transactions/abc123");
   });
 
   it("returns failed when the transaction did not succeed on-chain", async () => {
@@ -248,13 +246,11 @@ describe("pollTransactionStatus", () => {
 
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockResolvedValue({ status: 404, ok: false });
-    fetchMock
-      .mockResolvedValueOnce({ status: 404, ok: false })
-      .mockResolvedValueOnce({
-        status: 200,
-        ok: true,
-        json: async () => ({ successful: true }),
-      });
+    fetchMock.mockResolvedValueOnce({ status: 404, ok: false }).mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      json: async () => ({ successful: true }),
+    });
 
     const resultPromise = pollTransactionStatus(txHash, {
       horizonUrl: "https://horizon.example",
