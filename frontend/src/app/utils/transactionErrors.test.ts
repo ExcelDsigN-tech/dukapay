@@ -1,6 +1,7 @@
 import {
   mapTransactionError,
   ERROR_CODE_MESSAGES,
+  pollTransactionStatus,
 } from "./transactionErrors";
 
 describe("mapTransactionError", () => {
@@ -128,5 +129,134 @@ describe("ERROR_CODE_MESSAGES", () => {
   it("exposes human-readable messages", () => {
     expect(ERROR_CODE_MESSAGES.INVALID_AMOUNT).toMatch(/positive number/);
     expect(ERROR_CODE_MESSAGES.SERVICE_UNAVAILABLE).toMatch(/unavailable/i);
+  });
+});
+
+describe("pollTransactionStatus", () => {
+  const txHash = "abc123";
+
+  beforeEach(() => {
+    global.fetch = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  });
+
+  it("returns success when the transaction is successful on-chain", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({ successful: true }),
+    });
+
+    const result = await pollTransactionStatus(txHash, {
+      horizonUrl: "https://horizon.example",
+      timeoutMs: 10_000,
+    });
+
+    expect(result).toEqual({
+      status: "success",
+      message: "Transaction confirmed on-chain.",
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://horizon.example/transactions/abc123",
+    );
+  });
+
+  it("returns failed when the transaction did not succeed on-chain", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({ successful: false }),
+    });
+
+    const result = await pollTransactionStatus(txHash, {
+      horizonUrl: "https://horizon.example",
+      timeoutMs: 10_000,
+    });
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "Transaction failed on-chain.",
+    });
+  });
+
+  it("returns cancelled when the signal is aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await pollTransactionStatus(txHash, {
+      horizonUrl: "https://horizon.example",
+      timeoutMs: 10_000,
+      signal: controller.signal,
+    });
+
+    expect(result).toEqual({
+      status: "cancelled",
+      message: "Status tracking cancelled by user.",
+    });
+  });
+
+  it("polls repeatedly while the transaction is pending and returns success", async () => {
+    jest.useFakeTimers();
+
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({ status: 404, ok: false });
+    fetchMock
+      .mockResolvedValueOnce({ status: 404, ok: false })
+      .mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        json: async () => ({ successful: true }),
+      });
+
+    const resultPromise = pollTransactionStatus(txHash, {
+      horizonUrl: "https://horizon.example",
+      intervalMs: 1000,
+      timeoutMs: 5000,
+    });
+
+    await jest.advanceTimersByTimeAsync(1000);
+    const result = await resultPromise;
+
+    expect(result).toEqual({
+      status: "success",
+      message: "Transaction confirmed on-chain.",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns timeout when the transaction stays pending past the timeout", async () => {
+    jest.useFakeTimers();
+
+    (global.fetch as jest.Mock).mockResolvedValue({ status: 404, ok: false });
+
+    const resultPromise = pollTransactionStatus(txHash, {
+      horizonUrl: "https://horizon.example",
+      intervalMs: 1000,
+      timeoutMs: 3000,
+    });
+
+    await jest.advanceTimersByTimeAsync(3000);
+    const result = await resultPromise;
+
+    expect(result.status).toBe("timeout");
+    expect(result.message).toMatch(/still pending/);
+  });
+
+  it("throws when the status endpoint returns an unexpected error", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      status: 500,
+      ok: false,
+    });
+
+    await expect(
+      pollTransactionStatus(txHash, {
+        horizonUrl: "https://horizon.example",
+        timeoutMs: 10_000,
+      }),
+    ).rejects.toThrow("Unable to fetch transaction status (500)");
   });
 });
