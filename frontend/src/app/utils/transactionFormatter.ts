@@ -13,6 +13,19 @@ import type {
 
 // ─── Transaction Type Formatters ─────────────────────────────────────────────
 
+/**
+ * Mask an on-chain address as `prefix...suffix`, returning it unchanged when it
+ * is too short to mask without the truncated segments overlapping.
+ */
+function maskAddress(address: string): string {
+  const head = 8;
+  const tail = 6;
+  if (address.length <= head + tail) {
+    return address;
+  }
+  return `${address.slice(0, head)}...${address.slice(-tail)}`;
+}
+
 export interface LoanRequestParams {
   amount: number;
   borrower: string;
@@ -44,7 +57,7 @@ export function formatLoanRequest(params: LoanRequestParams): TransactionPreview
       amount: params.amount.toString(),
       token: "USDC",
       details: {
-        "Borrower Address": `${params.borrower.slice(0, 8)}...${params.borrower.slice(-6)}`,
+        "Borrower Address": maskAddress(params.borrower),
         "Loan Status": "Pending Approval",
       },
     },
@@ -186,14 +199,11 @@ export function formatRemittanceSend(params: {
   const operations: TransactionOperation[] = [
     {
       type: "Send Remittance",
-      description: `You are sending ${params.amount} ${params.token} to ${params.recipient.slice(
-        0,
-        8,
-      )}...${params.recipient.slice(-6)}`,
+      description: `You are sending ${params.amount} ${params.token} to ${maskAddress(params.recipient)}`,
       amount: params.amount.toString(),
       token: params.token,
       details: {
-        Recipient: `${params.recipient.slice(0, 8)}...${params.recipient.slice(-6)}`,
+        Recipient: maskAddress(params.recipient),
         "Transfer Type": "Cross-border Remittance",
         "Credit Score Impact": "+5 points",
       },
