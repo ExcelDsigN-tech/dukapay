@@ -6,6 +6,7 @@ import { Button } from "../ui/Button";
 import { AlertTriangle, ArrowRight, Info, Fuel } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { maskAddress } from "../../utils/address";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -76,7 +77,7 @@ export function TransactionPreviewModal({
           </div>
           {data.contractAddress && (
             <span className="text-xs text-gray-500 dark:text-zinc-500 font-mono">
-              {data.contractAddress.slice(0, 8)}...{data.contractAddress.slice(-6)}
+              {maskAddress(data.contractAddress)}
             </span>
           )}
         </div>

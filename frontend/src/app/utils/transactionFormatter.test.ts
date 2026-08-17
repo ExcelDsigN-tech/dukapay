@@ -32,9 +32,7 @@ describe("transaction formatter", () => {
     it("exposes a positive USDC balance change", () => {
       const result = formatLoanRequest({ amount: 100, borrower: LONG_ADDRESS });
 
-      expect(result.balanceChanges).toEqual([
-        { token: "USDC", change: "100", isPositive: true },
-      ]);
+      expect(result.balanceChanges).toEqual([{ token: "USDC", change: "100", isPositive: true }]);
     });
   });
 
@@ -51,9 +49,7 @@ describe("transaction formatter", () => {
     it("exposes a negative USDC balance change", () => {
       const result = formatLoanRepayment({ loanId: 1, amount: 10 });
 
-      expect(result.balanceChanges).toEqual([
-        { token: "USDC", change: "-10", isPositive: false },
-      ]);
+      expect(result.balanceChanges).toEqual([{ token: "USDC", change: "-10", isPositive: false }]);
     });
   });
 
@@ -107,9 +103,7 @@ describe("transaction formatter", () => {
         token: "USDC",
       });
 
-      expect(result.balanceChanges).toEqual([
-        { token: "USDC", change: "-30", isPositive: false },
-      ]);
+      expect(result.balanceChanges).toEqual([{ token: "USDC", change: "-30", isPositive: false }]);
     });
 
     it("masks short recipient addresses without truncation overlap", () => {

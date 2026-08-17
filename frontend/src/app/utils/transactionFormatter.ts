@@ -5,6 +5,7 @@
  * Converts contract calls and blockchain operations into clear, user-friendly text.
  */
 
+import { maskAddress } from "./address";
 import type {
   TransactionOperation,
   BalanceChange,
@@ -12,19 +13,6 @@ import type {
 } from "../components/transaction/TransactionPreviewModal";
 
 // ─── Transaction Type Formatters ─────────────────────────────────────────────
-
-/**
- * Mask an on-chain address as `prefix...suffix`, returning it unchanged when it
- * is too short to mask without the truncated segments overlapping.
- */
-function maskAddress(address: string): string {
-  const head = 8;
-  const tail = 6;
-  if (address.length <= head + tail) {
-    return address;
-  }
-  return `${address.slice(0, head)}...${address.slice(-tail)}`;
-}
 
 export interface LoanRequestParams {
   amount: number;
