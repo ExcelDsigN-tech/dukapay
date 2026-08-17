@@ -100,8 +100,8 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
           category: trivy-backend
@@ -127,8 +127,8 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Upload frontend Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('frontend-trivy-results.sarif') != ''
         with:
           sarif_file: 'frontend-trivy-results.sarif'
           category: trivy-frontend
