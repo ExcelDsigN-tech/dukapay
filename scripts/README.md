@@ -19,13 +19,13 @@ Deploys, initializes, and links contracts on Stellar networks.
 cd scripts && npm install
 
 # Run deployment to testnet
-SECRET_KEY=S... npx ts-node deploy.ts testnet
+SECRET_KEY=S... npm run deploy -- testnet
 ```
 
 ## Configuration
 
 - `deploy-config.json`: Contains network RPC URLs, passphrase, and initial contract parameters.
-- `.env`: (Optional) Can store `SECRET_KEY`, `RPC_URL`, etc.
+- `.env`: (Optional) Can store `SECRET_KEY`, the deployer's secret key. Network settings (RPC URL, passphrase) are read from `deploy-config.json`.
 
 ## Workflow
 

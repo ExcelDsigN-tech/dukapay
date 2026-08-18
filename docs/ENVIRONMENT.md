@@ -125,12 +125,11 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 
 ## Contracts / Scripts (`contracts/`, `scripts/`)
 
-| Variable                     | Dev | Staging | Prod | Default                               | Description                                | Source              |
-| ---------------------------- | --- | ------- | ---- | ------------------------------------- | ------------------------------------------ | ------------------- |
-| `SOROBAN_RPC_URL`            | ✓   | ✓       | ✓    | `https://soroban-testnet.stellar.org` | RPC URL for contract deployment            | `scripts/deploy.ts` |
-| `SOROBAN_NETWORK_PASSPHRASE` | ✓   | ✓       | ✓    | `Test SDF Network ; September 2015`   | Network passphrase for contract operations | `scripts/deploy.ts` |
-| `SOROBAN_ACCOUNT`            | ✓   | ✓       | ✓    | —                                     | Deployer account secret key                | `scripts/deploy.ts` |
-| `DEPLOY_CONFIG_PATH`         | —   | ✓       | ✓    | `scripts/deploy-config.json`          | Path to deploy configuration               | `scripts/deploy.ts` |
+| Variable     | Dev | Staging | Prod | Default | Description                 | Source              |
+| ------------ | --- | ------- | ---- | ------- | --------------------------- | ------------------- |
+| `SECRET_KEY` | ✓   | ✓       | ✓    | —       | Deployer account secret key | `scripts/deploy.ts` |
+
+Network RPC URL, passphrase, admin and token for contract deployment are read from `scripts/deploy-config.json`, not from environment variables.
 
 ---
 
