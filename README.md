@@ -50,7 +50,7 @@ The backend exposes interactive Swagger UI at [http://localhost:3001/docs](http:
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or higher)
+- [Node.js](https://nodejs.org/) (v20 or higher)
 - [npm](https://www.npmjs.com/)
 - [Docker & Docker Compose](https://www.docker.com/) (recommended)
 - [Rust & Cargo](https://rustup.rs/) (contract development)
