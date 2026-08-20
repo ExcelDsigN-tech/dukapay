@@ -5,7 +5,32 @@ labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
-      value: "Thanks for taking the time to suggest a feature!"
+      value: |
+        Thanks for taking the time to suggest a feature!
+
+        **Title format:** Start the title with a component prefix, e.g. `[frontend] Add offline balance caching`. See CONTRIBUTING.md for the full prefix list.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Component
+      description: Which part of DukaPay does this affect?
+      multiple: false
+      options:
+        - backend
+        - contracts
+        - frontend
+        - sdk
+        - indexer
+        - scripts
+        - docs
+        - ci
+        - infra
+        - security
+        - tests
+        - ops
+        - product
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:

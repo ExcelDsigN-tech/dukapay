@@ -85,6 +85,28 @@ We strictly follow the [Conventional Commits](https://www.conventionalcommits.or
 
 **Example**: `feat(contracts): add flash loan prevention to lending pool`
 
+## Issue Title Prefixes
+
+Every issue title **must** start with a bracketed component prefix so it is clear which part of DukaPay the work touches and so the issue can be mapped to a Drips Wave complexity tier. Choose the single most relevant prefix.
+
+| Prefix | Scope | Example |
+| :--- | :--- | :--- |
+| `[backend]` | API routes, services, middleware, database logic | `[backend] Add loan repayment preview endpoint` |
+| `[contracts]` | Soroban/Rust smart contracts, money policy | `[contracts] Implement settlement-netter contract` |
+| `[frontend]` | Next.js/React UI, i18n, client-side flows | `[frontend] Serwist does not support Next.js Turbopack in dev` |
+| `[sdk]` | TypeScript SDK package (`sdk/`) | `[sdk] Build TypeScript SDK package` |
+| `[indexer]` | Event indexer tooling (`indexer/`, indexer services) | `[indexer] Standalone Rust event indexer` |
+| `[scripts]` | Deploy, tooling, and load-test scripts (`scripts/`) | `[scripts] Add testnet deploy automation` |
+| `[docs]` | Documentation, wiki, API docs, Swagger/OpenAPI alignment | `[docs] Swagger/OpenAPI alignment audit` |
+| `[ci]` | CI/CD workflows, badges, supply-chain checks | `[ci] CI status badges` |
+| `[infra]` | Docker, environment/config drift, deployment infrastructure | `[infra] Env drift sweep` |
+| `[security]` | Secrets, PII crypto, signing, compliance, sanctions screening | `[security] PII key rotation (KEK/DEK)` |
+| `[tests]` | Test suites, parity tests, E2E coverage, load-test baselines | `[tests] Money-parity tests` |
+| `[ops]` | Operations tooling, monitoring, admin dashboards | `[ops] Admin operations center` |
+| `[product]` | Cross-cutting product flows spanning multiple components | `[product] Agent-to-agent float transfer flow` |
+
+Issue templates in `.github/ISSUE_TEMPLATE/` include a **Component** selector to help pick the right prefix.
+
 ## Pull Request Standards
 
 When opening a PR, ensure your description includes:

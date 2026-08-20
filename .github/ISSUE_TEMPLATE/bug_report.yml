@@ -5,7 +5,32 @@ labels: ["bug"]
 body:
   - type: markdown
     attributes:
-      value: "Thanks for taking the time to fill out this bug report!"
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+        **Title format:** Start the title with a component prefix, e.g. `[frontend] Balance widget shows stale value`. See CONTRIBUTING.md for the full prefix list.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Component
+      description: Which part of DukaPay does this affect?
+      multiple: false
+      options:
+        - backend
+        - contracts
+        - frontend
+        - sdk
+        - indexer
+        - scripts
+        - docs
+        - ci
+        - infra
+        - security
+        - tests
+        - ops
+        - product
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
