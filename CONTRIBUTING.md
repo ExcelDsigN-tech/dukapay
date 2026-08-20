@@ -19,6 +19,10 @@ This document provides a set of guidelines for contributing to DukaPay and its p
 
 By participating in this project, you agree to maintain a respectful, inclusive, and harassment-free environment for everyone. We are committed to providing a welcoming experience for contributors of all backgrounds and skill levels. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
+## Community
+
+Join the [DukaPay Telegram community](https://t.me/+eRqhka27TVo0NzM8) to discuss the project, ask questions, and coordinate with other contributors.
+
 ## Development Workflow
 
 We follow a **Feature-Branch-to-Main** workflow. All development work should happen in feature branches and be merged into `main` via Pull Requests.
