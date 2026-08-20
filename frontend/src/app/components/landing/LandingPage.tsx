@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   HandCoins,
   Landmark,
+  Send,
   ShieldCheck,
   Sparkles,
   Trophy,
@@ -79,6 +80,15 @@ export function LandingPage({ onConnect }: LandingPageProps) {
             <WalletCards className="h-5 w-5" aria-hidden="true" />
             {t("hero.cta")}
           </button>
+          <a
+            href={t("hero.telegramUrl")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0ECFCF]/40 bg-[#0ECFCF]/10 px-7 py-3.5 text-base font-bold text-[#0ECFCF] transition-all hover:bg-[#0ECFCF]/20 focus-visible:ring-2 focus-visible:ring-[#0ECFCF]"
+          >
+            <Send className="h-5 w-5" aria-hidden="true" />
+            {t("hero.telegram")}
+          </a>
           <span className="text-sm font-medium text-[#64748B]">{t("hero.subCta")}</span>
         </div>
       </section>

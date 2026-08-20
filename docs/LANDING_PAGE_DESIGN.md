@@ -84,6 +84,7 @@ Designed the "The Gates are Opening" closing module to drive user acquisition:
 - Platform name + tagline
 - TVL and Avg. Yield metrics in large type
 - "Enter the Citadel" primary CTA button
+- "Join our Telegram" secondary CTA linking to the community group (https://t.me/+eRqhka27TVo0NzM8)
 
 ### Arsenal Feature List
 - Section header: "Everything You Need to Grow"

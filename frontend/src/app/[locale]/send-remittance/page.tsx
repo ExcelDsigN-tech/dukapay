@@ -153,10 +153,12 @@ export default function SendRemittancePage() {
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Need help?
             <a
-              href="#"
+              href="https://t.me/+eRqhka27TVo0NzM8"
+              target="_blank"
+              rel="noopener noreferrer"
               className="ml-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 focus-visible:ring-2 focus-visible:ring-focus-ring rounded px-1"
             >
-              Contact Support
+              Contact Support on Telegram
             </a>
           </p>
         </div>

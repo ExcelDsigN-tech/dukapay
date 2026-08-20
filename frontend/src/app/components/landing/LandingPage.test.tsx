@@ -9,6 +9,8 @@ const EN: Record<string, string> = {
   "hero.tagline": "Lend, borrow, and move value across borders on the Stellar Network.",
   "hero.cta": "Enter the Citadel",
   "hero.subCta": "Connect Wallet",
+  "hero.telegram": "Join our Telegram",
+  "hero.telegramUrl": "https://t.me/+eRqhka27TVo0NzM8",
   "hero.tvl": "$1.2B+",
   "hero.tvlLabel": "Total Value Locked",
   "hero.yield": "4.8%",
@@ -107,5 +109,13 @@ describe("LandingPage", () => {
 
     expect(screen.getByRole("button", { name: EN["hero.cta"] })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: "Claim Access" })).not.toBeDisabled();
+  });
+
+  it("renders a Telegram community link pointing to the group", () => {
+    render(<LandingPage onConnect={mockOnConnect} />);
+
+    const telegram = screen.getByRole("link", { name: EN["hero.telegram"] });
+    expect(telegram).toHaveAttribute("href", EN["hero.telegramUrl"]);
+    expect(telegram).toHaveAttribute("target", "_blank");
   });
 });
