@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dukapay
+  labels:
+    istio-injection: enabled
+    security.istio.io/tlsMode: istio
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    istio-injection: enabled
+    security.istio.io/tlsMode: istio

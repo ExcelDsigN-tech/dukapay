@@ -1,0 +1,33 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: admin-access
+  namespace: dukapay
+spec:
+  selector:
+    matchLabels:
+      access-tier: admin
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            requestPrincipals: ["https://accounts.google.com/*"]
+      to:
+        - operation:
+            paths: ["/admin/*"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: admin-deny-direct
+  namespace: dukapay
+spec:
+  podSelector:
+    matchLabels:
+      access-tier: admin
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system

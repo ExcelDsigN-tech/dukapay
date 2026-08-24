@@ -159,5 +159,15 @@ Refer to [`contracts/FUZZING_README.md`](contracts/FUZZING_README.md) for full s
 - **TypeScript**: Use functional components and hooks. Prefer `interface` over `type`. Ensure strict typing.
 - **Rust**: Follow standard Rust naming conventions and maintain idiomatic code.
 
+## Secure Development
+
+For changes to authentication, authorization, payments, smart contracts, PII,
+secrets, dependencies, or deployment boundaries:
+
+- Copy `.github/THREAT_MODEL.md`, complete the STRIDE analysis, and attach it to the PR.
+- Request review from a security champion using `.github/SECURITY_CHAMPIONS.md`.
+- Run the repository pre-commit hooks before pushing (`pre-commit run --all-files`).
+- Treat all security-gate failures as blocking until the finding is fixed or explicitly reviewed.
+
 ---
 Thank you for contributing to DukaPay! 🚀

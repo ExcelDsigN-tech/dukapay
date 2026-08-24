@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "notifications": {"severity": {"low": ["security-oncall"], "medium": ["security-oncall", "engineering-leads"], "high": ["security-oncall", "engineering-leads", "legal"], "critical": ["security-oncall", "engineering-leads", "legal", "executive", "communications"]}},
+  "runbooks": {
+    "key-compromise": {"severity": "critical", "containment": ["revoke_tokens", "quarantine_namespace", "disable_affected_credentials"], "evidence": ["collect_audit_logs", "collect_pod_logs", "snapshot_workloads"]},
+    "contract-exploit": {"severity": "critical", "containment": ["pause_contracts", "quarantine_namespace", "revoke_tokens"], "evidence": ["collect_audit_logs", "collect_chain_events", "snapshot_workloads"]},
+    "data-breach": {"severity": "critical", "containment": ["quarantine_namespace", "revoke_tokens", "preserve_database_access"], "evidence": ["collect_audit_logs", "collect_pod_logs", "snapshot_database_metadata"]},
+    "ddos": {"severity": "high", "containment": ["enable_rate_limits", "enable_circuit_breakers", "quarantine_namespace"], "evidence": ["collect_gateway_metrics", "collect_audit_logs"]},
+    "insider-threat": {"severity": "high", "containment": ["revoke_tokens", "disable_affected_credentials", "preserve_database_access"], "evidence": ["collect_audit_logs", "snapshot_workloads"]},
+    "auth-bypass": {"severity": "high", "containment": ["revoke_tokens", "quarantine_namespace"], "evidence": ["collect_audit_logs", "collect_gateway_metrics"]},
+    "payment-integrity": {"severity": "critical", "containment": ["pause_payments", "revoke_tokens", "quarantine_namespace"], "evidence": ["collect_audit_logs", "collect_chain_events"]},
+    "dependency-compromise": {"severity": "high", "containment": ["disable_deployments", "revoke_tokens"], "evidence": ["collect_ci_logs", "collect_artifact_hashes"]},
+    "credential-leak": {"severity": "high", "containment": ["revoke_tokens", "disable_affected_credentials"], "evidence": ["collect_audit_logs", "collect_ci_logs"]},
+    "service-takeover": {"severity": "critical", "containment": ["quarantine_namespace", "revoke_tokens", "disable_affected_credentials"], "evidence": ["collect_audit_logs", "collect_pod_logs", "snapshot_workloads"]}
+  }
+}
