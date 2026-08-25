@@ -291,6 +291,16 @@ impl AgentVault {
         to: Address,
         amount: i128,
     ) -> Result<(), VaultError> {
+        // `from` and `to` must differ: read_vault(from) and read_vault(to)
+        // would otherwise alias the same storage key, and the second
+        // write_vault call below would silently clobber the first, minting
+        // `amount` of float out of thin air for the agent on every
+        // self-transfer. Checked before require_auth so a self-transfer
+        // never needs (and can't double-request) authorization for the
+        // same address.
+        if from == to {
+            return Err(VaultError::InvalidParams);
+        }
         from.require_auth();
         to.require_auth();
         if amount <= 0 {

@@ -16,7 +16,10 @@ jobs:
     name: Semgrep SAST
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep:latest
+      # Pinned to a specific release, not `latest`: a mutable tag lets a
+      # compromised or buggy upstream image silently change what every PR
+      # is scanned with.
+      image: semgrep/semgrep:1.174.0
     steps:
       - uses: actions/checkout@v4
       - run: semgrep scan --config p/ci --error --exclude='**/node_modules/**' --exclude='**/target/**'
@@ -28,7 +31,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      # Pinned to a commit SHA (not the `v2` tag) so the action's code can't
+      # change under us without a reviewed bump here — a tag can be
+      # repointed by whoever controls the upstream repo.
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -37,7 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@master
+      # Was pinned to `@master`, a mutable branch — the least hermetic
+      # reference possible for a security-scanning action. Pinned to a
+      # commit SHA on a tagged release instead.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: .

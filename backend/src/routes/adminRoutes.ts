@@ -6,6 +6,7 @@ import { strictRateLimiter } from '../middleware/rateLimiter.js';
 import { validateBody } from '../middleware/validation.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { auditLog } from '../middleware/auditLog.js';
+import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import { defaultChecker } from '../services/defaultChecker.js';
 import {
   createWebhookSubscription,
@@ -37,6 +38,7 @@ router.post(
   requireJwtAuth,
   requireRoles('admin'),
   auditLog,
+  idempotencyMiddleware,
   buildRejectLoanTx,
 );
 /**
@@ -93,6 +95,8 @@ router.get('/loan-disputes', requireApiKey('admin:disputes'), listLoanDisputes);
 router.post(
   '/loan-disputes/:disputeId/resolve',
   requireApiKey('admin:disputes'),
+  auditLog,
+  idempotencyMiddleware,
   resolveLoanDispute,
 );
 // New admin JWT-protected endpoints
@@ -102,12 +106,16 @@ router.post(
   '/disputes/:disputeId/resolve',
   requireJwtAuth,
   requireRoles('admin'),
+  auditLog,
+  idempotencyMiddleware,
   resolveLoanDispute,
 );
 router.post(
   '/disputes/:disputeId/reject',
   requireJwtAuth,
   requireRoles('admin'),
+  auditLog,
+  idempotencyMiddleware,
   rejectLoanDispute,
 );
 
@@ -160,6 +168,7 @@ router.post(
   requireApiKey('admin:loans'),
   strictRateLimiter,
   auditLog,
+  idempotencyMiddleware,
   validateBody(checkDefaultsBodySchema),
   asyncHandler(async (req, res) => {
     const result = await defaultChecker.checkOverdueLoans(req.body.loanIds);

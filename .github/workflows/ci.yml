@@ -128,7 +128,9 @@ jobs:
       migrations: ${{ steps.filter.outputs.migrations }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      # Pinned to a commit SHA, not the `v3` tag: a tag is mutable and can
+      # be repointed upstream without review on our side.
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
         id: filter
         with:
           filters: |
@@ -325,13 +327,19 @@ jobs:
     needs: money-policy
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+        # Pinned to a commit SHA, not the `v2` tag (see other pins in this
+        # workflow for rationale).
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: |
             contracts
@@ -378,8 +386,24 @@ jobs:
           name: contracts-wasm
           path: contracts/target/wasm32-unknown-unknown/release/*.wasm
           if-no-files-found: error
+      # SLSA build provenance: generates a signed (Sigstore keyless, via
+      # GitHub's OIDC token) in-toto attestation binding these wasm
+      # artifacts to this workflow run, commit, and builder. Verify with
+      # `gh attestation verify <file> --repo <owner>/<repo>`.
+      #
+      # Restricted to `push` (i.e. post-merge on main): GitHub does not
+      # issue OIDC tokens to `pull_request` runs triggered from a fork, so
+      # this step cannot succeed there — and attesting a build from an
+      # unmerged fork PR isn't meaningful provenance anyway.
+      - name: Attest wasm build provenance
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: contracts/target/wasm32-unknown-unknown/release/*.wasm
       - name: Install tarpaulin
-        uses: taiki-e/install-action@v2
+        # Pinned to a commit SHA, not the `v2` tag (see other pins in this
+        # workflow for rationale).
+        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2
         with:
           tool: cargo-tarpaulin
       - name: Run coverage
