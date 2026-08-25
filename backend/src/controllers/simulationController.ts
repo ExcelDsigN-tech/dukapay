@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { query } from '../db/connection.js';
 import { sorobanService } from '../services/sorobanService.js';
 import { fromStroops, MoneyError } from '../money/decimal.js';
+import { transactionSimulationService } from '../services/transactionSimulationService.js';
 
 /**
  * `contract_events.amount` is a Postgres `NUMERIC` column holding an integer
@@ -124,4 +125,17 @@ export const simulatePayment = asyncHandler(async (req: Request, res: Response) 
     message: `A payment of ${amount} would increase your estimated credit score from ${currentScore} to ${newScore}.`,
     newScore,
   });
+});
+
+export const simulateTransaction = asyncHandler(async (req: Request, res: Response) => {
+  const { contractId, function: function_, args, sourceAccount } = req.body;
+
+  const result = await transactionSimulationService.simulateTransaction(
+    contractId,
+    function_,
+    args ?? [],
+    sourceAccount,
+  );
+
+  res.json(result);
 });

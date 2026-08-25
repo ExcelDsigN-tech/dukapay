@@ -411,6 +411,34 @@ impl AgentVault {
     pub fn get_owner(env: Env) -> Result<Address, VaultError> {
         Self::owner(&env)
     }
+
+    // ── Invariant enforcement ──────────────────────────────────────────
+
+    /// View function that checks whether a single agent's vault satisfies
+    /// the core solvency invariant: `float <= collateral * haircut_bps / 10_000`.
+    /// Returns `(holds, float, max_allowed)` so the indexer can log the
+    /// result and trigger alerts when the invariant is violated.
+    pub fn check_invariant(env: Env, agent: Address) -> (bool, i128, i128) {
+        let vault = Self::read_vault(&env, &agent);
+        let max_allowed = Self::max_float_of(vault.collateral, vault.haircut_bps);
+        let holds = vault.float <= max_allowed;
+        events::invariant_checked(&env, &agent, holds, vault.float, max_allowed);
+        (holds, vault.float, max_allowed)
+    }
+
+    /// Batch invariant check across multiple agents. Returns a Vec of
+    /// `(agent, holds, float, max_allowed)` tuples. Useful for periodic
+    /// off-chain verification by the indexer.
+    pub fn check_invariants(env: Env, agents: Vec<Address>) -> Vec<(Address, bool, i128, i128)> {
+        let mut results: Vec<(Address, bool, i128, i128)> = Vec::new(&env);
+        for agent in agents.iter() {
+            let vault = Self::read_vault(&env, &agent);
+            let max_allowed = Self::max_float_of(vault.collateral, vault.haircut_bps);
+            let holds = vault.float <= max_allowed;
+            results.push_back((agent, holds, vault.float, max_allowed));
+        }
+        results
+    }
 }
 
 #[cfg(test)]
