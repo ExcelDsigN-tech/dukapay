@@ -250,6 +250,29 @@ fn test_transfer_float_atomic() {
     );
 }
 
+/// Regression test: transferring float to yourself must be rejected, not
+/// silently double-credited. `transfer_float` reads `from`'s and `to`'s
+/// vaults into two separate in-memory structs, then writes each back with
+/// `write_vault`. When `from == to` both reads observe the same starting
+/// balance and the second write clobbers the first, so a naive
+/// implementation nets the agent `+amount` float per call with no
+/// corresponding mint or collateral movement — an unbounded free-float
+/// exploit that also breaks the global solvency invariant.
+#[test]
+fn test_transfer_float_rejects_self_transfer() {
+    let s = setup();
+    let a = agent(&s.env);
+    fund(&s, &a, 1_000);
+    s.client.mint_float(&a, &500);
+
+    assert_eq!(
+        s.client.try_transfer_float(&a, &a, &100),
+        Err(Ok(VaultError::InvalidParams))
+    );
+    // Float must be unchanged — no free minting via self-transfer.
+    assert_eq!(s.client.get_vault(&a).float, 500);
+}
+
 #[test]
 fn test_transfer_float_respects_recipient_bound() {
     let s = setup();
