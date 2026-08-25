@@ -390,7 +390,13 @@ jobs:
       # GitHub's OIDC token) in-toto attestation binding these wasm
       # artifacts to this workflow run, commit, and builder. Verify with
       # `gh attestation verify <file> --repo <owner>/<repo>`.
+      #
+      # Restricted to `push` (i.e. post-merge on main): GitHub does not
+      # issue OIDC tokens to `pull_request` runs triggered from a fork, so
+      # this step cannot succeed there — and attesting a build from an
+      # unmerged fork PR isn't meaningful provenance anyway.
       - name: Attest wasm build provenance
+        if: github.event_name == 'push'
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-path: contracts/target/wasm32-unknown-unknown/release/*.wasm
