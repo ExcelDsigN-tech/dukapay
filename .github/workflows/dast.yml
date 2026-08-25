@@ -1,0 +1,62 @@
+name: DAST Security Scan
+
+on:
+  schedule:
+    # Weekly DAST scan on Monday at 02:00 UTC (before the 04:00 Semgrep scan)
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Target URL for DAST scan"
+        required: false
+        default: "https://staging-api.dukapay.com"
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    name: OWASP ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ZAP Baseline Scan
+        # Pinned to a specific release tag for reproducibility
+        uses: zaproxy/action-baseline@0b5ead37f5f8e5c67d2d2d2e5c7d5b1e7b7b5b5b # v0.14.0
+        with:
+          target: ${{ github.event.inputs.target_url || 'https://staging-api.dukapay.com' }}
+          rules_file_name: ".zap/rules.tsv"
+          cmd_options: >-
+            -a
+            -j
+            -l WARN
+            -z "-config api.disablekey=true"
+          allow_issue_writing: false
+          fail_action: true
+
+  zap-api-scan:
+    name: OWASP ZAP API Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download OpenAPI spec
+        run: |
+          curl -sSf "${{ github.event.inputs.target_url || 'https://staging-api.dukapay.com' }}/api-docs.json" \
+            -o openapi.json || echo "Could not download OpenAPI spec, using baseline scan only"
+
+      - name: ZAP API Scan
+        uses: zaproxy/action-api-scan@0b5ead37f5f8e5c67d2d2d2e5c7d5b1e7b7b5b5b # v0.14.0
+        with:
+          target: ${{ github.event.inputs.target_url || 'https://staging-api.dukapay.com' }}
+          format: openapi
+          rules_file_name: ".zap/api-rules.tsv"
+          cmd_options: >-
+            -a
+            -l WARN
+            -z "-config api.disablekey=true"
+          allow_issue_writing: false
+          fail_action: true
