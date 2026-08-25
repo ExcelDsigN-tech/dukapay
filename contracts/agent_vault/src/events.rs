@@ -38,3 +38,8 @@ pub fn haircut_updated(env: &Env, agent: &Address, old: u32, new: u32) {
     let topics = (Symbol::new(env, "HaircutUpdated"), agent.clone());
     env.events().publish(topics, (old, new));
 }
+
+pub fn vault_circuit_breaker_set(env: &Env, breaker: Option<Address>) {
+    let topics = (Symbol::new(env, "VaultCircuitBreakerSet"),);
+    env.events().publish(topics, breaker);
+}

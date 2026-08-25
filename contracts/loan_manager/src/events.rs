@@ -194,3 +194,8 @@ pub fn loan_purged(env: &Env, loan_id: u32) {
     let topics = (Symbol::new(env, "LoanPurged"),);
     env.events().publish(topics, loan_id);
 }
+
+pub fn loan_circuit_breaker_set(env: &Env, breaker: Option<Address>) {
+    let topics = (Symbol::new(env, "LoanCircuitBreakerSet"),);
+    env.events().publish(topics, breaker);
+}

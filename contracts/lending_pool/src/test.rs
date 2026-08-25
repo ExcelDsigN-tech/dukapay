@@ -2,7 +2,7 @@ use crate::{events, LendingPool, LendingPoolClient};
 use soroban_sdk::testutils::{Address as _, Events as _, Ledger as _};
 use soroban_sdk::token::Client as TokenClient;
 use soroban_sdk::token::StellarAssetClient;
-use soroban_sdk::{Address, BytesN, Env, FromVal, IntoVal, TryFromVal};
+use soroban_sdk::{Address, BytesN, Env, FromVal, IntoVal, Symbol, TryFromVal};
 
 fn create_token_contract<'a>(
     env: &Env,
@@ -1971,4 +1971,78 @@ fn test_round_trip_deposit_then_redeem_is_never_profitable() {
 
         pool_client.withdraw(&provider, &token_id, &shares, &0);
     }
+}
+
+// ── Circuit breaker integration ──────────────────────────────────────────────
+
+#[soroban_sdk::contract]
+pub struct MockBreaker;
+
+#[soroban_sdk::contractimpl]
+impl MockBreaker {
+    pub fn set_blocked(env: Env, blocked: bool) {
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "blk"), &blocked);
+    }
+
+    pub fn is_blocked(env: Env, _contract: Address, _function: Symbol) -> bool {
+        env.storage()
+            .instance()
+            .get(&Symbol::new(&env, "blk"))
+            .unwrap_or(false)
+    }
+}
+
+#[test]
+#[should_panic(expected = "#15")]
+fn test_deposit_blocked_by_circuit_breaker() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token_admin = Address::generate(&env);
+    let (token_id, stellar_asset_client, _token_client) = create_token_contract(&env, &token_admin);
+
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&token_admin);
+    pool_client.set_withdrawal_cooldown(&0);
+
+    let breaker_id = env.register(MockBreaker, ());
+    let breaker_client = MockBreakerClient::new(&env, &breaker_id);
+    breaker_client.set_blocked(&true);
+    pool_client.set_circuit_breaker(&Some(breaker_id.clone()));
+
+    // The configured breaker reports the pool as blocked, so deposit must revert.
+    let provider = Address::generate(&env);
+    stellar_asset_client.mint(&provider, &5000);
+    pool_client.deposit(&provider, &token_id, &3000, &0);
+}
+
+#[test]
+fn test_deposit_resumes_when_circuit_breaker_clears() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token_admin = Address::generate(&env);
+    let (token_id, stellar_asset_client, token_client) = create_token_contract(&env, &token_admin);
+
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&token_admin);
+    pool_client.set_withdrawal_cooldown(&0);
+
+    let breaker_id = env.register(MockBreaker, ());
+    let breaker_client = MockBreakerClient::new(&env, &breaker_id);
+    breaker_client.set_blocked(&true);
+    pool_client.set_circuit_breaker(&Some(breaker_id.clone()));
+    assert!(pool_client.is_circuit_blocked(&Symbol::new(&env, "deposit")));
+
+    breaker_client.set_blocked(&false);
+    assert!(!pool_client.is_circuit_blocked(&Symbol::new(&env, "deposit")));
+
+    let provider = Address::generate(&env);
+    stellar_asset_client.mint(&provider, &5000);
+    pool_client.deposit(&provider, &token_id, &3000, &0);
+    assert_eq!(token_client.balance(&pool_id), 3000);
 }

@@ -2,11 +2,19 @@
 // Lending pool contract for DukaPay.
 use soroban_sdk::token::Client as TokenClient;
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, Address, BytesN, Env, Symbol,
+    contract, contractclient, contracterror, contractimpl, contracttype, symbol_short, Address,
+    BytesN, Env, Symbol,
 };
 
 mod events;
 use events::*;
+
+/// Interface exposed by the DukaPay `CircuitBreaker` contract. The lending
+/// pool consults `is_blocked` at the top of every value-moving entry point.
+#[contractclient(name = "BreakerClient")]
+pub trait BreakerInterface {
+    fn is_blocked(env: Env, contract: Address, function: Symbol) -> bool;
+}
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -21,7 +29,7 @@ pub enum PoolError {
     InvalidMaxPoolSize = 9,
     NoProposedAdmin = 10,
     CooldownTooLong = 11,
-    /// `deposit` would mint fewer shares than the caller's `min_shares_out`.
+    /// `deposit` would mint fewer shares than the caller's `min_shaxt_out`.
     MinSharesNotMet = 12,
     /// `redeem`/`withdraw` would return fewer assets than the caller's
     /// `min_assets_out`.
@@ -29,6 +37,8 @@ pub enum PoolError {
     /// The computed share/asset amount for an operation rounded down to
     /// zero, so no value would actually move.
     ZeroShares = 14,
+    /// A global, contract, or function-level circuit-breaker pause is active.
+    CircuitBreakerTripped = 15,
 }
 
 /// Storage keys.
@@ -45,6 +55,9 @@ pub enum PoolError {
 pub enum DataKey {
     Admin,
     Paused,
+    /// Optional address of the DukaPay CircuitBreaker contract. When set, the
+    /// pool consults it before executing value-moving operations.
+    CircuitBreaker,
     WithdrawalCooldown,
     /// token → max pool size cap (0 = unlimited)
     MaxPoolSize(Address),
@@ -248,6 +261,25 @@ impl LendingPool {
         Ok(())
     }
 
+    /// Revert if the configured `CircuitBreaker` has tripped a pause that
+    /// covers this pool and `fn_sym`. When no breaker is configured this is a
+    /// no-op, so the pool remains fully backward compatible.
+    fn assert_circuit_ok(env: &Env, fn_sym: Symbol) -> Result<(), PoolError> {
+        Self::bump_instance_ttl(env);
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(env, &breaker);
+            if client.is_blocked(&env.current_contract_address(), &fn_sym) {
+                return Err(PoolError::CircuitBreakerTripped);
+            }
+        }
+        Ok(())
+    }
+
     // ── Share / asset math ────────────────────────────────────────────────
 
     /// LP shares to mint for `amount` of deposited assets.
@@ -432,6 +464,9 @@ impl LendingPool {
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Paused, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::CircuitBreaker, &None::<Address>);
         env.storage().instance().set(
             &DataKey::WithdrawalCooldown,
             &Self::DEFAULT_WITHDRAWAL_COOLDOWN,
@@ -555,6 +590,7 @@ impl LendingPool {
     ) -> Result<(), PoolError> {
         provider.require_auth();
         Self::assert_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, symbol_short!("deposit"))?;
 
         if amount <= 0 {
             return Err(PoolError::InvalidAmount);
@@ -702,6 +738,7 @@ impl LendingPool {
     ) -> Result<(), PoolError> {
         from.require_auth();
         Self::assert_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "distribute_yield"))?;
 
         if amount <= 0 {
             return Err(PoolError::InvalidAmount);
@@ -817,6 +854,7 @@ impl LendingPool {
     ) -> Result<(), PoolError> {
         provider.require_auth();
         Self::assert_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, symbol_short!("withdraw"))?;
         Self::assert_withdrawal_cooldown_elapsed(&env, &provider, &token);
         Self::redeem_shares(&env, &provider, &token, shares, min_assets_out)
     }
@@ -970,6 +1008,33 @@ impl LendingPool {
             .instance()
             .get(&DataKey::Paused)
             .unwrap_or(false)
+    }
+
+    /// Configure (or clear with `None`) the `CircuitBreaker` contract address
+    /// the pool consults before value-moving operations. Admin only.
+    pub fn set_circuit_breaker(env: Env, breaker: Option<Address>) {
+        Self::admin(&env).require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::CircuitBreaker, &breaker);
+        Self::bump_instance_ttl(&env);
+        pool_circuit_breaker_set(&env, breaker);
+    }
+
+    /// True when the active `CircuitBreaker` currently blocks this pool and
+    /// `function`. Returns false when no breaker is configured.
+    pub fn is_circuit_blocked(env: Env, function: Symbol) -> bool {
+        Self::bump_instance_ttl(&env);
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(&env, &breaker);
+            return client.is_blocked(&env.current_contract_address(), &function);
+        }
+        false
     }
 
     pub fn get_total_outstanding(env: Env, token: Address) -> i128 {

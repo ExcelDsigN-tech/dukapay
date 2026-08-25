@@ -707,6 +707,16 @@
                         "key": {
                           "vec": [
                             {
+                              "symbol": "CircuitBreaker"
+                            }
+                          ]
+                        },
+                        "val": "void"
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
                               "symbol": "Paused"
                             }
                           ]
@@ -783,6 +793,16 @@
                         "val": {
                           "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
                         }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "CircuitBreaker"
+                            }
+                          ]
+                        },
+                        "val": "void"
                       },
                       {
                         "key": {
