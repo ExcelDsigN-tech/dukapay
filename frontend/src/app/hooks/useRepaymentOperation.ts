@@ -32,6 +32,7 @@ import {
   submitPoolTransaction,
   queryKeys,
 } from "./useApi";
+import { enqueueRepayment } from "../../lib/offlineQueue";
 
 interface RepaymentOperationOptions {
   loanId: number;
@@ -64,6 +65,30 @@ export function useRepaymentOperation(options?: {
       setError(null);
 
       try {
+        // If offline, enqueue the repayment for background sync and return a queued result
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          await enqueueRepayment({ loanId, amount, borrowerAddress });
+          try {
+            if ("serviceWorker" in navigator && "SyncManager" in window) {
+              const reg = await navigator.serviceWorker.ready;
+              // register background sync to process queued repayments
+              await (reg as any).sync.register("sync-repayments");
+            }
+          } catch (swErr) {
+            // Non-fatal
+            // eslint-disable-next-line no-console
+            console.error("Background sync register failed", swErr);
+          }
+
+          transaction.submit(`queued-${Date.now()}`, "Queued for background sync");
+          transaction.confirm("Will retry when online");
+          transaction.complete(`queued-${Date.now()}`);
+
+          const result = { txHash: `queued-${Date.now()}`, status: "success" as const };
+          options?.onSuccess?.(result);
+          return result;
+        }
+
         transaction.updateProgress(20, "Submitting repayment...");
 
         // useRepayLoan handles the full submit flow with optimistic cache updates

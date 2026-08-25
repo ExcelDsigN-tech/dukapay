@@ -232,7 +232,111 @@ export function WalletProvider({ children }: WalletProviderProps) {
   }
 
   function disconnectWallet() {
+    // Update app state immediately
     disconnect();
+
+    // Perform cleanup asynchronously: unregister service workers, clear caches,
+    // remove wallet-related storage/indexedDB entries, then force a reload.
+    (async () => {
+      try {
+        // Unregister service workers
+        if (typeof navigator !== "undefined" && 'serviceWorker' in navigator) {
+          try {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map((r) => r.unregister()));
+          } catch (swErr) {
+            // Non-fatal: log and continue
+            // eslint-disable-next-line no-console
+            console.error("Service worker unregister failed:", swErr);
+          }
+        }
+
+        // Clear Cache Storage (all caches) — especially PWA cached responses
+        if (typeof caches !== "undefined") {
+          try {
+            const cacheKeys = await caches.keys();
+            await Promise.all(cacheKeys.map((k) => caches.delete(k)));
+          } catch (cacheErr) {
+            // eslint-disable-next-line no-console
+            console.error("Cache clear failed:", cacheErr);
+          }
+        }
+
+        // Heuristic wallet-related storage key prefixes to remove from local/session storage
+        const walletKeyPrefixes = ["wallet", "freighter", "dukapay", "stellar", "albedo", "xbull"];
+
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && walletKeyPrefixes.some((p) => key.toLowerCase().startsWith(p))) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch (lsErr) {
+          // eslint-disable-next-line no-console
+          console.error("localStorage clear failed:", lsErr);
+        }
+
+        try {
+          for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const key = sessionStorage.key(i);
+            if (key && walletKeyPrefixes.some((p) => key.toLowerCase().startsWith(p))) {
+              sessionStorage.removeItem(key);
+            }
+          }
+        } catch (ssErr) {
+          // eslint-disable-next-line no-console
+          console.error("sessionStorage clear failed:", ssErr);
+        }
+
+        // IndexedDB: delete databases whose name includes wallet-related substrings
+        try {
+          const idbAny = indexedDB as unknown as { databases?: () => Promise<Array<{ name?: string }>> };
+          if (typeof idbAny.databases === "function") {
+            const dbs = await idbAny.databases();
+            await Promise.all(
+              dbs.map(async (db) => {
+                try {
+                  const name = db.name;
+                  if (name && walletKeyPrefixes.some((p) => name.toLowerCase().includes(p))) {
+                    await new Promise<void>((resolve, reject) => {
+                      const req = indexedDB.deleteDatabase(name);
+                      req.onsuccess = () => resolve();
+                      req.onerror = () => reject(req.error);
+                      req.onblocked = () => resolve();
+                    });
+                  }
+                } catch (e) {
+                  // eslint-disable-next-line no-console
+                  console.error("IndexedDB delete failed for", db.name, e);
+                }
+              }),
+            );
+          }
+        } catch (idbErr) {
+          // eslint-disable-next-line no-console
+          console.error("IndexedDB cleanup failed:", idbErr);
+        }
+
+        // Finally force a full page reload to ensure no stale auth/service-worker state
+        try {
+          // Use location.replace to avoid keeping stale history entry
+          window.location.replace(window.location.href);
+        } catch (reloadErr) {
+          // Fallback to reload
+          // eslint-disable-next-line no-console
+          console.error("Force reload failed, falling back to location.reload():", reloadErr);
+          window.location.reload();
+        }
+      } catch (err) {
+        // Ensure we always reload to get a clean state
+        // eslint-disable-next-line no-console
+        console.error("Disconnect cleanup unexpected error:", err);
+        try {
+          window.location.reload();
+        } catch {}
+      }
+    })();
   }
 
   const NETWORK_PASSPHRASES: Record<string, string> = {
