@@ -9,6 +9,7 @@ import {
   webhookService,
 } from './webhookService.js';
 import { eventStreamService } from './eventStreamService.js';
+import { pubsubService } from './pubsubService.js';
 import { notificationService, type NotificationType } from './notificationService.js';
 import { sorobanService } from './sorobanService.js';
 import { updateUserScoresBulk } from './scoresService.js';
@@ -719,6 +720,23 @@ export class EventIndexer {
         ledgerClosedAt: event.ledgerClosedAt.toISOString(),
         txHash: event.txHash,
       });
+
+      // Also publish to Redis so other instances can forward to their SSE clients
+      try {
+        await pubsubService.publish({
+          eventId: event.eventId,
+          eventType: event.eventType,
+          loanId: event.loanId,
+          address: event.address,
+          amount: event.amount,
+          amountDisplay: event.amountDisplay,
+          ledger: event.ledger,
+          ledgerClosedAt: event.ledgerClosedAt,
+          txHash: event.txHash,
+        });
+      } catch (e) {
+        logger.withContext().error('Redis publish failed', { err: e });
+      }
 
       this.triggerNotification(event).catch((error) => {
         logger.withContext().error('Notification trigger failed', {

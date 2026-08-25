@@ -21,6 +21,7 @@ import {
   stopWebhookRetryProcessor,
 } from './services/webhookRetryProcessor.js';
 import { eventStreamService } from './services/eventStreamService.js';
+import { pubsubService } from './services/pubsubService.js';
 import {
   startNotificationCleanupScheduler,
   stopNotificationCleanupScheduler,
@@ -95,6 +96,16 @@ const server = app.listen(port, () => {
 
   // Start loan due check cron
   startLoanDueCheckCron();
+
+  // Initialize Redis subscriber to receive events from other instances
+  pubsubService.initSubscriber((payload) => {
+    try {
+      // Forward to local SSE clients
+      eventStreamService.broadcast(payload as any);
+    } catch (e) {
+      logger.withContext().error('Failed to forward pubsub SSE payload', { err: e });
+    }
+  });
 
   // Wire up and activate the score decay daily scheduler loop
   scoreDecaySchedulerHandle = startScoreDecayScheduler() || null;

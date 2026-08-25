@@ -16,6 +16,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
+    "i18n:validate": "node ./scripts/validate-i18n.js",
     "prepare": "husky || true"
   },
   "dependencies": {
