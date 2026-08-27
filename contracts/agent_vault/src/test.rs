@@ -291,6 +291,20 @@ fn test_transfer_float_respects_recipient_bound() {
     assert_eq!(s.client.get_vault(&b).float, 400);
 }
 
+#[test]
+fn test_transfer_to_agent_atomic() {
+    let s = setup();
+    let a = agent(&s.env);
+    let b = agent(&s.env);
+    fund(&s, &a, 1_000);
+    fund(&s, &b, 1_000);
+    s.client.mint_float(&a, &500);
+    s.client.transfer_to_agent(&a, &b, &300);
+
+    assert_eq!(s.client.get_vault(&a).float, 200);
+    assert_eq!(s.client.get_vault(&b).float, 300);
+}
+
 // ── Settlement ───────────────────────────────────────────────────────────────
 
 #[test]
@@ -444,7 +458,7 @@ fn test_mint_float_requires_operator() {
 // ── Invariant checks ────────────────────────────────────────────────────────
 
 #[test]
-fn test_check_invariant_holds_for solvent_vault() {
+fn test_check_invariant_holds_for_solvent_vault() {
     let s = setup();
     let a = agent(&s.env);
     fund(&s, &a, 1_000);
