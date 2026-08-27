@@ -326,6 +326,17 @@ impl AgentVault {
         Ok(())
     }
 
+    /// Agent-to-agent float transfer entrypoint (Soroban cross-agent liquidity).
+    /// Atomic float transfer between agents. Both initiator and recipient must authorise.
+    pub fn transfer_to_agent(
+        env: Env,
+        from: Address,
+        to: Address,
+        amount: i128,
+    ) -> Result<(), VaultError> {
+        Self::transfer_float(env, from, to, amount)
+    }
+
     /// Operator nets end-of-day positions. `entries` is a list of
     /// `(agent, delta)`; deltas must sum to zero (float conserved across the
     /// batch). Each agent's resulting float must stay in `[0, max_float]`.
