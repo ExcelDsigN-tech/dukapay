@@ -23,6 +23,7 @@ import eventRoutes from './routes/eventRoutes.js';
 import remittanceRoutes from './routes/remittanceRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import privacyRoutes from './routes/privacyRoutes.js';
+import agentRoutes from './routes/agentRoutes.js';
 import { registerStatusRoutes } from './routes/statusRoutes.js';
 import { requireApiKey } from './middleware/auth.js';
 import { globalRateLimiter } from './middleware/rateLimiter.js';
@@ -301,6 +302,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/remittances', remittanceRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/agents', agentRoutes);
 
 // Versioned API routes (v1 - current)
 app.use('/api/v1', simulationRoutes);
@@ -315,6 +317,7 @@ app.use('/api/v1/pool', poolRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/privacy', privacyRoutes);
+app.use('/api/v1/agents', agentRoutes);
 app.use('/user', userRoutes);
 
 mountSwaggerDocs(app);
