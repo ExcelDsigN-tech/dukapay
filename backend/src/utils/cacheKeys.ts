@@ -22,6 +22,15 @@ export const CacheKeys = {
   // Credit-score breakdown (getScoreBreakdown)
   scoreBreakdown: (publicKey: string) => `score:breakdown:${publicKey}`,
 
+  // Leaderboard (getLeaderboard) - 60s TTL
+  leaderboard: () => 'score:leaderboard',
+
+  // Pool & Protocol Analytics (getAnalytics) - 300s TTL
+  analytics: () => 'pool:analytics',
+
+  // Agent Dashboard (getAgentDashboard) - 30s TTL
+  agentDashboard: (agentAddress: string) => `agent:dashboard:${agentAddress}`,
+
   // Idempotency / unsigned-tx keys – loan
   pendingLoanTx: (borrower: string, amount: number) => `pending_loan_tx:${borrower}:${amount}`,
 
@@ -45,6 +54,8 @@ export async function invalidateOnRepay(borrower: string, _loanId: number): Prom
     cacheService.delete(CacheKeys.poolStats()),
     cacheService.delete(CacheKeys.borrowerLoans(borrower)),
     cacheService.delete(CacheKeys.scoreBreakdown(borrower)),
+    cacheService.delete(CacheKeys.leaderboard()),
+    cacheService.delete(CacheKeys.analytics()),
   ]);
 }
 
@@ -56,6 +67,7 @@ export async function invalidateOnLoanRequest(borrower: string): Promise<void> {
   await Promise.all([
     cacheService.delete(CacheKeys.poolStats()),
     cacheService.delete(CacheKeys.borrowerLoans(borrower)),
+    cacheService.delete(CacheKeys.analytics()),
   ]);
 }
 
@@ -64,7 +76,10 @@ export async function invalidateOnLoanRequest(borrower: string): Promise<void> {
  * Call this after the DB transaction commits inside depositToPool.
  */
 export async function invalidateOnDeposit(_depositor: string): Promise<void> {
-  await cacheService.delete(CacheKeys.poolStats());
+  await Promise.all([
+    cacheService.delete(CacheKeys.poolStats()),
+    cacheService.delete(CacheKeys.analytics()),
+  ]);
 }
 
 /**
@@ -72,5 +87,16 @@ export async function invalidateOnDeposit(_depositor: string): Promise<void> {
  * Call this after the DB transaction commits inside withdrawFromPool.
  */
 export async function invalidateOnWithdraw(_depositor: string): Promise<void> {
-  await cacheService.delete(CacheKeys.poolStats());
+  await Promise.all([
+    cacheService.delete(CacheKeys.poolStats()),
+    cacheService.delete(CacheKeys.analytics()),
+  ]);
 }
+
+export async function invalidateOnAgentMutation(agentAddress: string): Promise<void> {
+  await Promise.all([
+    cacheService.delete(CacheKeys.agentDashboard(agentAddress)),
+    cacheService.delete(CacheKeys.analytics()),
+  ]);
+}
+
