@@ -1,0 +1,32 @@
+# Environment files
+.env
+.env.local
+
+# Results (generated dynamically)
+results/*.json
+results/*.html
+!results/.gitkeep
+
+# Keep example baseline but ignore others unless committed
+baselines/*.json
+!baselines/.gitkeep
+!baselines/example-baseline.json
+
+# k6 output files
+output.json
+summary.json
+
+# Node modules (if needed)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
