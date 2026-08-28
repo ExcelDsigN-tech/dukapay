@@ -4,8 +4,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/backend"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
     open-pull-requests-limit: 5
     groups:
       backend-minor-patch:
@@ -23,8 +22,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
     open-pull-requests-limit: 5
     groups:
       frontend-minor-patch:
@@ -47,8 +45,7 @@ updates:
   - package-ecosystem: "cargo"
     directory: "/contracts"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
     open-pull-requests-limit: 5
     groups:
       contracts-minor-patch:
@@ -64,12 +61,23 @@ updates:
       - dependency-name: "soroban-token-sdk"
         update-types: ["version-update:semver-major"]
 
+  # Cargo fuzz harness is excluded from the main contracts workspace and has
+  # its own lockfile, so it needs a separate update entry.
+  - package-ecosystem: "cargo"
+    directory: "/contracts/fuzz"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 3
+    groups:
+      fuzz-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
   # ── GitHub Actions ────────────────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
     open-pull-requests-limit: 5
     groups:
       actions-minor-patch:
@@ -78,3 +86,14 @@ updates:
         update-types:
           - "minor"
           - "patch"
+
+  # npm: repository automation scripts
+  - package-ecosystem: "npm"
+    directory: "/scripts"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    groups:
+      scripts-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

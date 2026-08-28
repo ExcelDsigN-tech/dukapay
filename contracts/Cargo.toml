@@ -8,6 +8,7 @@ members = [
   "multisig_governance",
   "agent_registry",
   "agent_vault",
+  "audit_anchor",
 ]
 exclude = [
   "fuzz",

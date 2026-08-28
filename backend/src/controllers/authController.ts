@@ -29,16 +29,33 @@ import {
   revokeToken,
 } from '../services/authService.js';
 import logger from '../utils/logger.js';
+import { complianceService } from '../services/complianceService.js';
 
 const logAuthFailure = (req: Request, publicKey: string | undefined, reason: string): void => {
   logger.warn('Auth attempt failed', {
     ip: req.ip,
-    publicKey,
+    hasPublicKey: Boolean(publicKey),
     reason,
     path: req.path,
     method: req.method,
   });
 };
+
+export const submitKyc = asyncHandler(async (req: Request, res: Response) => {
+  const subjectId = req.user?.publicKey;
+  if (!subjectId) throw AppError.unauthorized('Authentication required');
+  const result = await complianceService.screenApplicant({
+    subjectId,
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    dateOfBirth: req.body.dateOfBirth,
+    countryCode: req.body.countryCode,
+  });
+  res.status(result.status === 'approved' ? 200 : 202).json({
+    success: true,
+    data: { status: result.status, providerReference: result.providerReference },
+  });
+});
 
 export const requestChallenge = (req: Request, res: Response): void => {
   const { publicKey } = req.body;
