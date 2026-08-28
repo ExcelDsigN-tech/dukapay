@@ -41,9 +41,9 @@ const metricsInterval = setInterval(() => {
 // Unref the interval so it doesn't keep the process alive
 metricsInterval.unref();
 
-// Set statement_timeout on every newly acquired connection
+// Set statement_timeout on every newly acquired connection (parameterized — issue #406)
 pool.on('connect', (client) => {
-  client.query(`SET statement_timeout = ${statementTimeoutMillis}`);
+  client.query('SET statement_timeout = $1', [statementTimeoutMillis]);
 });
 
 // Log idle client errors
