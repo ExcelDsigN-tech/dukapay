@@ -418,3 +418,51 @@ jobs:
       - name: Check fuzz targets compile
         run: cargo check
         working-directory: contracts/fuzz
+
+  indexer:
+    needs: supply-chain-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: indexer
+      - name: Format check
+        run: cargo fmt --all -- --check
+        working-directory: indexer
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+        working-directory: indexer
+      - name: Test
+        run: cargo test
+        working-directory: indexer
+
+  sdk:
+    needs: supply-chain-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: sdk
+      - name: Type check
+        run: npm run typecheck
+        working-directory: sdk
+      - name: Test
+        run: npm test
+        working-directory: sdk
+      - name: Build
+        run: npm run build
+        working-directory: sdk

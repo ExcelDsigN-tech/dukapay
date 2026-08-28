@@ -1,0 +1,107 @@
+# DukaPay standalone Rust event indexer.
+#
+# Horizontal scaling model: each replica is a *shard*. Set INDEXER_SHARD_TOTAL to
+# the replica count and give each pod its ordinal via the StatefulSet's
+# POD_NAME → INDEXER_SHARD_INDEX. Contracts are assigned to shards
+# deterministically, so scaling out simply redistributes contracts.
+apiVersion: v1
+kind: Service
+metadata:
+  name: dukapay-indexer
+  namespace: dukapay
+  labels: { app: dukapay-indexer }
+spec:
+  clusterIP: None
+  selector: { app: dukapay-indexer }
+  ports:
+    - name: metrics
+      port: 9464
+      targetPort: 9464
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dukapay-indexer
+  namespace: dukapay
+spec:
+  serviceName: dukapay-indexer
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels: { app: dukapay-indexer }
+  template:
+    metadata:
+      labels: { app: dukapay-indexer }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9464"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: indexer
+          image: ghcr.io/exceldsign-tech/dukapay-indexer:latest
+          ports:
+            - { name: metrics, containerPort: 9464 }
+          env:
+            # StatefulSet pod names end in -0, -1, ...; the indexer extracts the
+            # trailing ordinal from the pod name as its shard index.
+            - name: INDEXER_SHARD_INDEX
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: INDEXER_SHARD_TOTAL
+              value: "3"
+            - name: INDEXER_RPC_URL
+              valueFrom: { secretKeyRef: { name: dukapay-indexer, key: rpc-url } }
+            - name: INDEXER_CONTRACT_IDS
+              valueFrom: { configMapKeyRef: { name: dukapay-indexer, key: contract-ids } }
+            - name: INDEXER_CHECKPOINT_DSN
+              valueFrom: { secretKeyRef: { name: dukapay-indexer, key: checkpoint-dsn } }
+            - name: INDEXER_SINK
+              value: "kafka"
+            - name: INDEXER_KAFKA_BROKERS
+              valueFrom: { configMapKeyRef: { name: dukapay-indexer, key: kafka-brokers } }
+            - name: INDEXER_KAFKA_TOPIC
+              value: "dukapay.contract-events"
+            - name: INDEXER_WORKER_CONCURRENCY
+              value: "8"
+            - name: INDEXER_POLL_INTERVAL_MS
+              value: "2000"
+            - name: INDEXER_LOG_FORMAT
+              value: "json"
+          readinessProbe:
+            httpGet: { path: /readyz, port: 9464 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 9464 }
+            periodSeconds: 15
+          resources:
+            requests: { cpu: "250m", memory: "128Mi" }
+            limits: { cpu: "1", memory: "512Mi" }
+---
+# Scale on ingest lag rather than CPU: the custom metric `indexer_ledger_lag`
+# must be exposed to the k8s metrics adapter (e.g. prometheus-adapter).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: dukapay-indexer
+  namespace: dukapay
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: dukapay-indexer
+  minReplicas: 3
+  maxReplicas: 12
+  metrics:
+    - type: Pods
+      pods:
+        metric: { name: indexer_ledger_lag }
+        target:
+          type: AverageValue
+          averageValue: "50"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
