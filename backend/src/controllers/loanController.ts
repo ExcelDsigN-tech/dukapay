@@ -13,6 +13,7 @@ import { cacheService } from '../services/cacheService.js';
 import { notificationService } from '../services/notificationService.js';
 import { invalidateOnRepay, invalidateOnLoanRequest } from '../utils/cacheKeys.js';
 import { roundToCents } from '../money/decimal.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 
 // ─── Test/Dev Only ────────────────────────────────────────────────────────────
 
@@ -161,6 +162,9 @@ export const contestDefault = asyncHandler(
       throw AppError.unauthorized('Authentication required');
     }
 
+    // Sanitize user-provided HTML before storage (issue #407)
+    const sanitizedReason = sanitizeHtml(reason);
+
     // Check loan exists and is defaulted
     const loanResult = await query(
       `SELECT loan_id FROM contract_events WHERE loan_id = $1 AND event_type = 'LoanDefaulted' LIMIT 1`,
@@ -173,7 +177,7 @@ export const contestDefault = asyncHandler(
     // Insert dispute record and return disputeId
     const disputeResult = await query(
       `INSERT INTO loan_disputes (loan_id, borrower, reason, status) VALUES ($1, $2, $3, 'open') RETURNING id`,
-      [loanId, borrower, reason],
+      [loanId, borrower, sanitizedReason],
     );
 
     // Optionally: update loan status to 'disputed' in your loan status tracking (if applicable)
@@ -183,12 +187,14 @@ export const contestDefault = asyncHandler(
       [loanId, borrower],
     );
 
-    logger.withContext().info('Loan default contested', { loanId, borrower, reason });
+    logger
+      .withContext()
+      .info('Loan default contested', { loanId, borrower, reason: sanitizedReason });
 
     // Notify admins via email, SSE, and optional webhook
     await notificationService.notifyAdmins({
       title: 'Loan Default Contested',
-      message: `Borrower ${borrower} has contested the default on loan #${loanId}. Reason: ${reason}`,
+      message: `Borrower ${borrower} has contested the default on loan #${loanId}. Reason: ${sanitizedReason}`,
       loanId: Number(loanId),
     });
 

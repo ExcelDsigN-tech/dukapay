@@ -42,7 +42,7 @@ jobs:
       image: semgrep/semgrep:1.174.0
     steps:
       - uses: actions/checkout@v4
-      - run: semgrep scan --config p/ci --error --exclude='**/node_modules/**' --exclude='**/target/**'
+      - run: semgrep scan --config p/ci --config p/sql-injection --error --exclude='**/node_modules/**' --exclude='**/target/**'
 
   gitleaks:
     name: Gitleaks secrets

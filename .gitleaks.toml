@@ -1,0 +1,36 @@
+# Gitleaks configuration (issue #408)
+# https://github.com/gitleaks/gitleaks
+
+title = "DukaPay gitleaks config"
+
+[allowlist]
+  # Allowlist rules that are known false positives in this repo.
+  description = "Global allowlist"
+
+  # Test files may contain example secrets
+  paths = [
+    '''test/''',
+    '''__tests__/''',
+    '''\.test\.ts$''',
+    '''\.spec\.ts$''',
+    '''\.test\.js$''',
+    '''\.spec\.js$''',
+  ]
+
+[[rules]]
+  id = "dsa-key-in-env-docs"
+  description = "Allow example keys in documentation and .env.example files"
+  regex = '''(?i)(example|placeholder|your_|sample|dummy|fake|test|xxx|changeme)'''
+  paths = [
+    '''\.env\.example$''',
+    '''docs/''',
+    '''README''',
+  ]
+
+[[rules]]
+  id = "jwt-secret-example"
+  description = "Allow placeholder JWT secrets in env example files"
+  regex = '''JWT_SECRET\s*=\s*['\"]?your[_-]jwt[_-]secret'''
+  paths = [
+    '''\.env\.example$''',
+  ]
