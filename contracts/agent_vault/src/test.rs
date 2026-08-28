@@ -444,7 +444,7 @@ fn test_mint_float_requires_operator() {
 // ── Invariant checks ────────────────────────────────────────────────────────
 
 #[test]
-fn test_check_invariant_holds_for solvent_vault() {
+fn test_check_invariant_holds_for_solvent_vault() {
     let s = setup();
     let a = agent(&s.env);
     fund(&s, &a, 1_000);

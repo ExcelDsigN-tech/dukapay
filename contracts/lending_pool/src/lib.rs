@@ -1,6 +1,7 @@
 #![no_std]
 // Lending pool contract for DukaPay.
 use soroban_sdk::token::Client as TokenClient;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, Address, BytesN, Env, Symbol,
 };
@@ -29,6 +30,12 @@ pub enum PoolError {
     /// The computed share/asset amount for an operation rounded down to
     /// zero, so no value would actually move.
     ZeroShares = 14,
+    CommitmentNotFound = 15,
+    CommitmentTooEarly = 16,
+    CommitmentExpired = 17,
+    InvalidCommitmentHash = 18,
+    CallDepthExceeded = 19,
+    ReentrancyGuardTriggered = 20,
 }
 
 /// Storage keys.
@@ -73,6 +80,12 @@ pub enum DataKey {
     TotalYieldDistributed(Address),
     ProposedAdmin,
     Version,
+    /// settler → (commitment_hash, commit_ledger)
+    SettlementCommitment(Address),
+    /// Reentrancy guard lock flag
+    ReentrancyLock,
+    /// Cross-contract call depth counter
+    CallDepth,
 }
 
 #[contracttype]
@@ -1003,6 +1016,95 @@ impl LendingPool {
 
     pub fn pool_balance(env: Env, token: Address) -> i128 {
         Self::read_pool_balance(&env, &token)
+    }
+
+    /// Commit a settlement transaction commitment hash to prevent front-running/MEV.
+    pub fn commit_settlement(
+        env: Env,
+        settler: Address,
+        commitment_hash: BytesN<32>,
+    ) -> Result<(), PoolError> {
+        settler.require_auth();
+        let current_ledger = env.ledger().sequence();
+        let key = DataKey::SettlementCommitment(settler.clone());
+        env.storage()
+            .persistent()
+            .set(&key, &(commitment_hash, current_ledger));
+
+        env.events().publish(
+            (Symbol::new(&env, "SettlementCommitted"), settler),
+            current_ledger,
+        );
+        Ok(())
+    }
+
+    /// Reveal and verify a settlement transaction after minimum reveal delay.
+    pub fn reveal_settlement(
+        env: Env,
+        settler: Address,
+        token: Address,
+        amount: i128,
+        nonce: BytesN<32>,
+    ) -> Result<(), PoolError> {
+        settler.require_auth();
+        let key = DataKey::SettlementCommitment(settler.clone());
+        let (stored_hash, commit_ledger): (BytesN<32>, u32) = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(PoolError::CommitmentNotFound)?;
+
+        let current_ledger = env.ledger().sequence();
+        const MIN_REVEAL_DELAY: u32 = 1; // Minimum 1 ledger delay
+        const MAX_REVEAL_WINDOW: u32 = 100; // Maximum 100 ledgers validity
+
+        if current_ledger < commit_ledger + MIN_REVEAL_DELAY {
+            return Err(PoolError::CommitmentTooEarly);
+        }
+        if current_ledger > commit_ledger + MAX_REVEAL_WINDOW {
+            env.storage().persistent().remove(&key);
+            return Err(PoolError::CommitmentExpired);
+        }
+
+        // Compute payload hash: sha256(amount, nonce)
+        let mut data = soroban_sdk::Bytes::new(&env);
+        data.append(&amount.to_xdr(&env));
+        data.append(&nonce.clone().to_xdr(&env));
+        let computed_hash: BytesN<32> = env.crypto().sha256(&data).into();
+
+        if stored_hash != computed_hash {
+            return Err(PoolError::InvalidCommitmentHash);
+        }
+
+        // Clear commitment after successful verification
+        env.storage().persistent().remove(&key);
+
+        env.events().publish(
+            (Symbol::new(&env, "SettlementRevealed"), settler, token),
+            amount,
+        );
+        Ok(())
+    }
+
+    /// Enter cross-contract execution with Reentrancy Guard & Call Depth checks (max 3).
+    pub fn enter_cross_contract_call(env: &Env) -> Result<(), PoolError> {
+        let current_depth: u32 = env.storage().instance().get(&DataKey::CallDepth).unwrap_or(0);
+        if current_depth >= 3 {
+            return Err(PoolError::CallDepthExceeded);
+        }
+        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
+        env.storage().instance().set(&DataKey::CallDepth, &(current_depth + 1));
+        Ok(())
+    }
+
+    /// Exit cross-contract execution and reset call depth counter.
+    pub fn exit_cross_contract_call(env: &Env) {
+        let current_depth: u32 = env.storage().instance().get(&DataKey::CallDepth).unwrap_or(1);
+        let next_depth = if current_depth > 0 { current_depth - 1 } else { 0 };
+        env.storage().instance().set(&DataKey::CallDepth, &next_depth);
+        if next_depth == 0 {
+            env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+        }
     }
 }
 

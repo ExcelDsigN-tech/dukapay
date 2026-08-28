@@ -54,7 +54,7 @@ impl AuditAnchor {
             .persistent()
             .set(&DataKey::LeafCount(epoch), &leaf_count);
         env.events()
-            .publish((soroban_sdk::symbol_short!(auditroot), epoch), (root, leaf_count));
+            .publish((soroban_sdk::Symbol::new(&env, "auditroot"), epoch), (root, leaf_count));
         Ok(())
     }
 

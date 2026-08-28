@@ -5,6 +5,7 @@ import {
   getScoreBreakdown,
   getOnChainScoreHistory,
   getRemittanceNft,
+  getLeaderboard,
 } from '../controllers/scoreController.js';
 import { validate } from '../middleware/validation.js';
 import {
@@ -22,6 +23,8 @@ import {
 } from '../middleware/jwtAuth.js';
 
 const router = Router();
+
+router.get('/leaderboard', getLeaderboard);
 
 /**
  * @swagger

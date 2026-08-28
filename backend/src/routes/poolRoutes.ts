@@ -8,6 +8,8 @@ import {
   emergencyWithdrawFromPool,
   getPoolSharePrice,
   submitPoolTransaction,
+  getAnalytics,
+  getAgentDashboard,
 } from '../controllers/poolController.js';
 import {
   requireLender,
@@ -26,6 +28,9 @@ import {
 } from '../schemas/poolSchemas.js';
 
 const router = Router();
+
+router.get('/analytics', getAnalytics);
+router.get('/agent/dashboard/:agentAddress', getAgentDashboard);
 
 /**
  * @swagger
