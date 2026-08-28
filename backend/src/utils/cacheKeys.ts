@@ -99,4 +99,3 @@ export async function invalidateOnAgentMutation(agentAddress: string): Promise<v
     cacheService.delete(CacheKeys.analytics()),
   ]);
 }
-

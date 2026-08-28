@@ -57,19 +57,26 @@ class RedisCircuitBreaker {
   recordFailure(err: unknown): void {
     this.failureCount++;
     this.totalOperations++;
-    logger.withContext().error('Redis operation failure recorded', { error: err, failures: this.failureCount });
+    logger
+      .withContext()
+      .error('Redis operation failure recorded', { error: err, failures: this.failureCount });
 
     if (this.failureCount >= this.failureThreshold && this.state !== 'OPEN') {
       this.state = 'OPEN';
       this.lastStateChangeTime = Date.now();
-      logger.withContext().error('Redis Circuit Breaker tripped to OPEN due to consecutive failures');
+      logger
+        .withContext()
+        .error('Redis Circuit Breaker tripped to OPEN due to consecutive failures');
     }
   }
 
   getMetrics(): CacheMetrics {
     const totalRequests = this.hits + this.misses;
     const hitRate = totalRequests > 0 ? parseFloat((this.hits / totalRequests).toFixed(4)) : 0;
-    const avgLatencyMs = this.totalOperations > 0 ? parseFloat((this.totalLatencyMs / this.totalOperations).toFixed(2)) : 0;
+    const avgLatencyMs =
+      this.totalOperations > 0
+        ? parseFloat((this.totalLatencyMs / this.totalOperations).toFixed(2))
+        : 0;
 
     return {
       hits: this.hits,
@@ -117,7 +124,10 @@ export async function withCache<T>(
 ): Promise<T> {
   const startTime = Date.now();
 
-  if (redisCircuitBreaker.getState() === 'OPEN' || (process.env.NODE_ENV === 'test' && !redisClient.isOpen)) {
+  if (
+    redisCircuitBreaker.getState() === 'OPEN' ||
+    (process.env.NODE_ENV === 'test' && !redisClient.isOpen)
+  ) {
     return fallbackFn();
   }
 

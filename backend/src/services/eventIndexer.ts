@@ -65,6 +65,7 @@ export interface SorobanRawEvent {
 
 interface ContractEvent extends IndexedLoanEvent {
   amount?: string;
+  amountDisplay?: string;
   loanId?: number;
   address?: string;
   /**
@@ -504,10 +505,10 @@ export class EventIndexer {
         [this.contractIds, ledger],
       );
       if (scoreRollbacks.size > 0) await updateUserScoresBulk(scoreRollbacks, client);
-      await client.query(
-        'DELETE FROM ledger_checkpoints WHERE contract = $1 AND range_end >= $2',
-        [contract, ledger],
-      );
+      await client.query('DELETE FROM ledger_checkpoints WHERE contract = $1 AND range_end >= $2', [
+        contract,
+        ledger,
+      ]);
       await client.query(
         `UPDATE indexer_state
          SET last_ledger = LEAST(last_ledger, $1),

@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import { pool } from '../db/connection.js';
 import { query, withTransaction } from '../db/connection.js';
 import logger from '../utils/logger.js';
 
@@ -42,11 +41,14 @@ function anonymizePublicKey(publicKey: string): string {
  */
 function anonymizePiiField(value: string | null): string | null {
   if (!value) return null;
-  return 'ANON_' + crypto
-    .createHash('sha256')
-    .update(`${ANONYMIZATION_HASH_SALT}:${value}`)
-    .digest('hex')
-    .slice(0, 12);
+  return (
+    'ANON_' +
+    crypto
+      .createHash('sha256')
+      .update(`${ANONYMIZATION_HASH_SALT}:${value}`)
+      .digest('hex')
+      .slice(0, 12)
+  );
 }
 
 export class PrivacyService {
@@ -87,30 +89,34 @@ export class PrivacyService {
    * Returns all PII and associated records without modification.
    */
   async exportUserData(publicKey: string): Promise<UserDataExport> {
-    const [profileResult, scoresResult, loanEventsResult, remittancesResult, auditResult, notificationsResult] =
-      await Promise.all([
-        query('SELECT * FROM user_profiles WHERE public_key = $1', [publicKey]),
-        query('SELECT * FROM scores WHERE user_id = $1', [publicKey]),
-        query(
-          `SELECT * FROM contract_events WHERE address = $1 ORDER BY ledger_closed_at DESC LIMIT 1000`,
-          [publicKey],
-        ),
-        query(
-          `SELECT * FROM remittances WHERE sender_id = $1 ORDER BY created_at DESC LIMIT 1000`,
-          [publicKey],
-        ),
-        query(
-          `SELECT * FROM audit_logs WHERE actor = $1 ORDER BY created_at DESC LIMIT 500`,
-          [publicKey],
-        ),
-        query(
-          `SELECT ne.* FROM notification_events ne
+    const [
+      profileResult,
+      scoresResult,
+      loanEventsResult,
+      remittancesResult,
+      auditResult,
+      notificationsResult,
+    ] = await Promise.all([
+      query('SELECT * FROM user_profiles WHERE public_key = $1', [publicKey]),
+      query('SELECT * FROM scores WHERE user_id = $1', [publicKey]),
+      query(
+        `SELECT * FROM contract_events WHERE address = $1 ORDER BY ledger_closed_at DESC LIMIT 1000`,
+        [publicKey],
+      ),
+      query(`SELECT * FROM remittances WHERE sender_id = $1 ORDER BY created_at DESC LIMIT 1000`, [
+        publicKey,
+      ]),
+      query(`SELECT * FROM audit_logs WHERE actor = $1 ORDER BY created_at DESC LIMIT 500`, [
+        publicKey,
+      ]),
+      query(
+        `SELECT ne.* FROM notification_events ne
            JOIN user_notification_preferences unp ON ne.user_id = unp.user_id
            WHERE unp.user_id = $1
            ORDER BY ne.created_at DESC LIMIT 500`,
-          [publicKey],
-        ),
-      ]);
+        [publicKey],
+      ),
+    ]);
 
     return {
       profile: profileResult.rows[0] ?? null,
@@ -127,7 +133,9 @@ export class PrivacyService {
    * Hashes PII in financial tables so records remain queryable for accounting
    * but cannot be linked back to the individual.
    */
-  async deleteUserData(publicKey: string): Promise<{ deleted: boolean; recordsAnonymized: number }> {
+  async deleteUserData(
+    publicKey: string,
+  ): Promise<{ deleted: boolean; recordsAnonymized: number }> {
     return withTransaction(async (client) => {
       // 1. Anonymize PII in financial records (preserves record integrity)
       const remittancesResult = await client.query(
@@ -173,16 +181,12 @@ export class PrivacyService {
       );
 
       // 6. Delete PII access logs
-      await client.query(
-        `DELETE FROM pii_access_log WHERE record_id = $1`,
-        [publicKey],
-      );
+      await client.query(`DELETE FROM pii_access_log WHERE record_id = $1`, [publicKey]);
 
       // 7. Delete notification preferences
-      await client.query(
-        `DELETE FROM user_notification_preferences WHERE user_id = $1`,
-        [publicKey],
-      );
+      await client.query(`DELETE FROM user_notification_preferences WHERE user_id = $1`, [
+        publicKey,
+      ]);
 
       logger.withContext().info('User data deleted (DSAR)', {
         publicKey: publicKey.slice(0, 8) + '...',
@@ -221,10 +225,10 @@ export class PrivacyService {
       );
 
       // Anonymize contract events
-      await client.query(
-        `UPDATE contract_events SET address = $1 WHERE address = $2`,
-        [anonKey, publicKey],
-      );
+      await client.query(`UPDATE contract_events SET address = $1 WHERE address = $2`, [
+        anonKey,
+        publicKey,
+      ]);
 
       // Anonymize remittances
       await client.query(

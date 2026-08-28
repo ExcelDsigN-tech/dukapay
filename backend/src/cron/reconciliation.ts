@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { query, withTransaction } from '../db/connection.js';
+import { query } from '../db/connection.js';
 import { sorobanService } from '../services/sorobanService.js';
 import { cacheService } from '../services/cacheService.js';
 import logger from '../utils/logger.js';
@@ -85,12 +85,17 @@ export async function runReconciliationPass(): Promise<ReconciliationRunResult> 
           const diffPercent = diffAmount / maxVal;
 
           if (diffAmount > 0.01) {
-            const isMajor = diffAmount > DRIFT_ALERT_AMOUNT_THRESHOLD || diffPercent > DRIFT_ALERT_PERCENT_THRESHOLD;
+            const isMajor =
+              diffAmount > DRIFT_ALERT_AMOUNT_THRESHOLD ||
+              diffPercent > DRIFT_ALERT_PERCENT_THRESHOLD;
             let autoCorrected = false;
 
             if (!isMajor) {
               // Auto-correct minor drift in DB
-              await query(`UPDATE loans SET amount = $1, updated_at = CURRENT_TIMESTAMP WHERE loan_id = $2`, [onChainAmount, loanId]);
+              await query(
+                `UPDATE loans SET amount = $1, updated_at = CURRENT_TIMESTAMP WHERE loan_id = $2`,
+                [onChainAmount, loanId],
+              );
               autoCorrected = true;
               autoCorrectedCount++;
             }
@@ -131,11 +136,16 @@ export async function runReconciliationPass(): Promise<ReconciliationRunResult> 
           const diffPercent = diffFloat / maxFloat;
 
           if (diffFloat > 0.01) {
-            const isMajor = diffFloat > DRIFT_ALERT_AMOUNT_THRESHOLD || diffPercent > DRIFT_ALERT_PERCENT_THRESHOLD;
+            const isMajor =
+              diffFloat > DRIFT_ALERT_AMOUNT_THRESHOLD ||
+              diffPercent > DRIFT_ALERT_PERCENT_THRESHOLD;
             let autoCorrected = false;
 
             if (!isMajor) {
-              await query(`UPDATE agent_vaults SET float_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE agent_address = $2`, [onChainFloat, agentAddress]);
+              await query(
+                `UPDATE agent_vaults SET float_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE agent_address = $2`,
+                [onChainFloat, agentAddress],
+              );
               await cacheService.delete(`agent:dashboard:${agentAddress}`);
               autoCorrected = true;
               autoCorrectedCount++;
@@ -155,7 +165,10 @@ export async function runReconciliationPass(): Promise<ReconciliationRunResult> 
 
           // Check Agent Active Status
           if (agent.is_active !== onChainVault.isActive) {
-            await query(`UPDATE agent_vaults SET is_active = $1 WHERE agent_address = $2`, [onChainVault.isActive, agentAddress]);
+            await query(`UPDATE agent_vaults SET is_active = $1 WHERE agent_address = $2`, [
+              onChainVault.isActive,
+              agentAddress,
+            ]);
             autoCorrectedCount++;
             discrepancies.push({
               entityType: 'agent_status',
@@ -170,19 +183,27 @@ export async function runReconciliationPass(): Promise<ReconciliationRunResult> 
           }
         }
       } catch (e) {
-        logger.withContext().warn(`Reconciliation check failed for agent ${agentAddress}`, { error: e });
+        logger
+          .withContext()
+          .warn(`Reconciliation check failed for agent ${agentAddress}`, { error: e });
       }
     }
 
     const majorAlertsCount = discrepancies.filter((d) => d.isMajor && !d.autoCorrected).length;
-    const status: ReconciliationRunResult['status'] = majorAlertsCount > 0 ? 'ALERT' : discrepancies.length > 0 ? 'WARNING' : 'SUCCESS';
+    const status: ReconciliationRunResult['status'] =
+      majorAlertsCount > 0 ? 'ALERT' : discrepancies.length > 0 ? 'WARNING' : 'SUCCESS';
 
     if (majorAlertsCount > 0) {
-      logger.withContext().error(`[DRIFT ALERT] State reconciliation detected ${majorAlertsCount} major discrepancies!`, {
-        runId,
-        majorAlertsCount,
-        discrepancies,
-      });
+      logger
+        .withContext()
+        .error(
+          `[DRIFT ALERT] State reconciliation detected ${majorAlertsCount} major discrepancies!`,
+          {
+            runId,
+            majorAlertsCount,
+            discrepancies,
+          },
+        );
     }
 
     const runResult: ReconciliationRunResult = {
@@ -200,7 +221,15 @@ export async function runReconciliationPass(): Promise<ReconciliationRunResult> 
     await query(
       `INSERT INTO reconciliation_logs (run_id, total_checked, discrepancies_count, major_alerts_count, auto_corrected_count, status, details)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [runId, totalChecked, discrepancies.length, majorAlertsCount, autoCorrectedCount, status, JSON.stringify(runResult)],
+      [
+        runId,
+        totalChecked,
+        discrepancies.length,
+        majorAlertsCount,
+        autoCorrectedCount,
+        status,
+        JSON.stringify(runResult),
+      ],
     ).catch(() => {});
 
     return runResult;

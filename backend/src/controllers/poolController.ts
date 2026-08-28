@@ -430,7 +430,9 @@ export const getAnalytics = asyncHandler(async (_req: Request, res: Response) =>
       FROM contract_events
       WHERE event_type = 'LoanApproved'
     `),
-    query(`SELECT COUNT(*) AS active_agents FROM agent_vaults WHERE is_active = true`).catch(() => ({ rows: [{ active_agents: 0 }] })),
+    query(`SELECT COUNT(*) AS active_agents FROM agent_vaults WHERE is_active = true`).catch(
+      () => ({ rows: [{ active_agents: 0 }] }),
+    ),
   ]);
 
   const analyticsData = {
@@ -463,13 +465,21 @@ export const getAgentDashboard = asyncHandler(async (req: Request, res: Response
   }
 
   const [vaultResult, loansResult] = await Promise.all([
-    query(`SELECT float_balance, collateral_balance, is_active FROM agent_vaults WHERE agent_address = $1`, [agentAddress])
-      .catch(() => ({ rows: [] })),
-    query(`SELECT COUNT(*) AS active_loans FROM loans WHERE agent_address = $1 AND status = 'active'`, [agentAddress])
-      .catch(() => ({ rows: [{ active_loans: 0 }] })),
+    query(
+      `SELECT float_balance, collateral_balance, is_active FROM agent_vaults WHERE agent_address = $1`,
+      [agentAddress],
+    ).catch(() => ({ rows: [] })),
+    query(
+      `SELECT COUNT(*) AS active_loans FROM loans WHERE agent_address = $1 AND status = 'active'`,
+      [agentAddress],
+    ).catch(() => ({ rows: [{ active_loans: 0 }] })),
   ]);
 
-  const vault = vaultResult.rows[0] || { float_balance: 0, collateral_balance: 0, is_active: false };
+  const vault = vaultResult.rows[0] || {
+    float_balance: 0,
+    collateral_balance: 0,
+    is_active: false,
+  };
   const dashboardData = {
     agentAddress,
     floatBalance: safeFloat(vault.float_balance),
@@ -483,4 +493,3 @@ export const getAgentDashboard = asyncHandler(async (req: Request, res: Response
 
   res.json({ success: true, dashboard: dashboardData, source: 'database' });
 });
-

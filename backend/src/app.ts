@@ -108,7 +108,17 @@ const corsOptions: cors.CorsOptions = {
     return callback(AppError.forbidden('Origin is not allowed by CORS policy'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-request-id', 'Idempotency-Key'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-api-key',
+    'x-request-id',
+    'Idempotency-Key',
+    'x-csrf-token',
+    'X-CSRF-Token',
+    'x-xsrf-token',
+    'x-refresh-token',
+  ],
   credentials: true,
 };
 
@@ -399,7 +409,7 @@ if (process.env.NODE_ENV === 'test') {
 // unmatched paths trigger a not-found error.
 // Express 5 uses path-to-regexp v8 which requires named params,
 // so we use a standard middleware function instead of app.all('*').
-app.use((req: Request, _res: Response, next: NextFunction) => {
+app.use((_req: Request, _res: Response, next: NextFunction) => {
   // Log the full path server-side; return a generic message to the client
   // so the path structure isn't exposed (issue #409).
   next(AppError.notFound('Resource not found'));
