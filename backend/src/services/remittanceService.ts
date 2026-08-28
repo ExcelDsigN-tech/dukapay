@@ -5,6 +5,7 @@ import { query } from '../db/connection.js';
 import { withTransaction } from '../db/transaction.js';
 import { AppError } from '../errors/AppError.js';
 import logger from '../utils/logger.js';
+import { complianceService } from './complianceService.js';
 
 export interface CreateRemittancePayload {
   recipientAddress: string;
@@ -91,6 +92,16 @@ export const remittanceService = {
     const paymentAsset = getCurrencyAsset(payload.fromCurrency);
     const normalizedFromCurrency = normalizeCurrency(payload.fromCurrency);
     const normalizedToCurrency = normalizeCurrency(payload.toCurrency);
+
+    const monitoring = await complianceService.monitorTransaction({
+      subjectId: payload.senderAddress,
+      recipientAddress: payload.recipientAddress,
+      amount: payload.amount,
+      transactionReference: id,
+    });
+    if (!monitoring.allowed) {
+      throw AppError.forbidden('Transaction requires compliance review');
+    }
 
     try {
       const networkPassphrase = getStellarNetworkPassphrase();

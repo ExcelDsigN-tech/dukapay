@@ -164,7 +164,13 @@ export class PrivacyService {
       await client.query('DELETE FROM scores WHERE user_id = $1', [publicKey]);
 
       // 5. Delete audit logs referencing this user as actor
-      await client.query('DELETE FROM audit_logs WHERE actor = $1', [publicKey]);
+      // Financial audit records are held under the seven-year statutory
+      // retention policy and are intentionally excluded from erasure.
+      await client.query(
+        `INSERT INTO audit_logs (actor, action, target, payload, ip_address, status)
+         VALUES ('SYSTEM', 'DSAR_RETENTION_HOLD', 'retained-audit-subject',
+                 jsonb_build_object('legalBasis', 'financial-record-retention'), NULL, 200)`,
+      );
 
       // 6. Delete PII access logs
       await client.query(

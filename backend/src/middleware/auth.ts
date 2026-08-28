@@ -7,7 +7,12 @@ import { AppError } from '../errors/AppError.js';
  * A key without a scope prefix is treated as a legacy key that grants all scopes.
  * A scoped key has the format `<scope>:<value>` and grants only that one scope.
  */
-export type ApiKeyScope = 'admin:disputes' | 'admin:indexer' | 'admin:webhooks' | 'admin:loans';
+export type ApiKeyScope =
+  | 'admin:disputes'
+  | 'admin:indexer'
+  | 'admin:webhooks'
+  | 'admin:loans'
+  | 'admin:audit';
 
 interface ParsedKey {
   scope: ApiKeyScope | null; // null = legacy (all scopes)

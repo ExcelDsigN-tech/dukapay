@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { rpc as SorobanRpc, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { type PoolClient, query, withTransaction } from '../db/connection.js';
 import logger from '../utils/logger.js';
@@ -91,6 +92,7 @@ interface EventIndexerConfig {
   contractConfigs?: Array<{ contractId: string }>;
   pollIntervalMs?: number;
   batchSize?: number;
+  finalityDepth?: number;
 }
 
 interface StoreEventsResult {
@@ -101,6 +103,13 @@ interface ProcessChunkResult {
   lastProcessedLedger: number;
   fetchedEvents: number;
   insertedEvents: number;
+  rangeDigest: string;
+}
+
+interface LedgerCheckpoint {
+  rangeStart: number;
+  rangeEnd: number;
+  rangeDigest: string | null;
 }
 
 export class EventIndexer {
@@ -108,11 +117,14 @@ export class EventIndexer {
   private readonly contractIds: string[];
   private readonly pollIntervalMs: number;
   private readonly batchSize: number;
+  private readonly finalityDepth: number;
+  private readonly lagAlertThreshold: number;
   private readonly quarantineAlertThreshold: number;
   private lastObservedQuarantineCount = 0;
   private running = false;
   private pollTimeout: NodeJS.Timeout | null = null;
   private activePollPromise: Promise<void> | null = null;
+  private lagAlertActive = false;
 
   constructor(config: EventIndexerConfig);
   constructor(rpcUrl: string, contractId: string);
@@ -120,6 +132,9 @@ export class EventIndexer {
     const thresholdRaw = Number.parseInt(process.env.QUARANTINE_ALERT_THRESHOLD ?? '25', 10);
     this.quarantineAlertThreshold =
       Number.isFinite(thresholdRaw) && thresholdRaw > 0 ? thresholdRaw : 25;
+    const lagThresholdRaw = Number.parseInt(process.env.INDEXER_LAG_ALERT_THRESHOLD ?? '100', 10);
+    this.lagAlertThreshold =
+      Number.isFinite(lagThresholdRaw) && lagThresholdRaw > 0 ? lagThresholdRaw : 100;
 
     if (typeof configOrRpcUrl === 'string') {
       if (!contractId) {
@@ -129,6 +144,7 @@ export class EventIndexer {
       this.contractIds = [contractId];
       this.pollIntervalMs = 30_000;
       this.batchSize = 100;
+      this.finalityDepth = this.parseNonNegativeInt(process.env.INDEXER_FINALITY_DEPTH, 0);
       return;
     }
 
@@ -148,6 +164,9 @@ export class EventIndexer {
     this.contractIds = [...new Set(normalized)];
     this.pollIntervalMs = configOrRpcUrl.pollIntervalMs ?? 30_000;
     this.batchSize = configOrRpcUrl.batchSize ?? 100;
+    this.finalityDepth =
+      configOrRpcUrl.finalityDepth ??
+      this.parseNonNegativeInt(process.env.INDEXER_FINALITY_DEPTH, 0);
   }
 
   async ingestRawEvents(events: SorobanRawEvent[]): Promise<StoreEventsResult> {
@@ -244,6 +263,52 @@ export class EventIndexer {
     };
   }
 
+  /** Backfill every unresolved range which is now finalized. */
+  async backfillMissingRanges(finalizedLedger?: number): Promise<number> {
+    const finalizedTip = finalizedLedger ?? (await this.getFinalizedLedgerSequence());
+    if (finalizedTip <= 0) return 0;
+
+    const ranges = await this.getSuspectRanges();
+    let backfilled = 0;
+    for (const range of ranges) {
+      const end = Math.min(range.rangeEnd, finalizedTip);
+      if (end < range.rangeStart) continue;
+
+      const result = await this.processChunk(range.rangeStart, end);
+      if (end === range.rangeEnd) {
+        await query(
+          `UPDATE ledger_checkpoints
+           SET status = 'verified', range_digest = $1
+           WHERE contract = $2 AND status = 'suspect'
+             AND range_start = $3 AND range_end = $4`,
+          [result.rangeDigest, this.getContractId(), range.rangeStart, range.rangeEnd],
+        );
+      } else {
+        await query(
+          `UPDATE ledger_checkpoints SET range_start = $1
+           WHERE contract = $2 AND status = 'suspect'
+             AND range_start = $3 AND range_end = $4`,
+          [end + 1, this.getContractId(), range.rangeStart, range.rangeEnd],
+        );
+        await query(
+          `INSERT INTO ledger_checkpoints
+             (contract, range_start, range_end, status, range_digest)
+           VALUES ($1, $2, $3, 'verified', $4)`,
+          [this.getContractId(), range.rangeStart, end, result.rangeDigest],
+        );
+      }
+      backfilled += end - range.rangeStart + 1;
+    }
+
+    if (backfilled > 0) {
+      logger.withContext().info('Indexer backfilled missing ledger ranges', {
+        contract: this.getContractId(),
+        ledgers: backfilled,
+      });
+    }
+    return backfilled;
+  }
+
   private scheduleNextPoll(): void {
     if (!this.running) return;
 
@@ -267,7 +332,7 @@ export class EventIndexer {
   private async pollOnce(): Promise<void> {
     if (!this.running) return;
 
-    const lastIndexedLedger = await this.getLastIndexedLedger();
+    await this.getLastIndexedLedger();
     const latestLedger = await this.getLatestLedgerSequence();
 
     // latestLedger === 0 means getLatestLedgerSequence failed (RPC error or
@@ -278,18 +343,23 @@ export class EventIndexer {
       return;
     }
 
-    if (latestLedger <= lastIndexedLedger) {
-      recordIndexerLedgers(lastIndexedLedger, latestLedger);
+    const finalizedLedger = Math.max(latestLedger - this.finalityDepth, 0);
+    await this.detectAndRollbackReorg();
+    const checkpointAfterReorg = await this.getLastIndexedLedger();
+    await this.backfillMissingRanges(finalizedLedger);
+
+    if (finalizedLedger <= checkpointAfterReorg) {
+      this.recordLag(checkpointAfterReorg, latestLedger);
       return;
     }
 
-    const fromLedger = lastIndexedLedger + 1;
-    const toLedger = Math.min(fromLedger + this.batchSize - 1, latestLedger);
+    const fromLedger = checkpointAfterReorg + 1;
+    const toLedger = Math.min(fromLedger + this.batchSize - 1, finalizedLedger);
 
     const result = await this.processChunk(fromLedger, toLedger);
-    await this.recordCheckpoint(fromLedger, result.lastProcessedLedger);
+    await this.recordCheckpoint(fromLedger, result.lastProcessedLedger, result.rangeDigest);
     await this.updateLastIndexedLedger(result.lastProcessedLedger);
-    recordIndexerLedgers(result.lastProcessedLedger, latestLedger);
+    this.recordLag(result.lastProcessedLedger, latestLedger);
   }
 
   /**
@@ -309,7 +379,11 @@ export class EventIndexer {
    * content digest) is intentionally out of scope here — see this change's
    * PR description.
    */
-  private async recordCheckpoint(rangeStart: number, rangeEnd: number): Promise<void> {
+  private async recordCheckpoint(
+    rangeStart: number,
+    rangeEnd: number,
+    rangeDigest: string,
+  ): Promise<void> {
     const contract = this.getContractId();
 
     const previous = await query(
@@ -339,10 +413,110 @@ export class EventIndexer {
     }
 
     await query(
-      `INSERT INTO ledger_checkpoints (contract, range_start, range_end, status)
-       VALUES ($1, $2, $3, 'verified')`,
-      [contract, rangeStart, rangeEnd],
+      `INSERT INTO ledger_checkpoints (contract, range_start, range_end, status, range_digest)
+       VALUES ($1, $2, $3, 'verified', $4)`,
+      [contract, rangeStart, rangeEnd, rangeDigest],
     );
+  }
+
+  private async detectAndRollbackReorg(): Promise<boolean> {
+    const checkpoint = await this.getLatestVerifiedCheckpoint();
+    if (!checkpoint) return false;
+
+    const events = await this.fetchEventsInRange(checkpoint.rangeStart, checkpoint.rangeEnd);
+    const currentDigest = this.digestEvents(events);
+    if (checkpoint.rangeDigest === null) {
+      await query(
+        `UPDATE ledger_checkpoints SET range_digest = $1
+         WHERE contract = $2 AND range_start = $3 AND range_end = $4 AND status = 'verified'`,
+        [currentDigest, this.getContractId(), checkpoint.rangeStart, checkpoint.rangeEnd],
+      );
+      return false;
+    }
+    if (currentDigest === checkpoint.rangeDigest) return false;
+
+    await this.rollbackFromLedger(checkpoint.rangeStart);
+    logger.withContext().error('Blockchain reorganization detected; indexer state rolled back', {
+      contract: this.getContractId(),
+      rollbackLedger: checkpoint.rangeStart,
+      previousDigest: checkpoint.rangeDigest,
+      currentDigest,
+    });
+    return true;
+  }
+
+  private async getLatestVerifiedCheckpoint(): Promise<LedgerCheckpoint | null> {
+    const result = await query(
+      `SELECT range_start, range_end, range_digest
+       FROM ledger_checkpoints
+       WHERE contract = $1 AND status = 'verified'
+       ORDER BY range_end DESC LIMIT 1`,
+      [this.getContractId()],
+    );
+    if (!result.rows.length) return null;
+    const rangeStart = Number(result.rows[0]?.range_start);
+    const rangeEnd = Number(result.rows[0]?.range_end);
+    if (!Number.isFinite(rangeStart) || !Number.isFinite(rangeEnd)) return null;
+    return {
+      rangeStart,
+      rangeEnd,
+      rangeDigest: (result.rows[0]?.range_digest as string | null | undefined) ?? null,
+    };
+  }
+
+  private async rollbackFromLedger(ledger: number): Promise<void> {
+    const contract = this.getContractId();
+    await withTransaction(async (client: PoolClient) => {
+      const orphanedEvents = await client.query(
+        `SELECT event_type, address
+         FROM contract_events
+         WHERE contract_id = ANY($1::text[]) AND ledger >= $2`,
+        [this.contractIds, ledger],
+      );
+      const scoreRollbacks = new Map<string, number>();
+      const { repaymentDelta, defaultPenalty } = sorobanService.getScoreConfig();
+      for (const row of orphanedEvents.rows) {
+        const address = typeof row.address === 'string' ? row.address : '';
+        if (!address) continue;
+        if (row.event_type === 'LoanRepaid') {
+          scoreRollbacks.set(address, (scoreRollbacks.get(address) ?? 0) - repaymentDelta);
+        } else if (
+          row.event_type === 'LoanDefaulted' ||
+          row.event_type === 'CollateralLiquidated'
+        ) {
+          scoreRollbacks.set(address, (scoreRollbacks.get(address) ?? 0) + defaultPenalty);
+        }
+      }
+      await client.query(
+        `INSERT INTO audit_logs (actor, action, target, payload, ip_address, status)
+         SELECT 'SYSTEM', 'REORG_REVERSAL', target,
+                jsonb_build_object('reversedEventId', payload->>'eventId', 'rollbackLedger', $2),
+                'internal-indexer', 200
+         FROM audit_logs
+         WHERE payload->>'eventId' IN (
+           SELECT event_id FROM contract_events
+           WHERE contract_id = ANY($1::text[]) AND ledger >= $2
+         )`,
+        [this.contractIds, ledger],
+      );
+      await client.query(
+        'DELETE FROM contract_events WHERE contract_id = ANY($1::text[]) AND ledger >= $2',
+        [this.contractIds, ledger],
+      );
+      if (scoreRollbacks.size > 0) await updateUserScoresBulk(scoreRollbacks, client);
+      await client.query(
+        'DELETE FROM ledger_checkpoints WHERE contract = $1 AND range_end >= $2',
+        [contract, ledger],
+      );
+      await client.query(
+        `UPDATE indexer_state
+         SET last_ledger = LEAST(last_ledger, $1),
+             last_finalized_ledger = LEAST(last_finalized_ledger, $1),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE contract = $2`,
+        [Math.max(ledger - 1, 0), contract],
+      );
+    });
   }
 
   /**
@@ -384,6 +558,32 @@ export class EventIndexer {
     }
   }
 
+  private async getFinalizedLedgerSequence(): Promise<number> {
+    const latest = await this.getLatestLedgerSequence();
+    return Math.max(latest - this.finalityDepth, 0);
+  }
+
+  private recordLag(lastFinalizedLedger: number, chainTip: number): void {
+    recordIndexerLedgers(lastFinalizedLedger, chainTip);
+    const lag = Math.max(chainTip - lastFinalizedLedger, 0);
+    if (lag > this.lagAlertThreshold && !this.lagAlertActive) {
+      this.lagAlertActive = true;
+      logger.withContext().error('Indexer lag exceeded alert threshold', {
+        lag,
+        threshold: this.lagAlertThreshold,
+        lastFinalizedLedger,
+        chainTip,
+      });
+    } else if (lag <= this.lagAlertThreshold) {
+      this.lagAlertActive = false;
+    }
+  }
+
+  private parseNonNegativeInt(value: string | undefined, fallback: number): number {
+    const parsed = Number.parseInt(value ?? '', 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+  }
+
   private getContractId(): string {
     return this.contractIds[0] ?? 'default';
   }
@@ -391,7 +591,7 @@ export class EventIndexer {
   private async getLastIndexedLedger(): Promise<number> {
     const contract = this.getContractId();
     const result = await query(
-      `SELECT last_ledger
+      `SELECT COALESCE(last_finalized_ledger, last_ledger) AS last_ledger
        FROM indexer_state
        WHERE contract = $1
        ORDER BY id DESC
@@ -401,8 +601,8 @@ export class EventIndexer {
 
     if (!result.rows.length) {
       await query(
-        `INSERT INTO indexer_state (contract, last_ledger)
-         VALUES ($1, 0)`,
+        `INSERT INTO indexer_state (contract, last_ledger, last_finalized_ledger)
+         VALUES ($1, 0, 0)`,
         [contract],
       );
       return 0;
@@ -416,6 +616,7 @@ export class EventIndexer {
     const updateResult = await query(
       `UPDATE indexer_state
        SET last_ledger = GREATEST(last_ledger, $1),
+           last_finalized_ledger = GREATEST(last_finalized_ledger, $1),
            updated_at = CURRENT_TIMESTAMP
        WHERE contract = $2`,
       [ledger, contract],
@@ -423,8 +624,8 @@ export class EventIndexer {
 
     if ((updateResult.rowCount ?? 0) === 0) {
       await query(
-        `INSERT INTO indexer_state (contract, last_ledger)
-         VALUES ($1, $2)`,
+        `INSERT INTO indexer_state (contract, last_ledger, last_finalized_ledger)
+         VALUES ($1, $2, $2)`,
         [contract, ledger],
       );
     }
@@ -443,6 +644,7 @@ export class EventIndexer {
           lastProcessedLedger: Math.max(startLedger - 1, 0),
           fetchedEvents: 0,
           insertedEvents: 0,
+          rangeDigest: this.digestEvents([]),
         };
         throw AppError.badRequest(
           `Invalid ledger range: endLedger (${endLedger}) cannot be less than startLedger (${startLedger})`,
@@ -456,6 +658,7 @@ export class EventIndexer {
             lastProcessedLedger: endLedger,
             fetchedEvents: 0,
             insertedEvents: 0,
+            rangeDigest: this.digestEvents([]),
           };
         }
 
@@ -470,12 +673,14 @@ export class EventIndexer {
           endLedger,
           fetchedEvents: events.length,
           insertedEvents: storeResult.insertedCount,
+          rangeDigest: this.digestEvents(events),
         });
 
         return {
           lastProcessedLedger: Math.max(maxLedger, endLedger),
           fetchedEvents: events.length,
           insertedEvents: storeResult.insertedCount,
+          rangeDigest: this.digestEvents(events),
         };
       } catch (error) {
         logger.withContext().error('Error processing event chunk', {
@@ -486,6 +691,22 @@ export class EventIndexer {
         throw error;
       }
     });
+  }
+
+  private digestEvents(events: SorobanRawEvent[]): string {
+    const canonical = [...events]
+      .sort((a, b) =>
+        a.ledger === b.ledger ? a.id.localeCompare(b.id) : Number(a.ledger) - Number(b.ledger),
+      )
+      .map((event) => ({
+        id: event.id,
+        ledger: Number(event.ledger),
+        txHash: event.txHash,
+        contractId: event.contractId,
+        topics: event.topic.map((topic) => topic.toXDR('base64')),
+        value: event.value.toXDR('base64'),
+      }));
+    return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
   }
 
   private async fetchEventsInRange(

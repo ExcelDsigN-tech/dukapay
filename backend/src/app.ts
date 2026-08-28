@@ -22,6 +22,7 @@ import notificationsRoutes from './routes/notificationsRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import remittanceRoutes from './routes/remittanceRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import auditRoutes from './routes/auditRoutes.js';
 import privacyRoutes from './routes/privacyRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import { registerStatusRoutes } from './routes/statusRoutes.js';
@@ -191,6 +192,51 @@ app.get(
 
 app.get('/metrics', requireApiKey('admin:indexer'), asyncHandler(metricsHandler));
 
+/** GET /health/indexer - focused readiness and lag information for operators. */
+app.get(
+  '/health/indexer',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const threshold = Number.parseInt(process.env.INDEXER_LAG_ALERT_THRESHOLD ?? '100', 10);
+    const finalityDepth = Number.parseInt(process.env.INDEXER_FINALITY_DEPTH ?? '5', 10);
+    const [rpcResult, stateResult] = await Promise.allSettled([
+      sorobanService.healthCheck(),
+      pool.query(
+        `SELECT MIN(COALESCE(last_finalized_ledger, last_ledger)) AS last_finalized_ledger,
+                MAX(updated_at) AS updated_at
+         FROM indexer_state`,
+      ),
+    ]);
+
+    const rpc = rpcResult.status === 'fulfilled' ? rpcResult.value : null;
+    const state = stateResult.status === 'fulfilled' ? stateResult.value.rows[0] : null;
+    const chainHead = rpc?.connected ? Number(rpc.latestLedger) : NaN;
+    const lastFinalizedBlock = Number(state?.last_finalized_ledger);
+    if (!Number.isFinite(chainHead) || !Number.isFinite(lastFinalizedBlock)) {
+      res.status(503).json({
+        status: 'down',
+        chainHead: Number.isFinite(chainHead) ? chainHead : null,
+        lastFinalizedBlock: Number.isFinite(lastFinalizedBlock) ? lastFinalizedBlock : null,
+        lag: null,
+        threshold,
+      });
+      return;
+    }
+
+    const finalizedHead = Math.max(chainHead - Math.max(finalityDepth, 0), 0);
+    const lag = Math.max(chainHead - lastFinalizedBlock, 0);
+    res.json({
+      status: lag > threshold ? 'degraded' : 'ok',
+      chainHead,
+      finalizedHead,
+      lastFinalizedBlock,
+      lag,
+      threshold,
+      finalityDepth: Math.max(finalityDepth, 0),
+      updatedAt: state?.updated_at ?? null,
+    });
+  }),
+);
+
 /**
  * GET /health/deep
  * Exercises DB, Redis, Stellar RPC, and indexer lag.
@@ -235,7 +281,10 @@ app.get(
       ),
       withTimeout(
         pool
-          .query('SELECT last_indexed_ledger FROM indexer_state ORDER BY id DESC LIMIT 1')
+          .query(
+            `SELECT MIN(COALESCE(last_finalized_ledger, last_ledger)) AS last_indexed_ledger
+             FROM indexer_state`,
+          )
           .then((r) => ({
             lastIndexedLedger: r.rows[0]?.last_indexed_ledger ?? null,
           }))
@@ -303,6 +352,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/remittances', remittanceRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/agents', agentRoutes);
+app.use('/audit', auditRoutes);
 
 // Versioned API routes (v1 - current)
 app.use('/api/v1', simulationRoutes);
@@ -318,6 +368,7 @@ app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/privacy', privacyRoutes);
 app.use('/api/v1/agents', agentRoutes);
+app.use('/api/v1/audit', auditRoutes);
 app.use('/user', userRoutes);
 
 mountSwaggerDocs(app);

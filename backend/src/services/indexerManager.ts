@@ -31,6 +31,7 @@ export const startIndexer = (): void => {
   );
   const pollIntervalMs = parseInt(process.env.INDEXER_POLL_INTERVAL_MS || '30000');
   const batchSize = parseInt(process.env.INDEXER_BATCH_SIZE || '100');
+  const finalityDepth = parseInt(process.env.INDEXER_FINALITY_DEPTH || '5');
 
   if (contractIds.length === 0) {
     logger
@@ -48,6 +49,7 @@ export const startIndexer = (): void => {
     contractConfigs: contractIds.map((contractId) => ({ contractId })),
     pollIntervalMs,
     batchSize,
+    finalityDepth,
   });
 
   indexerInstance.start().catch((error) => {
@@ -60,6 +62,7 @@ export const startIndexer = (): void => {
     contractIds,
     pollIntervalMs,
     batchSize,
+    finalityDepth,
   });
 };
 

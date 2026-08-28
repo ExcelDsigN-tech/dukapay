@@ -219,7 +219,8 @@ type BorrowerLoan = {
 
 const getLatestLedger = async (): Promise<number> => {
   const result = await query(
-    'SELECT last_indexed_ledger FROM indexer_state ORDER BY id DESC LIMIT 1',
+    `SELECT MIN(COALESCE(last_finalized_ledger, last_ledger)) AS last_indexed_ledger
+     FROM indexer_state`,
     [],
   );
 
