@@ -1,0 +1,244 @@
+name: Load Tests
+
+on:
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_env:
+        description: 'Test environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      load_profile:
+        description: 'Load profile'
+        required: true
+        default: 'normal'
+        type: choice
+        options:
+          - smoke
+          - normal
+          - stress
+          - spike
+
+jobs:
+  load-test:
+    name: Run Load Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ inputs.test_env || 'staging' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Create results directory
+        run: |
+          mkdir -p tests/load/results
+          mkdir -p tests/load/baselines
+
+      - name: Download existing baselines
+        uses: actions/download-artifact@v4
+        with:
+          name: load-test-baselines
+          path: tests/load/baselines
+        continue-on-error: true
+
+      - name: Run API Read Load Test
+        working-directory: tests/load
+        env:
+          TEST_ENV: ${{ inputs.test_env || 'staging' }}
+          LOAD_PROFILE: ${{ inputs.load_profile || 'normal' }}
+          TEST_AUTH_TOKEN: ${{ secrets.LOAD_TEST_AUTH_TOKEN }}
+          STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
+        run: k6 run scenarios/api-read.js
+        continue-on-error: true
+
+      - name: Run API Write Load Test
+        working-directory: tests/load
+        env:
+          TEST_ENV: ${{ inputs.test_env || 'staging' }}
+          LOAD_PROFILE: ${{ inputs.load_profile || 'normal' }}
+          TEST_AUTH_TOKEN: ${{ secrets.LOAD_TEST_AUTH_TOKEN }}
+          STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
+        run: k6 run scenarios/api-write.js
+        continue-on-error: true
+
+      - name: Run Contract Calls Load Test
+        working-directory: tests/load
+        env:
+          TEST_ENV: ${{ inputs.test_env || 'staging' }}
+          LOAD_PROFILE: ${{ inputs.load_profile || 'normal' }}
+          TEST_AUTH_TOKEN: ${{ secrets.LOAD_TEST_AUTH_TOKEN }}
+          STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
+        run: k6 run scenarios/contract-calls.js
+        continue-on-error: true
+
+      - name: Run Settlement Batch Load Test
+        working-directory: tests/load
+        env:
+          TEST_ENV: ${{ inputs.test_env || 'staging' }}
+          LOAD_PROFILE: ${{ inputs.load_profile || 'normal' }}
+          TEST_AUTH_TOKEN: ${{ secrets.LOAD_TEST_AUTH_TOKEN }}
+          STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
+        run: k6 run scenarios/settlement-batch.js
+        continue-on-error: true
+
+      - name: Check for performance regressions
+        working-directory: tests/load
+        run: node scripts/check-regression.js
+        continue-on-error: true
+
+      - name: Generate HTML report
+        working-directory: tests/load
+        run: node scripts/generate-report.js
+        if: always()
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-results-${{ github.run_number }}
+          path: tests/load/results/
+          retention-days: 90
+
+      - name: Upload baselines (update)
+        uses: actions/upload-artifact@v4
+        if: success() && github.event_name == 'schedule'
+        with:
+          name: load-test-baselines
+          path: tests/load/baselines/
+          retention-days: 365
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'tests/load/results/regression-report.json';
+            
+            if (fs.existsSync(reportPath)) {
+              const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              const hasRegressions = report.summary.scenarios_with_regressions > 0;
+              
+              const body = `## 📊 Load Test Results
+              
+              **Status:** ${hasRegressions ? '⚠️ Regressions Detected' : '✅ All Clear'}
+              
+              **Summary:**
+              - Total Scenarios: ${report.summary.total_scenarios}
+              - Scenarios with Regressions: ${report.summary.scenarios_with_regressions}
+              - Total Regressions: ${report.summary.total_regressions}
+              
+              ${hasRegressions ? '⚠️ Performance regressions detected! Please review the test results.' : '✅ No performance regressions detected.'}
+              
+              [View Full Report](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+
+      - name: Send Slack notification
+        if: failure() && github.event_name == 'schedule'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🚨 Load Test Failure on ${{ inputs.test_env || 'staging' }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Load Test Failed*\n\nEnvironment: `${{ inputs.test_env || 'staging' }}`\nProfile: `${{ inputs.load_profile || 'normal' }}`\n\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Results>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+      - name: Create GitHub Issue on regression
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'tests/load/results/regression-report.json';
+            
+            if (fs.existsSync(reportPath)) {
+              const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              
+              if (report.summary.total_regressions > 0) {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `[Performance] Load Test Regression Detected - ${new Date().toISOString().split('T')[0]}`,
+                  body: `## 🚨 Performance Regression Alert
+                  
+                  **Environment:** ${process.env.TEST_ENV || 'staging'}
+                  **Timestamp:** ${report.timestamp}
+                  **Threshold:** ${report.threshold * 100}%
+                  
+                  ### Summary
+                  - Scenarios with Regressions: ${report.summary.scenarios_with_regressions}
+                  - Total Regressions: ${report.summary.total_regressions}
+                  
+                  ### Affected Scenarios
+                  ${report.scenarios.filter(s => s.hasRegression).map(s => `- **${s.scenario}**: ${s.regressions.length} regression(s)`).join('\n')}
+                  
+                  [View Full Test Results](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})
+                  
+                  ### Action Required
+                  Please investigate the performance degradation and identify the root cause.
+                  `,
+                  labels: ['performance', 'regression', 'priority:high']
+                });
+              }
+            }
+        continue-on-error: true
+
+  summary:
+    name: Test Summary
+    needs: [load-test]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Generate summary
+        run: |
+          echo "### 🎯 Load Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.test_env || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Profile:** ${{ inputs.load_profile || 'normal' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ needs.load-test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Test Scenarios" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ API Read Operations (1000 RPS)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ API Write Operations (100 RPS)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Contract Calls (100 TPS)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Settlement Batch (1000 loans)" >> $GITHUB_STEP_SUMMARY

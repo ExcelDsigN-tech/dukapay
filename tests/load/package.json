@@ -1,0 +1,28 @@
+{
+  "name": "@dukapay/load-tests",
+  "version": "1.0.0",
+  "description": "Load testing suite for DukaPay API and contract calls",
+  "type": "module",
+  "scripts": {
+    "test:api-read": "k6 run scenarios/api-read.js",
+    "test:api-write": "k6 run scenarios/api-write.js",
+    "test:contract-calls": "k6 run scenarios/contract-calls.js",
+    "test:settlement-batch": "k6 run scenarios/settlement-batch.js",
+    "test:all": "npm run test:api-read && npm run test:api-write && npm run test:contract-calls && npm run test:settlement-batch",
+    "test:baseline": "node scripts/run-baseline.js",
+    "test:regression": "node scripts/check-regression.js",
+    "report": "node scripts/generate-report.js"
+  },
+  "keywords": [
+    "load-testing",
+    "k6",
+    "performance",
+    "dukapay"
+  ],
+  "author": "DukaPay Team",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "k6": "^0.0.0"
+  }
+}
