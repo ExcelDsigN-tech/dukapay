@@ -108,7 +108,17 @@ const corsOptions: cors.CorsOptions = {
     return callback(AppError.forbidden('Origin is not allowed by CORS policy'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-request-id', 'Idempotency-Key'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-api-key',
+    'x-request-id',
+    'Idempotency-Key',
+    'x-csrf-token',
+    'X-CSRF-Token',
+    'x-xsrf-token',
+    'x-refresh-token',
+  ],
   credentials: true,
 };
 

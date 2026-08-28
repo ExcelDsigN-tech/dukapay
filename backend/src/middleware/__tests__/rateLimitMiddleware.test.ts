@@ -3,10 +3,28 @@ import type { Request, Response, NextFunction } from 'express';
 
 // Mock the rate limit service before importing middleware that depends on it
 jest.unstable_mockModule('../../services/rateLimitService.js', () => ({
+  RateLimitTier: {
+    ANONYMOUS: 'anonymous',
+    AUTHENTICATED: 'authenticated',
+    PREMIUM: 'premium',
+    INTERNAL: 'internal',
+  },
+  TIER_LIMITS: {
+    anonymous: { maxRequests: 30, windowSeconds: 60 },
+    authenticated: { maxRequests: 100, windowSeconds: 60 },
+    premium: { maxRequests: 1000, windowSeconds: 60 },
+    internal: { maxRequests: 10000, windowSeconds: 60 },
+  },
+  EXPENSIVE_OPERATION_LIMITS: {
+    SEARCH: { maxRequests: 10, windowSeconds: 60 },
+    LOAN_APPLICATION: { maxRequests: 5, windowSeconds: 60 },
+    SCORE_UPDATE: { maxRequests: 5, windowSeconds: 86400 },
+  },
   rateLimitService: {
     checkRateLimit: jest.fn(),
     resetRateLimit: jest.fn(),
     getRateLimitStatus: jest.fn(),
+    resolveTier: jest.fn(),
   },
   SCORE_UPDATE_RATE_LIMIT: {
     maxRequests: 5,
@@ -23,9 +41,14 @@ jest.unstable_mockModule('../../utils/logger.js', () => ({
   },
 }));
 
-const { createRateLimitMiddleware, scoreUpdateRateLimit } =
-  await import('../rateLimitMiddleware.js');
-const { rateLimitService } = await import('../../services/rateLimitService.js');
+const {
+  createRateLimitMiddleware,
+  tieredRateLimiter,
+  searchRateLimit,
+  loanApplicationRateLimit,
+  scoreUpdateRateLimit,
+} = await import('../rateLimitMiddleware.js');
+const { rateLimitService, RateLimitTier } = await import('../../services/rateLimitService.js');
 const mockRateLimitService = rateLimitService as jest.Mocked<typeof rateLimitService>;
 
 describe('Rate Limit Middleware', () => {
@@ -228,6 +251,92 @@ describe('Rate Limit Middleware', () => {
         expect.objectContaining({
           statusCode: 429,
           message: 'Too many score updates. Maximum 5 updates allowed per user per day.',
+        }),
+      );
+    });
+  });
+
+  describe('tieredRateLimiter', () => {
+    it('should enforce anonymous tier limits (30 req/min)', async () => {
+      mockRateLimitService.resolveTier.mockReturnValue({
+        tier: RateLimitTier.ANONYMOUS,
+        identifier: 'anon',
+      });
+      mockRateLimitService.checkRateLimit.mockResolvedValue({
+        allowed: true,
+        remaining: 29,
+        resetTime: new Date(Date.now() + 60 * 1000),
+        currentCount: 1,
+        limit: 30,
+      });
+
+      const middleware = tieredRateLimiter();
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockRateLimitService.checkRateLimit).toHaveBeenCalledWith(
+        'ip:127.0.0.1',
+        { maxRequests: 30, windowSeconds: 60 },
+        RateLimitTier.ANONYMOUS,
+      );
+      expect(mockResponse.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'X-RateLimit-Limit': '30',
+          'X-RateLimit-Remaining': '29',
+        }),
+      );
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it('should enforce authenticated tier limits (100 req/min)', async () => {
+      mockRateLimitService.resolveTier.mockReturnValue({
+        tier: RateLimitTier.AUTHENTICATED,
+        identifier: 'user:GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
+      });
+      mockRateLimitService.checkRateLimit.mockResolvedValue({
+        allowed: true,
+        remaining: 99,
+        resetTime: new Date(Date.now() + 60 * 1000),
+        currentCount: 1,
+        limit: 100,
+      });
+
+      const middleware = tieredRateLimiter();
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockRateLimitService.checkRateLimit).toHaveBeenCalledWith(
+        'user:GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
+        { maxRequests: 100, windowSeconds: 60 },
+        RateLimitTier.AUTHENTICATED,
+      );
+      expect(mockResponse.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'X-RateLimit-Limit': '100',
+          'X-RateLimit-Remaining': '99',
+        }),
+      );
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it('should set Retry-After header on 429', async () => {
+      mockRateLimitService.resolveTier.mockReturnValue({
+        tier: RateLimitTier.ANONYMOUS,
+        identifier: 'anon',
+      });
+      mockRateLimitService.checkRateLimit.mockResolvedValue({
+        allowed: false,
+        remaining: 0,
+        resetTime: new Date(Date.now() + 30 * 1000),
+        currentCount: 31,
+        limit: 30,
+      });
+
+      const middleware = tieredRateLimiter();
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.set).toHaveBeenCalledWith('Retry-After', expect.any(String));
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 429,
         }),
       );
     });

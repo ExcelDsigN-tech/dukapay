@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom-client';
+import { Request, Response, type NextFunction } from 'express';
+import { Registry, Counter, Histogram, collectDefaultMetrics } from 'prom-client';
 
 export const register = new Registry();
 
@@ -20,63 +20,6 @@ export const httpRequestDuration = new Histogram({
   registers: [register],
 });
 
-export const activeLoans = new Gauge({
-  name: 'dukapay_active_loans_total',
-  help: 'Total number of active loans',
-  registers: [register],
-});
-
-export const loansDisbursed = new Counter({
-  name: 'dukapay_loans_disbursed_total',
-  help: 'Total number of loans disbursed',
-  labelNames: ['currency'],
-  registers: [register],
-});
-
-export const loansRepaid = new Counter({
-  name: 'dukapay_loans_repaid_total',
-  help: 'Total number of loans repaid',
-  labelNames: ['currency'],
-  registers: [register],
-});
-
-export const loansDefaulted = new Counter({
-  name: 'dukapay_loans_defaulted_total',
-  help: 'Total number of defaulted loans',
-  labelNames: ['currency'],
-  registers: [register],
-});
-
-export const floatTotal = new Gauge({
-  name: 'dukapay_float_total',
-  help: 'Total float available',
-  labelNames: ['currency'],
-  registers: [register],
-});
-
-export const floatUtilized = new Gauge({
-  name: 'dukapay_float_utilized',
-  help: 'Total float currently utilized',
-  labelNames: ['currency'],
-  registers: [register],
-});
-
-export const disbursementAmount = new Histogram({
-  name: 'dukapay_disbursement_amount',
-  help: 'Loan disbursement amounts',
-  labelNames: ['currency'],
-  buckets: [100, 500, 1000, 5000, 10000, 50000],
-  registers: [register],
-});
-
-export const repaymentAmount = new Histogram({
-  name: 'dukapay_repayment_amount',
-  help: 'Loan repayment amounts',
-  labelNames: ['currency'],
-  buckets: [100, 500, 1000, 5000, 10000, 50000],
-  registers: [register],
-});
-
 export const databaseQueryDuration = new Histogram({
   name: 'dukapay_database_query_duration_seconds',
   help: 'Database query duration in seconds',
@@ -94,7 +37,7 @@ export const blockchainTransactionDuration = new Histogram({
 });
 
 export function metricsMiddleware() {
-  return (req: Request, res: Response, next: Function) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
 
     res.on('finish', () => {
@@ -122,7 +65,7 @@ export function metricsMiddleware() {
 }
 
 export function metricsEndpoint() {
-  return async (req: Request, res: Response) => {
+  return async (_req: Request, res: Response) => {
     res.set('Content-Type', register.contentType);
     res.end(await register.metrics());
   };

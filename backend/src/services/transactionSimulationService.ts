@@ -9,10 +9,7 @@ import {
 } from '@stellar/stellar-sdk';
 import logger from '../utils/logger.js';
 import { AppError } from '../errors/AppError.js';
-import {
-  createSorobanRpcServer,
-  getStellarNetworkPassphrase,
-} from '../config/stellar.js';
+import { createSorobanRpcServer, getStellarNetworkPassphrase } from '../config/stellar.js';
 import { cacheService } from './cacheService.js';
 
 const SIMULATION_CACHE_TTL = 30; // 30 seconds
@@ -25,9 +22,9 @@ interface SimulationArg {
 interface SimulationResult {
   success: boolean;
   gasEstimate: string;
-  resultXdr?: string;
+  resultXdr?: string | undefined;
   returnValue?: unknown;
-  error?: string;
+  error?: string | undefined;
   warnings: string[];
   balanceDeltas: Array<{ address: string; asset: string; delta: string }>;
   cached: boolean;
@@ -63,7 +60,12 @@ function convertArgToScVal(arg: SimulationArg): ReturnType<typeof nativeToScVal>
   }
 }
 
-function generateCacheKey(contractId: string, function_: string, args: SimulationArg[], sourceAccount: string): string {
+function generateCacheKey(
+  contractId: string,
+  function_: string,
+  args: SimulationArg[],
+  sourceAccount: string,
+): string {
   const argsHash = JSON.stringify(args);
   return `sim:${contractId}:${function_}:${sourceAccount}:${argsHash}`;
 }
@@ -174,12 +176,15 @@ export class TransactionSimulationService {
         }
       }
 
-      const resourceFee = (simulation as { result?: { cost?: { cpuInsns?: string } } }).result?.cost?.cpuInsns ?? '0';
+      const resourceFee =
+        (simulation as { result?: { cost?: { cpuInsns?: string } } }).result?.cost?.cpuInsns ?? '0';
 
       const result: SimulationResult = {
         success: true,
         gasEstimate: resourceFee,
-        resultXdr: simulation.result ? (simulation as { result: { xdr?: string } }).result.xdr : undefined,
+        resultXdr: simulation.result
+          ? (simulation as { result: { xdr?: string } }).result.xdr
+          : undefined,
         returnValue,
         warnings,
         balanceDeltas: [],

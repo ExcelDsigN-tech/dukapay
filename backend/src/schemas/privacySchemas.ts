@@ -20,7 +20,7 @@ export const dsarDeleteSchema = z.object({
       .min(10, 'Reason must be at least 10 characters')
       .max(1000, 'Reason is too long'),
     confirmDeletion: z.literal(true, {
-      errorMap: () => ({ message: 'You must confirm deletion by setting confirmDeletion to true' }),
+      message: 'You must confirm deletion by setting confirmDeletion to true',
     }),
   }),
 });

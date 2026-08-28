@@ -240,12 +240,10 @@ export const complianceService = {
         [result.id ?? null, sarId],
       );
     } catch (error) {
-      logger
-        .withContext()
-        .error('SAR provider submission failed', {
-          sarId,
-          reason: error instanceof Error ? error.message : 'unknown',
-        });
+      logger.withContext().error('SAR provider submission failed', {
+        sarId,
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
     }
   },
 };
