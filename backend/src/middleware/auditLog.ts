@@ -97,10 +97,8 @@ export const auditLog = (req: Request, res: Response, next: NextFunction): void 
           );
         } catch (err) {
           logger.error('Audit logging failure', {
-            err,
-            actor,
+            reason: err instanceof Error ? err.message : 'unknown',
             action,
-            target,
           });
         }
       })();

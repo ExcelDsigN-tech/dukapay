@@ -155,3 +155,42 @@ describe('GET /health/deep', () => {
     });
   });
 });
+
+describe('GET /health/indexer', () => {
+  beforeEach(() => {
+    delete process.env.INDEXER_LAG_ALERT_THRESHOLD;
+    mockHealthCheck.mockResolvedValue({ connected: true, latestLedger: 1200 });
+    mockDbQuery.mockImplementation(async (sql: unknown) => {
+      if (typeof sql === 'string' && sql.includes('indexer_state')) {
+        return {
+          rows: [{ last_finalized_ledger: 1050, updated_at: '2026-08-28T00:00:00.000Z' }],
+          rowCount: 1,
+        };
+      }
+      return { rows: [{ '?column?': 1 }], rowCount: 1 };
+    });
+  });
+
+  it('reports the finalized height and degrades above 100 blocks of lag', async () => {
+    const res = await request(app).get('/health/indexer');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      status: 'degraded',
+      chainHead: 1200,
+      lastFinalizedBlock: 1050,
+      lag: 150,
+      threshold: 100,
+    });
+  });
+
+  it('returns 503 when chain or indexer state is unavailable', async () => {
+    mockHealthCheck.mockResolvedValue({ connected: false });
+
+    const res = await request(app).get('/health/indexer');
+
+    expect(res.status).toBe(503);
+    expect(res.body.status).toBe('down');
+    expect(res.body.lag).toBeNull();
+  });
+});

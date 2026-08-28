@@ -1,7 +1,13 @@
 import { registerTestUser } from '../controllers/authController.js';
 import { Router } from 'express';
 import { z } from 'zod';
-import { requestChallenge, login, verify, logout } from '../controllers/authController.js';
+import {
+  requestChallenge,
+  login,
+  verify,
+  logout,
+  submitKyc,
+} from '../controllers/authController.js';
 import {
   challengeRateLimiter,
   loginRateLimiter,
@@ -25,6 +31,17 @@ const loginSchema = z.object({
   publicKey: z.string().min(1, 'Public key is required'),
   message: z.string().min(1, 'Message is required'),
   signature: z.string().min(1, 'Signature is required'),
+});
+
+const kycSchema = z.object({
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().min(1).max(100),
+  dateOfBirth: z.string().date().optional(),
+  countryCode: z
+    .string()
+    .trim()
+    .length(2)
+    .transform((value) => value.toUpperCase()),
 });
 
 /**
@@ -86,6 +103,8 @@ router.post('/challenge', challengeRateLimiter, validateBody(challengeSchema), r
  *               $ref: '#/components/schemas/AuthLoginResponse'
  */
 router.post('/login', ipLoginRateLimiter, loginRateLimiter, validateBody(loginSchema), login);
+
+router.post('/kyc', requireJwtAuth, validateBody(kycSchema), submitKyc);
 
 /**
  * @swagger
