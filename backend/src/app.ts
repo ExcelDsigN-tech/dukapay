@@ -409,7 +409,7 @@ if (process.env.NODE_ENV === 'test') {
 // unmatched paths trigger a not-found error.
 // Express 5 uses path-to-regexp v8 which requires named params,
 // so we use a standard middleware function instead of app.all('*').
-app.use((req: Request, _res: Response, next: NextFunction) => {
+app.use((_req: Request, _res: Response, next: NextFunction) => {
   // Log the full path server-side; return a generic message to the client
   // so the path structure isn't exposed (issue #409).
   next(AppError.notFound('Resource not found'));

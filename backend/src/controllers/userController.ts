@@ -97,7 +97,7 @@ export const updateUserProfile = asyncHandler(async (req: Request, res: Response
 
   if (input.displayName !== undefined) {
     updates.push(`display_name = $${paramIndex++}`);
-    values.push(sanitizeHtml(input.displayName));
+    values.push(input.displayName ? sanitizeHtml(input.displayName) : input.displayName);
   }
 
   if (input.email !== undefined) {
