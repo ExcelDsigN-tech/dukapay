@@ -6,6 +6,7 @@
   "scripts": {
     "deploy": "ts-node deploy.ts",
     "typecheck": "tsc --noEmit",
+    "verify:contracts": "tsx verify-contracts.ts",
     "gen:money": "ts-node gen-money.ts",
     "gen:money:check": "ts-node gen-money.ts --check",
     "money:property-test": "tsx money-property-test.ts",
@@ -29,5 +30,8 @@
   },
   "overrides": {
     "axios": "1.13.5"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }

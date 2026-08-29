@@ -24,6 +24,49 @@ import {
 
 const router = Router();
 
+/**
+ * @swagger
+ * /score/leaderboard:
+ *   get:
+ *     summary: Retrieve the credit score leaderboard
+ *     description: >
+ *       Returns the top 50 credit scores ordered descending. Public endpoint;
+ *       cached for 60 seconds. Each entry contains the wallet address, its
+ *       current score, and the corresponding band.
+ *     tags: [Score]
+ *     responses:
+ *       200:
+ *         description: Leaderboard retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, leaderboard, source]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 leaderboard:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     required: [userId, score, band]
+ *                     properties:
+ *                       userId:
+ *                         type: string
+ *                         example: GBABCDEFGHIJK...
+ *                       score:
+ *                         type: integer
+ *                         example: 750
+ *                       band:
+ *                         type: string
+ *                         enum: [Excellent, Good, Fair, Poor]
+ *                 source:
+ *                   type: string
+ *                   enum: [cache, database]
+ *       500:
+ *         description: Internal server error.
+ */
 router.get('/leaderboard', getLeaderboard);
 
 /**
@@ -107,6 +150,65 @@ router.get(
   getOnChainScoreHistory,
 );
 
+/**
+ * @swagger
+ * /score/{walletAddress}/nft:
+ *   get:
+ *     summary: Retrieve a wallet's on-chain credit score NFT metadata
+ *     description: >
+ *       Queries the RemittanceNFT contract and returns the on-chain metadata
+ *       backing a wallet's credit score NFT: the current score, a history
+ *       digest hash, metadata URI, default counter, transfer cooldown and the
+ *       ledger of the last update. `walletAddress` must match the JWT wallet.
+ *       Returns `null` for the `nft` field when no NFT exists.
+ *     tags: [Score]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: walletAddress
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Must equal the JWT wallet (`publicKey`)
+ *     responses:
+ *       200:
+ *         description: NFT metadata retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, walletAddress, nft]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 walletAddress:
+ *                   type: string
+ *                 nft:
+ *                   type: object
+ *                   nullable: true
+ *                   required:
+ *                     [score, historyHash, metadataUri, defaultCount, transferCooldownRemaining, lastUpdateLedger]
+ *                   properties:
+ *                     score:
+ *                       type: integer
+ *                     historyHash:
+ *                       type: string
+ *                     metadataUri:
+ *                       type: string
+ *                     defaultCount:
+ *                       type: integer
+ *                     transferCooldownRemaining:
+ *                       type: integer
+ *                       description: Remaining cooldown in seconds before the NFT can be transferred.
+ *                     lastUpdateLedger:
+ *                       type: integer
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: walletAddress does not match the authenticated wallet.
+ */
 router.get(
   '/:walletAddress/nft',
   requireJwtAuth,
