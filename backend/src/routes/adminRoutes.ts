@@ -100,8 +100,180 @@ router.post(
   resolveLoanDispute,
 );
 // New admin JWT-protected endpoints
+
+/**
+ * @swagger
+ * /admin/disputes:
+ *   get:
+ *     summary: List loan disputes
+ *     description: >
+ *       Returns a keyset-paginated list of loan disputes, optionally filtered
+ *       by status (`open`, `resolved`, `rejected`, or `all`). Admin only.
+ *     tags: [Admin]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [open, resolved, rejected, all]
+ *         description: Filter by dispute status (default `open`)
+ *       - in: query
+ *         name: snapshot_seq
+ *         schema:
+ *           type: string
+ *         description: Snapshot sequence for stable pagination
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ *         description: Opaque keyset cursor from a previous response
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Disputes retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, data, page]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   required: [items]
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/LoanDispute'
+ *                 page:
+ *                   type: object
+ *                   required: [next_cursor, snapshot_seq, total_at_snapshot, limit]
+ *                   properties:
+ *                     next_cursor:
+ *                       type: string
+ *                       nullable: true
+ *                     snapshot_seq:
+ *                       type: string
+ *                     total_at_snapshot:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *       400:
+ *         description: Invalid query parameters.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Requires the admin role.
+ */
 router.get('/disputes', requireJwtAuth, requireRoles('admin'), listLoanDisputes);
+
+/**
+ * @swagger
+ * /admin/disputes/{disputeId}:
+ *   get:
+ *     summary: Get a single loan dispute
+ *     description: >
+ *       Returns a dispute together with its joined loan record. Admin only.
+ *     tags: [Admin]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: disputeId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Dispute ID
+ *     responses:
+ *       200:
+ *         description: Dispute retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, dispute]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 dispute:
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/LoanDispute'
+ *                     - type: object
+ *                       required: [loan]
+ *                       properties:
+ *                         loan:
+ *                           type: object
+ *                           description: Joined loan record
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Requires the admin role.
+ *       404:
+ *         description: Dispute not found.
+ */
 router.get('/disputes/:disputeId', requireJwtAuth, requireRoles('admin'), getLoanDispute);
+/**
+ * @swagger
+ * /admin/disputes/{disputeId}/resolve:
+ *   post:
+ *     summary: Resolve a loan dispute
+ *     description: >
+ *       Resolves an open dispute. `action` of `confirm` keeps the loan as
+ *       defaulted (writes a `DefaultConfirmed` event) while `reverse` marks
+ *       the loan active again (writes a `DefaultReversed` event). Admin only.
+ *     tags: [Admin]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: disputeId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Dispute ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [action, resolution]
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [confirm, reverse]
+ *               resolution:
+ *                 type: string
+ *                 minLength: 5
+ *               adminNote:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Dispute resolved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessMessageResponse'
+ *       400:
+ *         description: Invalid action or resolution.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Requires the admin role.
+ *       404:
+ *         description: Dispute not found or not open.
+ */
 router.post(
   '/disputes/:disputeId/resolve',
   requireJwtAuth,
@@ -110,6 +282,50 @@ router.post(
   idempotencyMiddleware,
   resolveLoanDispute,
 );
+/**
+ * @swagger
+ * /admin/disputes/{disputeId}/reject:
+ *   post:
+ *     summary: Reject a loan dispute
+ *     description: >
+ *       Rejects an open dispute, marking it `rejected` with an optional admin
+ *       note. Admin only.
+ *     tags: [Admin]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: disputeId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Dispute ID
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               admin_note:
+ *                 type: string
+ *                 description: Optional note written as the resolution reason
+ *     responses:
+ *       200:
+ *         description: Dispute rejected successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessMessageResponse'
+ *       400:
+ *         description: Invalid request.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Requires the admin role.
+ *       404:
+ *         description: Dispute not found or not open.
+ */
 router.post(
   '/disputes/:disputeId/reject',
   requireJwtAuth,
@@ -119,6 +335,79 @@ router.post(
   rejectLoanDispute,
 );
 
+/**
+ * @swagger
+ * /admin/governance/pending:
+ *   get:
+ *     summary: Get the pending governance proposal
+ *     description: >
+ *       Returns the currently pending multisig governance proposal (proposed
+ *       admin, signer approvals, timelock) as well as the current admin and
+ *       target contract. Admin only.
+ *     tags: [Admin]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Pending governance proposal retrieved.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 currentAdmin:
+ *                   type: string
+ *                   nullable: true
+ *                 targetContract:
+ *                   type: string
+ *                   nullable: true
+ *                 pendingProposal:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       nullable: true
+ *                     proposedAdmin:
+ *                       type: string
+ *                       nullable: true
+ *                     approvalCount:
+ *                       type: integer
+ *                     threshold:
+ *                       type: integer
+ *                     executableAt:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     expiresAt:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     signers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           address:
+ *                             type: string
+ *                           approved:
+ *                             type: boolean
+ *                 signers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       address:
+ *                         type: string
+ *                       approved:
+ *                         type: boolean
+ *                 threshold:
+ *                   type: integer
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Requires the admin role.
+ */
 router.get('/governance/pending', requireJwtAuth, requireRoles('admin'), getPendingGovernance);
 
 const checkDefaultsBodySchema = z.object({
