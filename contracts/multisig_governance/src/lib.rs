@@ -2,6 +2,13 @@
 
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod upgrade_timelock_test;
+
+/// Issue #452: 48-hour timelock + multi-sig governance for Soroban contract
+/// upgrades, with an emergency-pause circuit breaker.
+pub mod upgrade_timelock;
+
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env,
     IntoVal, Map, Symbol, Vec,
@@ -54,6 +61,18 @@ pub enum GovernanceError {
     ProposalIdMismatch = 4018,
     ProposalNotActive = 4019,
     DuplicateSigner = 4020,
+
+    // ── Upgrade timelock (Issue #452) ──────────────────────────────────────
+    UpgradeGovernanceNotConfigured = 4030,
+    UpgradeAlreadyPending = 4031,
+    NoPendingUpgrade = 4032,
+    UpgradeTimelockNotElapsed = 4033,
+    UpgradeThresholdNotMet = 4034,
+    UpgradeExpired = 4035,
+    UpgradesPaused = 4036,
+    NotUpgradeSigner = 4037,
+    InvalidUpgradeThreshold = 4038,
+    TooManyUpgradeSigners = 4039,
 }
 
 /// Status of a pending admin transfer proposal.
@@ -654,7 +673,7 @@ impl GovernanceContract {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    fn read_admin(env: &Env) -> Result<Address, GovernanceError> {
+    pub(crate) fn read_admin(env: &Env) -> Result<Address, GovernanceError> {
         env.storage()
             .instance()
             .get(&KEY_ADMIN)

@@ -451,32 +451,32 @@ impl AgentVault {
         Self::owner(&env)
     }
 
-    /// Configure (or clear with `None`) the `CircuitBreaker` contract address
-    /// the vault consults before value-moving operations. Owner only.
-    pub fn set_circuit_breaker(env: Env, breaker: Option<Address>) -> Result<(), VaultError> {
-        Self::owner(&env)?.require_auth();
-        env.storage()
-            .instance()
-            .set(&DataKey::CircuitBreaker, &breaker);
-        Self::bump_instance_ttl(&env);
-        events::vault_circuit_breaker_set(&env, breaker);
-        Ok(())
+    // ── Invariant enforcement ──────────────────────────────────────────
+
+    /// View function that checks whether a single agent's vault satisfies
+    /// the core solvency invariant: `float <= collateral * haircut_bps / 10_000`.
+    /// Returns `(holds, float, max_allowed)` so the indexer can log the
+    /// result and trigger alerts when the invariant is violated.
+    pub fn check_invariant(env: Env, agent: Address) -> (bool, i128, i128) {
+        let vault = Self::read_vault(&env, &agent);
+        let max_allowed = Self::max_float_of(vault.collateral, vault.haircut_bps);
+        let holds = vault.float <= max_allowed;
+        events::invariant_checked(&env, &agent, holds, vault.float, max_allowed);
+        (holds, vault.float, max_allowed)
     }
 
-    /// True when the active `CircuitBreaker` currently blocks this vault and
-    /// `function`. Returns false when no breaker is configured.
-    pub fn is_circuit_blocked(env: Env, function: Symbol) -> bool {
-        Self::bump_instance_ttl(&env);
-        if let Some(breaker) = env
-            .storage()
-            .instance()
-            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
-            .flatten()
-        {
-            let client = BreakerClient::new(&env, &breaker);
-            return client.is_blocked(&env.current_contract_address(), &function);
+    /// Batch invariant check across multiple agents. Returns a Vec of
+    /// `(agent, holds, float, max_allowed)` tuples. Useful for periodic
+    /// off-chain verification by the indexer.
+    pub fn check_invariants(env: Env, agents: Vec<Address>) -> Vec<(Address, bool, i128, i128)> {
+        let mut results: Vec<(Address, bool, i128, i128)> = Vec::new(&env);
+        for agent in agents.iter() {
+            let vault = Self::read_vault(&env, &agent);
+            let max_allowed = Self::max_float_of(vault.collateral, vault.haircut_bps);
+            let holds = vault.float <= max_allowed;
+            results.push_back((agent, holds, vault.float, max_allowed));
         }
-        false
+        results
     }
 }
 

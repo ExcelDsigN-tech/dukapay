@@ -1,0 +1,43 @@
+name: Contract Registry Verification
+
+on:
+  schedule:
+    - cron: '15 3 * * *' # nightly at 03:15 UTC, after the env drift sweep
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'scripts/contract-registry.json'
+      - 'docs/deployed-contracts.md'
+      - 'scripts/verify-contracts.ts'
+      - '.github/workflows/verify-contracts.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: scripts/package-lock.json
+
+      - name: Install script deps
+        working-directory: scripts
+        run: npm ci
+
+      - name: Verify deployed contract registry
+        working-directory: scripts
+        run: |
+          npx tsx verify-contracts.ts --format markdown \
+            > ../contract-registry-report.md
+          cat ../contract-registry-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on registry verification errors
+        working-directory: scripts
+        run: |
+          npx tsx verify-contracts.ts --network testnet --format json

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://schema.stellar.org/contract-registry-1.0.json",
+  "_comment": "Canonical registry of deployed DukaPay Soroban contracts. This is the single source of truth consumed by docs/deployed-contracts.md and scripts/verify-contracts.ts. Update it after every (re)deployment via scripts/deploy.ts. Contract IDs are public addresses and safe to commit; never store secret/admin keys here.",
+  "networks": {
+    "testnet": {
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "rpcUrl": "https://soroban-testnet.stellar.org",
+      "explorerUrl": "https://stellar.expert/explorer/testnet",
+      "contracts": {
+        "loan_manager": {
+          "address": "not yet recorded",
+          "deployDate": null,
+          "deployer": "not yet recorded",
+          "deployTxHash": null,
+          "abiVersion": null,
+          "upgradeAuthority": "not yet recorded",
+          "timelock": null,
+          "envVar": "LOAN_MANAGER_CONTRACT_ID",
+          "initParams": ["remittance_nft", "lending_pool", "token", "admin"]
+        },
+        "lending_pool": {
+          "address": "not yet recorded",
+          "deployDate": null,
+          "deployer": "not yet recorded",
+          "deployTxHash": null,
+          "abiVersion": null,
+          "upgradeAuthority": "not yet recorded",
+          "timelock": null,
+          "envVar": "LENDING_POOL_CONTRACT_ID",
+          "initParams": ["token", "admin"]
+        },
+        "remittance_nft": {
+          "address": "not yet recorded",
+          "deployDate": null,
+          "deployer": "not yet recorded",
+          "deployTxHash": null,
+          "abiVersion": null,
+          "upgradeAuthority": "not yet recorded",
+          "timelock": null,
+          "envVar": "REMITTANCE_NFT_CONTRACT_ID",
+          "initParams": ["admin"]
+        },
+        "multisig_governance": {
+          "address": "not yet recorded",
+          "deployDate": null,
+          "deployer": "not yet recorded",
+          "deployTxHash": null,
+          "abiVersion": null,
+          "upgradeAuthority": "not yet recorded",
+          "timelock": null,
+          "envVar": "MULTISIG_GOVERNANCE_CONTRACT_ID",
+          "initParams": ["admin", "target_contract"]
+        },
+        "token": {
+          "address": "not yet recorded",
+          "deployDate": null,
+          "deployer": "not yet recorded",
+          "deployTxHash": null,
+          "abiVersion": null,
+          "upgradeAuthority": "not yet recorded",
+          "timelock": null,
+          "envVar": "POOL_TOKEN_ADDRESS",
+          "initParams": []
+        },
+        "agent_registry": {
+          "address": "not yet recorded",
+          "deployDate": null,
+          "deployer": "not yet recorded",
+          "deployTxHash": null,
+          "abiVersion": null,
+          "upgradeAuthority": "not yet recorded",
+          "timelock": null,
+          "envVar": "AGENT_REGISTRY_CONTRACT_ID",
+          "initParams": ["owner", "operator"]
+        },
+        "agent_vault": {
+          "address": "not yet recorded",
+          "deployDate": null,
+          "deployer": "not yet recorded",
+          "deployTxHash": null,
+          "abiVersion": null,
+          "upgradeAuthority": "not yet recorded",
+          "timelock": null,
+          "envVar": "AGENT_VAULT_CONTRACT_ID",
+          "initParams": ["owner", "operator", "token", "max_haircut_bps", "min_collateral"]
+        }
+      }
+    },
+    "futurenet": {
+      "networkPassphrase": "Test SDF Future Network ; October 2022",
+      "rpcUrl": "https://rpc-futurenet.stellar.org",
+      "explorerUrl": "https://stellar.expert/explorer/futurenet",
+      "contracts": {}
+    },
+    "mainnet": {
+      "networkPassphrase": "Public Global Stellar Network ; September 2015",
+      "rpcUrl": "https://soroban-rpc.stellar.org",
+      "explorerUrl": "https://stellar.expert/explorer/public",
+      "contracts": {}
+    }
+  }
+}

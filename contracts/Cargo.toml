@@ -8,7 +8,8 @@ members = [
   "multisig_governance",
   "agent_registry",
   "agent_vault",
-  "circuit_breaker",
+  "audit_anchor",
+  "oracle",
 ]
 exclude = [
   "fuzz",

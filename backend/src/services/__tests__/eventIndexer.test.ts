@@ -286,12 +286,18 @@ beforeAll(async () => {
     notificationService: { createNotification: mockNotificationCreate },
   }));
 
+  const mockLogMethods = {
+    warn: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+    http: jest.fn(),
+  };
+
   jest.unstable_mockModule('../../utils/logger.js', () => ({
     default: {
-      warn: jest.fn(),
-      error: jest.fn(),
-      info: jest.fn(),
-      debug: jest.fn(),
+      ...mockLogMethods,
+      withContext: jest.fn().mockReturnValue(mockLogMethods),
     },
   }));
 

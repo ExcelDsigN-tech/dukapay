@@ -12,6 +12,26 @@ permissions:
   contents: read
 
 jobs:
+  socket-supply-chain:
+    name: Socket malicious package blocking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Socket Firewall blocks installs when its supply-chain analysis finds a
+      # malicious package. Pin the action itself to an immutable commit.
+      - uses: SocketDev/action@2d3f25590c6ed6ba11a9a14c064d962a3a04698f # v1.3.1
+        with:
+          mode: firewall-free
+      - name: Analyze npm lockfiles
+        shell: bash
+        run: |
+          for directory in backend frontend scripts; do
+            (cd "$directory" && sfw npm ci --ignore-scripts)
+          done
+      - name: Analyze Cargo lockfile
+        run: sfw cargo fetch --locked
+        working-directory: contracts
+
   semgrep:
     name: Semgrep SAST
     runs-on: ubuntu-latest
@@ -22,7 +42,7 @@ jobs:
       image: semgrep/semgrep:1.174.0
     steps:
       - uses: actions/checkout@v4
-      - run: semgrep scan --config p/ci --error --exclude='**/node_modules/**' --exclude='**/target/**'
+      - run: semgrep scan --config p/ci --config p/sql-injection --error --exclude='**/node_modules/**' --exclude='**/target/**'
 
   gitleaks:
     name: Gitleaks secrets
@@ -87,3 +107,40 @@ jobs:
       - run: cargo install cargo-audit --locked
       - run: cargo audit
         working-directory: contracts
+
+  weekly-report:
+    name: Weekly vulnerability report
+    if: always() && github.event_name == 'schedule'
+    needs: [socket-supply-chain, semgrep, gitleaks, trivy, npm-audit, cargo-audit]
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Publish security-team report
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SOCKET_RESULT: ${{ needs.socket-supply-chain.result }}
+          SEMGREP_RESULT: ${{ needs.semgrep.result }}
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          TRIVY_RESULT: ${{ needs.trivy.result }}
+          NPM_RESULT: ${{ needs.npm-audit.result }}
+          CARGO_RESULT: ${{ needs.cargo-audit.result }}
+        run: |
+          title="Weekly vulnerability report - $(date -u +%Y-%m-%d)"
+          body=$(cat <<EOF
+          Automated security scan summary:
+
+          - Socket supply chain: ${SOCKET_RESULT}
+          - Semgrep: ${SEMGREP_RESULT}
+          - Gitleaks: ${GITLEAKS_RESULT}
+          - Trivy: ${TRIVY_RESULT}
+          - npm audit: ${NPM_RESULT}
+          - cargo audit: ${CARGO_RESULT}
+
+          Detailed findings remain in the restricted workflow logs: ${RUN_URL}
+          EOF
+          )
+          gh issue create --repo "$REPOSITORY" --title "$title" --body "$body" --label security

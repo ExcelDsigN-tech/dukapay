@@ -39,7 +39,7 @@ pub fn haircut_updated(env: &Env, agent: &Address, old: u32, new: u32) {
     env.events().publish(topics, (old, new));
 }
 
-pub fn vault_circuit_breaker_set(env: &Env, breaker: Option<Address>) {
-    let topics = (Symbol::new(env, "VaultCircuitBreakerSet"),);
-    env.events().publish(topics, breaker);
+pub fn invariant_checked(env: &Env, agent: &Address, holds: bool, float: i128, max_allowed: i128) {
+    let topics = (Symbol::new(env, "InvariantChecked"), agent.clone());
+    env.events().publish(topics, (holds, float, max_allowed));
 }

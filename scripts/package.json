@@ -6,9 +6,12 @@
   "scripts": {
     "deploy": "ts-node deploy.ts",
     "typecheck": "tsc --noEmit",
+    "verify:contracts": "tsx verify-contracts.ts",
     "gen:money": "ts-node gen-money.ts",
     "gen:money:check": "ts-node gen-money.ts --check",
-    "money:property-test": "tsx money-property-test.ts"
+    "money:property-test": "tsx money-property-test.ts",
+    "audit:verify": "tsx verify-audit-proof.ts",
+    "drift:check": "tsx drift-check.ts"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^14.4.3",
@@ -22,7 +25,13 @@
     "tsx": "^4.23.1",
     "typescript": "^5.4.5"
   },
+  "optionalDependencies": {
+    "pg": "^8.18.0"
+  },
   "overrides": {
     "axios": "1.13.5"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }

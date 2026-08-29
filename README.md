@@ -29,8 +29,8 @@ Monorepo:
 - **`contracts/`**: Soroban (Rust) smart contracts — `agent-registry`, `agent-vault`, `settlement-netter` (+ integration & proptest harness).
 - **`backend/`**: Node.js/Express API — onboarding, KYC adapter, transaction API, settlement service.
 - **`frontend/`**: Next.js web application — agent dashboard, admin console, find-an-agent map.
-- **`sdk/`**: TypeScript SDK — register agents, cash-in/out, settle.
-- **`indexer/`**: Rust → PostgreSQL event index and audit queries.
+- **`sdk/`**: `@dukapay/sdk` — TypeScript SDK for external integrators: typed API client, Freighter/Albedo wallet adapters, contract helpers, React hooks.
+- **`indexer/`**: standalone Rust Soroban event indexer — parallel fetch/decode, durable checkpointing, contract sharding, Prometheus health metrics, Kafka output.
 - **`infra/`**, **`scripts/`**, **`docs/`**: docker-compose, bootstrap scripts, architecture & ADRs.
 
 *For the system design, see [ARCHITECTURE.md](ARCHITECTURE.md).*

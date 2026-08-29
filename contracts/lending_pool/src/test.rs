@@ -2,7 +2,8 @@ use crate::{events, LendingPool, LendingPoolClient};
 use soroban_sdk::testutils::{Address as _, Events as _, Ledger as _};
 use soroban_sdk::token::Client as TokenClient;
 use soroban_sdk::token::StellarAssetClient;
-use soroban_sdk::{Address, BytesN, Env, FromVal, IntoVal, Symbol, TryFromVal};
+use soroban_sdk::xdr::ToXdr;
+use soroban_sdk::{Address, BytesN, Env, FromVal, IntoVal, TryFromVal};
 
 fn create_token_contract<'a>(
     env: &Env,
@@ -1973,76 +1974,86 @@ fn test_round_trip_deposit_then_redeem_is_never_profitable() {
     }
 }
 
-// ── Circuit breaker integration ──────────────────────────────────────────────
-
-#[soroban_sdk::contract]
-pub struct MockBreaker;
-
-#[soroban_sdk::contractimpl]
-impl MockBreaker {
-    pub fn set_blocked(env: Env, blocked: bool) {
-        env.storage()
-            .instance()
-            .set(&Symbol::new(&env, "blk"), &blocked);
-    }
-
-    pub fn is_blocked(env: Env, _contract: Address, _function: Symbol) -> bool {
-        env.storage()
-            .instance()
-            .get(&Symbol::new(&env, "blk"))
-            .unwrap_or(false)
-    }
-}
+// ── MEV Commit-Reveal & Cross-Contract Safety Tests ────────────────────────
 
 #[test]
-#[should_panic(expected = "#15")]
-fn test_deposit_blocked_by_circuit_breaker() {
+fn test_mev_commit_reveal_workflow() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let token_admin = Address::generate(&env);
-    let (token_id, stellar_asset_client, _token_client) = create_token_contract(&env, &token_admin);
+    let admin = Address::generate(&env);
+    let settler = Address::generate(&env);
+    let (token_id, _, _) = create_token_contract(&env, &admin);
 
     let pool_id = env.register(LendingPool, ());
     let pool_client = LendingPoolClient::new(&env, &pool_id);
-    pool_client.initialize(&token_admin);
-    pool_client.set_withdrawal_cooldown(&0);
+    pool_client.initialize(&admin);
 
-    let breaker_id = env.register(MockBreaker, ());
-    let breaker_client = MockBreakerClient::new(&env, &breaker_id);
-    breaker_client.set_blocked(&true);
-    pool_client.set_circuit_breaker(&Some(breaker_id.clone()));
+    let amount: i128 = 50_000;
+    let nonce = BytesN::from_array(&env, &[42u8; 32]);
 
-    // The configured breaker reports the pool as blocked, so deposit must revert.
-    let provider = Address::generate(&env);
-    stellar_asset_client.mint(&provider, &5000);
-    pool_client.deposit(&provider, &token_id, &3000, &0);
+    // Compute commitment hash: sha256(amount, nonce)
+    let mut data = soroban_sdk::Bytes::new(&env);
+    data.append(&amount.to_xdr(&env));
+    data.append(&nonce.clone().to_xdr(&env));
+    let hash: BytesN<32> = env.crypto().sha256(&data).into();
+
+    // 1. Commit
+    pool_client.commit_settlement(&settler, &hash);
+
+    // Advance ledger by 1 to satisfy minimum delay
+    env.ledger().set_sequence_number(env.ledger().sequence() + 1);
+
+    // 2. Reveal
+    pool_client.reveal_settlement(&settler, &token_id, &amount, &nonce);
 }
 
 #[test]
-fn test_deposit_resumes_when_circuit_breaker_clears() {
+#[should_panic]
+fn test_mev_reveal_without_delay_panics() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let token_admin = Address::generate(&env);
-    let (token_id, stellar_asset_client, token_client) = create_token_contract(&env, &token_admin);
+    let admin = Address::generate(&env);
+    let settler = Address::generate(&env);
+    let (token_id, _, _) = create_token_contract(&env, &admin);
 
     let pool_id = env.register(LendingPool, ());
     let pool_client = LendingPoolClient::new(&env, &pool_id);
-    pool_client.initialize(&token_admin);
-    pool_client.set_withdrawal_cooldown(&0);
+    pool_client.initialize(&admin);
 
-    let breaker_id = env.register(MockBreaker, ());
-    let breaker_client = MockBreakerClient::new(&env, &breaker_id);
-    breaker_client.set_blocked(&true);
-    pool_client.set_circuit_breaker(&Some(breaker_id.clone()));
-    assert!(pool_client.is_circuit_blocked(&Symbol::new(&env, "deposit")));
+    let amount: i128 = 50_000;
+    let nonce = BytesN::from_array(&env, &[42u8; 32]);
 
-    breaker_client.set_blocked(&false);
-    assert!(!pool_client.is_circuit_blocked(&Symbol::new(&env, "deposit")));
+    let mut data = soroban_sdk::Bytes::new(&env);
+    data.append(&amount.to_xdr(&env));
+    data.append(&nonce.clone().to_xdr(&env));
+    let hash: BytesN<32> = env.crypto().sha256(&data).into();
 
-    let provider = Address::generate(&env);
-    stellar_asset_client.mint(&provider, &5000);
-    pool_client.deposit(&provider, &token_id, &3000, &0);
-    assert_eq!(token_client.balance(&pool_id), 3000);
+    pool_client.commit_settlement(&settler, &hash);
+
+    // Trying to reveal on SAME ledger must panic (CommitmentTooEarly)
+    pool_client.reveal_settlement(&settler, &token_id, &amount, &nonce);
 }
+
+#[test]
+fn test_cross_contract_call_depth_limit() {
+    let env = Env::default();
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+
+    // Calling enter_cross_contract_call 3 times succeeds
+    assert!(pool_client.try_enter_cross_contract_call().unwrap().is_ok());
+    assert!(pool_client.try_enter_cross_contract_call().unwrap().is_ok());
+    assert!(pool_client.try_enter_cross_contract_call().unwrap().is_ok());
+
+    // 4th nested call must fail with CallDepthExceeded error
+    assert!(pool_client.try_enter_cross_contract_call().is_err());
+
+    // Exiting returns capacity
+    pool_client.exit_cross_contract_call();
+    pool_client.exit_cross_contract_call();
+    pool_client.exit_cross_contract_call();
+    assert!(pool_client.try_enter_cross_contract_call().unwrap().is_ok());
+}
+

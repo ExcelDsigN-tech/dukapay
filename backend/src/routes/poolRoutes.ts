@@ -8,6 +8,8 @@ import {
   emergencyWithdrawFromPool,
   getPoolSharePrice,
   submitPoolTransaction,
+  getAnalytics,
+  getAgentDashboard,
 } from '../controllers/poolController.js';
 import {
   requireLender,
@@ -26,6 +28,110 @@ import {
 } from '../schemas/poolSchemas.js';
 
 const router = Router();
+
+/**
+ * @swagger
+ * /pool/analytics:
+ *   get:
+ *     summary: Get aggregate pool analytics
+ *     description: >
+ *       Returns high-level lending-pool analytics: total deposits and
+ *       withdrawals, yield distributed, loans issued, total volume and the
+ *       number of active agents. Public endpoint; cached for 300 seconds.
+ *     tags: [Pool]
+ *     responses:
+ *       200:
+ *         description: Pool analytics retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, analytics, source]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 analytics:
+ *                   type: object
+ *                   required:
+ *                     [totalDeposits, totalWithdrawals, totalYieldDistributed, totalLoansIssued, totalVolume, activeAgents, updatedAt]
+ *                   properties:
+ *                     totalDeposits:
+ *                       type: number
+ *                     totalWithdrawals:
+ *                       type: number
+ *                     totalYieldDistributed:
+ *                       type: number
+ *                     totalLoansIssued:
+ *                       type: integer
+ *                     totalVolume:
+ *                       type: number
+ *                     activeAgents:
+ *                       type: integer
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                 source:
+ *                   type: string
+ *                   enum: [cache, database]
+ *       500:
+ *         description: Internal server error.
+ */
+router.get('/analytics', getAnalytics);
+
+/**
+ * @swagger
+ * /pool/agent/dashboard/{agentAddress}:
+ *   get:
+ *     summary: Get an agent's lending dashboard
+ *     description: >
+ *       Returns a single agent's float balance, collateral balance, active
+ *       state, and number of active loans. Public endpoint; cached for 30
+ *       seconds.
+ *     tags: [Pool]
+ *     parameters:
+ *       - in: path
+ *         name: agentAddress
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Stellar public key of the agent
+ *     responses:
+ *       200:
+ *         description: Agent dashboard retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, dashboard, source]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 dashboard:
+ *                   type: object
+ *                   required: [agentAddress, floatBalance, collateralBalance, isActive, activeLoans, updatedAt]
+ *                   properties:
+ *                     agentAddress:
+ *                       type: string
+ *                     floatBalance:
+ *                       type: number
+ *                     collateralBalance:
+ *                       type: number
+ *                     isActive:
+ *                       type: boolean
+ *                     activeLoans:
+ *                       type: integer
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                 source:
+ *                   type: string
+ *                   enum: [cache, database]
+ *       500:
+ *         description: Internal server error.
+ */
+router.get('/agent/dashboard/:agentAddress', getAgentDashboard);
 
 /**
  * @swagger

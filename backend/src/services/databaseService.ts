@@ -1,5 +1,38 @@
 import { query } from '../db/connection.js';
 
+/**
+ * Whitelist of columns allowed in dynamic SET clauses (issue #406).
+ * Column names are never trusted from user input — only from these
+ * statically-defined sets. Any key in `data` that isn't listed here is
+ * silently dropped so an attacker can't inject arbitrary SQL via
+ * Object.keys(data).
+ */
+const USER_PROFILE_UPDATABLE_FIELDS = new Set(['display_name', 'email', 'metadata']);
+
+const LOAN_HISTORY_UPDATABLE_FIELDS = new Set([
+  'lender_public_key',
+  'principal_amount',
+  'interest_rate_bps',
+  'principal_paid',
+  'interest_paid',
+  'accrued_interest',
+  'status',
+  'due_date',
+  'requested_at',
+  'approved_at',
+  'repaid_at',
+  'defaulted_at',
+  'metadata',
+]);
+
+/** Return only the keys present in both `data` and the allowed set. */
+function pickAllowedKeys<T extends Record<string, unknown>>(
+  data: T,
+  allowed: Set<string>,
+): string[] {
+  return Object.keys(data).filter((k) => allowed.has(k));
+}
+
 export interface UserProfile {
   id: number;
   public_key: string;
@@ -71,7 +104,7 @@ export const UserProfileService = {
     publicKey: string,
     data: Partial<Omit<UserProfile, 'id' | 'public_key' | 'created_at' | 'updated_at'>>,
   ): Promise<UserProfile | null> {
-    const fields = Object.keys(data);
+    const fields = pickAllowedKeys(data as Record<string, unknown>, USER_PROFILE_UPDATABLE_FIELDS);
     if (fields.length === 0) return this.findByPublicKey(publicKey);
 
     const setClauses = fields.map((f, i) => `${f} = $${i + 2}`).join(', ');
@@ -159,7 +192,7 @@ export const LoanHistoryService = {
       Omit<LoanHistory, 'id' | 'loan_id' | 'borrower_public_key' | 'created_at' | 'updated_at'>
     >,
   ): Promise<LoanHistory | null> {
-    const fields = Object.keys(data);
+    const fields = pickAllowedKeys(data as Record<string, unknown>, LOAN_HISTORY_UPDATABLE_FIELDS);
     if (fields.length === 0) {
       const r = await query('SELECT * FROM loan_history WHERE loan_id = $1', [loanId]);
       return (r.rows[0] as LoanHistory) ?? null;
