@@ -39,6 +39,13 @@ pub trait LendingPoolInterface {
 
 mod events;
 
+/// Interface exposed by the DukaPay `CircuitBreaker` contract. The loan
+/// manager consults `is_blocked` before executing value-moving operations.
+#[contractclient(name = "BreakerClient")]
+pub trait BreakerInterface {
+    fn is_blocked(env: Env, contract: Address, function: Symbol) -> bool;
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum LoanError {
@@ -70,6 +77,8 @@ pub enum LoanError {
     InsufficientCollateral = 26,
     LoanNotLiquidatable = 27,
     LoanNotPurgable = 28,
+    /// A global, contract, or function-level circuit-breaker pause is active.
+    CircuitBreakerTripped = 29,
 }
 
 #[contracttype]
@@ -123,6 +132,9 @@ pub enum DataKey {
     BorrowerLoanCount(Address),
     BorrowerLoans(Address),
     Paused,
+    /// Optional address of the DukaPay CircuitBreaker contract. When set, the
+    /// loan manager consults it before executing value-moving operations.
+    CircuitBreaker,
     PausedAtLedger,
     InterestRateBps,
     DefaultTermLedgers,
@@ -331,6 +343,27 @@ impl LoanManager {
             let nft_client = NftClient::new(env, &nft_addr);
             if nft_client.is_paused() {
                 return Err(LoanError::NftPaused);
+            }
+        }
+        // Cascade: also check the global/contract-level circuit breaker.
+        Self::assert_circuit_ok(env, Symbol::new(env, "any"))?;
+        Ok(())
+    }
+
+    /// Revert if the configured `CircuitBreaker` has tripped a pause that
+    /// covers this loan manager and `fn_sym`. When no breaker is configured
+    /// this is a no-op, so the loan manager remains fully backward compatible.
+    fn assert_circuit_ok(env: &Env, fn_sym: Symbol) -> Result<(), LoanError> {
+        Self::bump_instance_ttl(env);
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(env, &breaker);
+            if client.is_blocked(&env.current_contract_address(), &fn_sym) {
+                return Err(LoanError::CircuitBreakerTripped);
             }
         }
         Ok(())
@@ -915,6 +948,9 @@ impl LoanManager {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::LoanCounter, &0u32);
         env.storage().instance().set(&DataKey::Paused, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::CircuitBreaker, &None::<Address>);
 
         let nft_client = NftClient::new(&env, &nft_contract);
         if !nft_client.is_authorized_minter(&env.current_contract_address()) {
@@ -976,6 +1012,33 @@ impl LoanManager {
             (old_version, new_version),
         );
         env.deployer().update_current_contract_wasm(new_wasm_hash);
+    }
+
+    /// Configure (or clear with `None`) the `CircuitBreaker` contract address
+    /// the loan manager consults before value-moving operations. Admin only.
+    pub fn set_circuit_breaker(env: Env, breaker: Option<Address>) {
+        Self::admin(&env).require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::CircuitBreaker, &breaker);
+        Self::bump_instance_ttl(&env);
+        events::loan_circuit_breaker_set(&env, breaker);
+    }
+
+    /// True when the active `CircuitBreaker` currently blocks this loan
+    /// manager and `function`. Returns false when no breaker is configured.
+    pub fn is_circuit_blocked(env: Env, function: Symbol) -> bool {
+        Self::bump_instance_ttl(&env);
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(&env, &breaker);
+            return client.is_blocked(&env.current_contract_address(), &function);
+        }
+        false
     }
 
     pub fn migrate(env: Env) {
@@ -1066,6 +1129,7 @@ impl LoanManager {
     ) -> Result<u32, LoanError> {
         borrower.require_auth();
         Self::require_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "request_loan"))?;
 
         if amount <= 0 {
             return Err(LoanError::InvalidAmount);
@@ -1183,6 +1247,7 @@ impl LoanManager {
         let admin = Self::admin(&env);
         admin.require_auth();
         Self::require_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "approve_loan"))?;
 
         let loan_key = DataKey::Loan(loan_id);
         let mut loan: Loan = env
@@ -1287,6 +1352,7 @@ impl LoanManager {
 
         borrower.require_auth();
         Self::require_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "repay"))?;
         Self::bump_instance_ttl(&env);
 
         if amount <= 0 {
