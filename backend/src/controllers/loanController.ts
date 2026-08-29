@@ -323,6 +323,138 @@ export const previewLoanAmortizationSchedule = asyncHandler(async (req: Request,
   });
 });
 
+const FEE_RATE_BPS = 100; // 1% origination fee default
+
+/**
+ * Build repayment preview schedule with fees per period
+ * Returns amortization table with principal, interest, fees, total, remaining_balance
+ */
+export const buildRepaymentPreviewSchedule = (
+  principal: number,
+  interestRateBps: number,
+  termLedgers: number,
+  startDate: Date,
+  feeRateBps: number = FEE_RATE_BPS,
+) => {
+  const totalInterest = roundToCents(principal * (interestRateBps / 10_000));
+  const totalFees = roundToCents(principal * (feeRateBps / 10_000));
+  const totalDue = roundToCents(principal + totalInterest + totalFees);
+
+  const LEDGER_DAY = 17280;
+  const termDays = termLedgers / LEDGER_DAY;
+  const periodCount = Math.max(1, Math.round(termDays / 30) || 1);
+  const daysPerPeriod = termDays / periodCount;
+
+  const rawPrincipal = principal / periodCount;
+  const rawInterest = totalInterest / periodCount;
+  const rawFees = totalFees / periodCount;
+
+  const schedule: Array<{
+    period: number;
+    due_date: string;
+    principal: number;
+    interest: number;
+    fees: number;
+    total: number;
+    remaining_balance: number;
+  }> = [];
+
+  let remainingPrincipal = principal;
+  let remainingInterest = totalInterest;
+  let remainingFees = totalFees;
+
+  for (let i = 1; i <= periodCount; i++) {
+    const isLast = i === periodCount;
+    const principalPortion = isLast ? roundToCents(remainingPrincipal) : roundToCents(rawPrincipal);
+    const interestPortion = isLast ? roundToCents(remainingInterest) : roundToCents(rawInterest);
+    const feesPortion = isLast ? roundToCents(remainingFees) : roundToCents(rawFees);
+
+    remainingPrincipal = roundToCents(remainingPrincipal - principalPortion);
+    remainingInterest = roundToCents(remainingInterest - interestPortion);
+    remainingFees = roundToCents(remainingFees - feesPortion);
+
+    const dueDate = addDays(startDate, Math.round(daysPerPeriod * i));
+
+    schedule.push({
+      period: i,
+      due_date: dueDate.toISOString(),
+      principal: principalPortion,
+      interest: interestPortion,
+      fees: feesPortion,
+      total: roundToCents(principalPortion + interestPortion + feesPortion),
+      remaining_balance: Math.max(0, roundToCents(remainingPrincipal)),
+    });
+  }
+
+  return {
+    principal: roundToCents(principal),
+    interestRateBps,
+    termLedgers,
+    feeRateBps,
+    totalInterest,
+    totalFees,
+    totalDue,
+    schedule,
+  };
+};
+
+/**
+ * GET /api/loans/:id/repayment-preview
+ * Returns exact repayment schedule before committing — amortization table with
+ * principal, interest, fees, remaining balance per period.
+ */
+export const getLoanRepaymentPreview = asyncHandler(async (req: Request, res: Response) => {
+  const { loanId } = req.params;
+
+  const eventsResult = await query(
+    `SELECT id, event_type, amount, ledger, ledger_closed_at, interest_rate_bps, term_ledgers
+       FROM contract_events
+       WHERE loan_id = $1
+       ORDER BY ledger_closed_at ASC, ledger ASC, id ASC`,
+    [loanId],
+  );
+
+  if (eventsResult.rows.length === 0) {
+    throw AppError.notFound('Loan not found', ErrorCode.LOAN_NOT_FOUND, 'loanId');
+  }
+
+  const events = eventsResult.rows;
+  const requestEvent = events.find(
+    (event: Record<string, unknown>) => event.event_type === 'LoanRequested',
+  );
+  const approvalEvents = events.filter(
+    (event: Record<string, unknown>) => event.event_type === 'LoanApproved',
+  );
+  const approvalEvent =
+    approvalEvents.length > 0 ? approvalEvents[approvalEvents.length - 1] : undefined;
+
+  if (!requestEvent || !approvalEvent || !requestEvent.amount) {
+    throw AppError.notFound('Loan not fully approved', ErrorCode.LOAN_NOT_FOUND, 'loanId');
+  }
+
+  const principal = Number.parseFloat(String(requestEvent.amount));
+  const interestRateBps = Number.parseInt(
+    String(approvalEvent.interest_rate_bps ?? DEFAULT_INTEREST_RATE_BPS),
+    10,
+  );
+  const termLedgers = Number.parseInt(
+    String(approvalEvent.term_ledgers ?? DEFAULT_TERM_LEDGERS),
+    10,
+  );
+
+  const approvedAt = approvalEvent.ledger_closed_at
+    ? new Date(approvalEvent.ledger_closed_at as string)
+    : new Date();
+
+  const preview = buildRepaymentPreviewSchedule(principal, interestRateBps, termLedgers, approvedAt);
+
+  res.json({
+    success: true,
+    loanId,
+    preview,
+  });
+});
+
 /**
  * Get active loans for a borrower
  *
