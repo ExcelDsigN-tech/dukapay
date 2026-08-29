@@ -25,3 +25,6 @@ BUG_HUNT_ANSWER_KEY.md
 .agents
 data
 skills-lock.json
+
+# soroban test snapshots
+contracts/*/test_snapshots/

@@ -263,13 +263,25 @@ class NotificationService {
   ): Promise<Map<string, Array<{ userId: string; message: string; loanId?: number }>>> {
     const grouped = new Map<string, Array<{ userId: string; message: string; loanId?: number }>>();
 
-    for (const notif of notifications) {
+    // Batch-prefetch all digest preferences in a single query instead of one
+    // round-trip per notification (fixes the N+1 on
+    // user_notification_preferences for large repayment batches).
+    const userIds = [...new Set(notifications.map((n) => n.userId))];
+    const prefMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const placeholders = userIds.map((_, i) => `$${i + 1}`).join(', ');
       const prefResult = await query(
-        `SELECT digest_frequency FROM user_notification_preferences WHERE user_id = $1`,
-        [notif.userId],
+        `SELECT user_id, digest_frequency FROM user_notification_preferences
+         WHERE user_id IN (${placeholders})`,
+        userIds,
       );
+      for (const row of prefResult.rows) {
+        prefMap.set(String(row.user_id), row.digest_frequency);
+      }
+    }
 
-      const digestFrequency = prefResult.rows[0]?.digest_frequency ?? 'off';
+    for (const notif of notifications) {
+      const digestFrequency = prefMap.get(notif.userId) ?? 'off';
 
       if (digestFrequency === 'off') {
         // Send immediately
