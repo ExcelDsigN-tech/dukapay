@@ -50,6 +50,7 @@ export const swaggerSpec = swaggerJSDoc({
   apis: [
     path.join(cwd, 'src/routes/**/*.{ts,js}'),
     path.join(cwd, 'src/controllers/**/*.{ts,js}'),
+    path.join(cwd, 'src/swagger/**/*.{ts,js}'),
     path.join(cwd, 'dist/src/routes/**/*.js'),
     path.join(cwd, 'dist/src/controllers/**/*.js'),
   ],
@@ -60,27 +61,32 @@ export function mountSwaggerDocs(app: Express): void {
   docsRouter.use(...swaggerUi.serve);
   docsRouter.get('/', swaggerUi.setup(swaggerSpec));
 
-  app.use('/docs', (req: Request, res: Response, next: NextFunction) => {
-    if (!isSwaggerEnabled()) {
-      next();
-      return;
-    }
+  // Both a short alias (`/docs`) and the `/api/docs` base are served, so
+  // integrators have a stable, discoverable URL. See Issue #437.
+  for (const docsPath of ['/docs', '/api/docs']) {
+    app.use(docsPath, (req: Request, res: Response, next: NextFunction) => {
+      if (!isSwaggerEnabled()) {
+        next();
+        return;
+      }
 
-    // Swagger UI requires inline scripts. Override helmet's global script-src
-    // with a /docs-scoped policy so API routes stay hardened.
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https: 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https: data:; frame-ancestors 'self'",
-    );
-    docsRouter(req, res, next);
-  });
+      // Swagger UI requires inline scripts. Override helmet's global script-src
+      // with a /docs-scoped policy so API routes stay hardened.
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https: 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https: data:; frame-ancestors 'self'",
+      );
+      docsRouter(req, res, next);
+    });
+  }
 
-  app.get('/docs.json', (_req: Request, res: Response, next: NextFunction) => {
-    if (!isSwaggerEnabled()) {
-      next();
-      return;
-    }
-
-    res.json(swaggerSpec);
-  });
+  for (const jsonPath of ['/docs.json', '/api/docs.json']) {
+    app.get(jsonPath, (_req: Request, res: Response, next: NextFunction) => {
+      if (!isSwaggerEnabled()) {
+        next();
+        return;
+      }
+      res.json(swaggerSpec);
+    });
+  }
 }

@@ -143,6 +143,54 @@ router.post('/refresh', refresh);
  */
 router.get('/csrf', getCsrfTokenController);
 
+/**
+ * @swagger
+ * /auth/kyc:
+ *   post:
+ *     summary: Submit a KYC screening for the authenticated user
+ *     description: >
+ *       Submits the authenticated user's identity details to the configured
+ *       screening provider and returns the screening outcome (`approved`,
+ *       `review`, or `rejected`) with the provider reference.
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [firstName, lastName]
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 maxLength: 100
+ *               lastName:
+ *                 type: string
+ *                 maxLength: 100
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *               countryCode:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 2
+ *                 description: ISO 3166-1 alpha-2 country code
+ *     responses:
+ *       200:
+ *         description: KYC screening completed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/KycScreeningResponse'
+ *       400:
+ *         description: Validation error.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       503:
+ *         description: Screening provider unavailable.
+ */
 router.post('/kyc', requireJwtAuth, validateBody(kycSchema), submitKyc);
 
 /**
