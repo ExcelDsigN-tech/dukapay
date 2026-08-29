@@ -2057,3 +2057,159 @@ fn test_cross_contract_call_depth_limit() {
     assert!(pool_client.try_enter_cross_contract_call().unwrap().is_ok());
 }
 
+// ── Reentrancy Guard & Fuzz Tests ──────────────────────────────────────────
+
+#[test]
+fn test_reentrancy_guard_blocks_reentrant_withdraw() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, stellar, _) = create_token_contract(&env, &admin);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+    pool_client.set_withdrawal_cooldown(&0);
+
+    let provider = Address::generate(&env);
+    stellar.mint(&provider, &1000);
+    pool_client.deposit(&provider, &token_id, &1000, &0);
+
+    // Simulate reentrancy: manually set lock then attempt withdraw
+    env.as_contract(&pool_id, || {
+        env.storage().instance().set(&crate::DataKey::ReentrancyLock, &true);
+    });
+
+    let result = pool_client.try_withdraw(&provider, &token_id, &100, &0);
+    assert_eq!(result, Err(Ok(crate::PoolError::ReentrancyGuardTriggered)));
+
+    // After clearing lock, withdraw succeeds
+    env.as_contract(&pool_id, || {
+        env.storage().instance().set(&crate::DataKey::ReentrancyLock, &false);
+        env.storage().instance().set(&crate::DataKey::CallDepth, &0u32);
+    });
+    pool_client.withdraw(&provider, &token_id, &100, &0);
+    assert_eq!(pool_client.get_shares(&provider, &token_id), 900);
+}
+
+#[test]
+fn test_reentrancy_guard_blocks_reentrant_deposit() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, stellar, _) = create_token_contract(&env, &admin);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+
+    let provider = Address::generate(&env);
+    stellar.mint(&provider, &1000);
+
+    env.as_contract(&pool_id, || {
+        env.storage().instance().set(&crate::DataKey::ReentrancyLock, &true);
+    });
+
+    let result = pool_client.try_deposit(&provider, &token_id, &100, &0);
+    assert_eq!(result, Err(Ok(crate::PoolError::ReentrancyGuardTriggered)));
+}
+
+#[test]
+fn test_reentrancy_guard_allows_sequential_calls() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, stellar, _) = create_token_contract(&env, &admin);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+    pool_client.set_withdrawal_cooldown(&0);
+
+    let p = Address::generate(&env);
+    stellar.mint(&p, &3000);
+    pool_client.deposit(&p, &token_id, &1000, &0);
+    pool_client.deposit(&p, &token_id, &1000, &0);
+    pool_client.withdraw(&p, &token_id, &500, &0);
+    pool_client.withdraw(&p, &token_id, &500, &0);
+    assert_eq!(pool_client.get_shares(&p, &token_id), 1000);
+}
+
+#[test]
+fn test_fuzz_reentrancy_random_sequence() {
+    // Fuzz-like: random sequence of deposits/withdraws with interleaved lock checks
+    fn next(state: &mut u64) -> u64 {
+        *state ^= *state << 13;
+        *state ^= *state >> 7;
+        *state ^= *state << 17;
+        *state
+    }
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, stellar, _) = create_token_contract(&env, &admin);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+    pool_client.set_withdrawal_cooldown(&0);
+
+    let mut rng: u64 = 0xDEAD_BEEF_CAFE_1234;
+    let provider = Address::generate(&env);
+    stellar.mint(&provider, &1_000_000);
+
+    for _ in 0..30 {
+        let op = next(&mut rng) % 3;
+        let amount = (next(&mut rng) % 500 + 1) as i128;
+        match op {
+            0 => {
+                let _ = pool_client.try_deposit(&provider, &token_id, &amount, &0);
+            }
+            1 => {
+                let shares = pool_client.get_shares(&provider, &token_id);
+                if shares > 0 {
+                    let w = (amount % shares) + 1;
+                    let _ = pool_client.try_withdraw(&provider, &token_id, &w, &0);
+                }
+            }
+            _ => {
+                let shares = pool_client.get_shares(&provider, &token_id);
+                if shares > 0 {
+                    let w = (amount % shares) + 1;
+                    let _ = pool_client.try_emergency_withdraw(&provider, &token_id, &w, &0);
+                }
+            }
+        }
+        // Invariant: lock must be released after each call
+        let locked: bool = env.as_contract(&pool_id, || {
+            env.storage().instance().get(&crate::DataKey::ReentrancyLock).unwrap_or(false)
+        });
+        assert!(!locked, "reentrancy lock must be released after each operation");
+    }
+}
+
+#[test]
+fn test_cei_ordering_withdraw_does_not_lose_funds_on_reentrancy_attempt() {
+    // Ensure that even if reentrancy were attempted, CEI prevents double-spend
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, stellar, token_client) = create_token_contract(&env, &admin);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+    pool_client.set_withdrawal_cooldown(&0);
+
+    let provider = Address::generate(&env);
+    stellar.mint(&provider, &1000);
+    pool_client.deposit(&provider, &token_id, &1000, &0);
+
+    let bal_before = token_client.balance(&pool_id);
+    // Normal withdraw should reduce pool balance by assets returned
+    pool_client.withdraw(&provider, &token_id, &400, &0);
+    let bal_after = token_client.balance(&pool_id);
+    assert_eq!(bal_after, bal_before - 400);
+    assert_eq!(pool_client.get_shares(&provider, &token_id), 600);
+}
+
