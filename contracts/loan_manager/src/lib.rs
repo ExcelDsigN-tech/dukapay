@@ -155,6 +155,7 @@ pub enum DataKey {
     MigratedVersion,
     PriceOracle,
     CollateralToken,
+    ReentrancyLock,
 }
 
 #[contract]
@@ -367,6 +368,19 @@ impl LoanManager {
             }
         }
         Ok(())
+    }
+
+    fn acquire_lock(env: &Env) -> Result<(), LoanError> {
+        let locked: bool = env.storage().instance().get(&DataKey::ReentrancyLock).unwrap_or(false);
+        if locked {
+            panic!("reentrancy guard triggered");
+        }
+        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
+        Ok(())
+    }
+
+    fn release_lock(env: &Env) {
+        env.storage().instance().set(&DataKey::ReentrancyLock, &false);
     }
 
     fn remaining_principal(loan: &Loan) -> i128 {
@@ -1248,7 +1262,6 @@ impl LoanManager {
         admin.require_auth();
         Self::require_not_paused(&env)?;
         Self::assert_circuit_ok(&env, Symbol::new(&env, "approve_loan"))?;
-
         let loan_key = DataKey::Loan(loan_id);
         let mut loan: Loan = env
             .storage()
@@ -1283,6 +1296,9 @@ impl LoanManager {
             return Err(LoanError::InsufficientPoolLiquidity);
         }
 
+        // Acquire reentrancy guard before state mutations (CEI)
+        Self::acquire_lock(&env)?;
+
         // ── EFFECTS (all state mutations before any external calls) ─────────
         // Capture values used in the transfer before mutating loan fields.
         let borrower = loan.borrower.clone();
@@ -1315,6 +1331,7 @@ impl LoanManager {
         );
         events::loan_approved_by_admin(&env, admin, loan_id, borrower);
 
+        Self::release_lock(&env);
         Ok(())
     }
 

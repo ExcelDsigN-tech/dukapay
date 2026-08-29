@@ -74,6 +74,7 @@ pub enum DataKey {
     /// vault consults it before executing value-moving operations.
     CircuitBreaker,
     Vault(Address),
+    ReentrancyLock,
 }
 
 #[contract]
@@ -158,6 +159,19 @@ impl AgentVault {
         Ok(())
     }
 
+    fn acquire_lock(env: &Env) -> Result<(), VaultError> {
+        let locked: bool = env.storage().instance().get(&DataKey::ReentrancyLock).unwrap_or(false);
+        if locked {
+            panic!("reentrancy guard triggered");
+        }
+        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
+        Ok(())
+    }
+
+    fn release_lock(env: &Env) {
+        env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+    }
+
     fn read_vault(env: &Env, agent: &Address) -> Vault {
         Self::bump_instance_ttl(env);
         let key = DataKey::Vault(agent.clone());
@@ -228,10 +242,13 @@ impl AgentVault {
 
     /// Agent posts USDC collateral. A vault is created on first deposit with
     /// the default haircut (the global maximum).
+    /// CEI ordering: vault state updated before external token transfer, with reentrancy guard.
     pub fn deposit_collateral(env: Env, agent: Address, amount: i128) -> Result<(), VaultError> {
         agent.require_auth();
         Self::assert_circuit_ok(&env, Symbol::new(&env, "deposit_collateral"))?;
+        Self::acquire_lock(&env)?;
         if amount <= 0 {
+            Self::release_lock(&env);
             return Err(VaultError::InvalidAmount);
         }
         let token = Self::token(&env)?;
@@ -243,40 +260,50 @@ impl AgentVault {
             .collateral
             .checked_add(amount)
             .ok_or(VaultError::InvalidAmount)?;
-        TokenClient::new(&env, &token).transfer(&agent, &env.current_contract_address(), &amount);
+        // CEI: effects before interactions
         Self::write_vault(&env, &agent, &vault);
+        TokenClient::new(&env, &token).transfer(&agent, &env.current_contract_address(), &amount);
         events::collateral_deposited(&env, &agent, amount, vault.collateral);
+        Self::release_lock(&env);
         Ok(())
     }
 
     /// Agent withdraws collateral. While float is outstanding the vault must
     /// stay above `min_collateral` and solvency must hold after the move.
     /// Full exit (down to zero) is only allowed when float == 0.
+    /// CEI + reentrancy guard.
     pub fn withdraw_collateral(env: Env, agent: Address, amount: i128) -> Result<(), VaultError> {
         agent.require_auth();
         Self::assert_circuit_ok(&env, Symbol::new(&env, "withdraw_collateral"))?;
+        Self::acquire_lock(&env)?;
         if amount <= 0 {
+            Self::release_lock(&env);
             return Err(VaultError::InvalidAmount);
         }
         let token = Self::token(&env)?;
         let params = Self::params(&env)?;
         let mut vault = Self::read_vault(&env, &agent);
         if amount > vault.collateral {
+            Self::release_lock(&env);
             return Err(VaultError::InsufficientCollateral);
         }
         let remaining = vault.collateral - amount;
         if vault.float > 0 {
             if remaining < params.min_collateral {
+                Self::release_lock(&env);
                 return Err(VaultError::MinCollateralViolated);
             }
             if vault.float > Self::max_float_of(remaining, vault.haircut_bps) {
+                Self::release_lock(&env);
                 return Err(VaultError::SolvencyViolated);
             }
         }
         vault.collateral = remaining;
-        TokenClient::new(&env, &token).transfer(&env.current_contract_address(), &agent, &amount);
+        // CEI: effects before external call
         Self::write_vault(&env, &agent, &vault);
+        TokenClient::new(&env, &token).transfer(&env.current_contract_address(), &agent, &amount);
         events::collateral_withdrawn(&env, &agent, amount, vault.collateral);
+        Self::release_lock(&env);
         Ok(())
     }
 

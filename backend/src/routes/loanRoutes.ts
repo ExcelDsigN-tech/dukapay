@@ -8,6 +8,7 @@ import {
   getLoanDetails,
   getLoanAmortizationSchedule,
   previewLoanAmortizationSchedule,
+  getLoanRepaymentPreview,
   requestLoan,
   repayLoan,
   depositCollateral,
@@ -460,6 +461,82 @@ router.get(
   requireScopes('read:loans'),
   requireLoanBorrowerAccess,
   getLoanAmortizationSchedule,
+);
+
+/**
+ * @swagger
+ * /loans/{loanId}/repayment-preview:
+ *   get:
+ *     summary: Get loan repayment preview
+ *     description: >
+ *       Returns exact repayment schedule before committing. Includes amortization
+ *       table with principal, interest, fees, remaining balance per period.
+ *     tags: [Loans]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: loanId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Repayment preview retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, loanId, preview]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 loanId:
+ *                   type: string
+ *                 preview:
+ *                   type: object
+ *                   required: [principal, interestRateBps, termLedgers, totalInterest, totalFees, totalDue, schedule]
+ *                   properties:
+ *                     principal:
+ *                       type: number
+ *                     interestRateBps:
+ *                       type: integer
+ *                     termLedgers:
+ *                       type: integer
+ *                     totalInterest:
+ *                       type: number
+ *                     totalFees:
+ *                       type: number
+ *                     totalDue:
+ *                       type: number
+ *                     schedule:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         required: [period, due_date, principal, interest, fees, total, remaining_balance]
+ *                         properties:
+ *                           period:
+ *                             type: integer
+ *                           due_date:
+ *                             type: string
+ *                             format: date-time
+ *                           principal:
+ *                             type: number
+ *                           interest:
+ *                             type: number
+ *                           fees:
+ *                             type: number
+ *                           total:
+ *                             type: number
+ *                           remaining_balance:
+ *                             type: number
+ */
+router.get(
+  '/:loanId/repayment-preview',
+  requireJwtAuth,
+  requireScopes('read:loans'),
+  requireLoanBorrowerAccess,
+  getLoanRepaymentPreview,
 );
 
 /**
