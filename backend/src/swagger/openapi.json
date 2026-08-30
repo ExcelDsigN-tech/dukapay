@@ -190,7 +190,9 @@
             "type": "string",
             "enum": [
               "admin",
+              "agent",
               "borrower",
+              "auditor",
               "lender"
             ],
             "nullable": true
@@ -2732,6 +2734,186 @@
         }
       }
     },
+    "/agents/my-assignments": {
+      "get": {
+        "summary": "List borrower wallets assigned to the authenticated agent",
+        "description": "Returns the borrowers the authenticated agent (or admin) is scoped to under tenant isolation (the `agents:view-assigned` scope). Agents can read but not modify the data of these borrowers on the loan, score and remittance endpoints, enforced both by the RBAC middleware and by RLS.\n",
+        "tags": [
+          "Agents"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignments retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "agentPublicKey",
+                        "assignments"
+                      ],
+                      "properties": {
+                        "agentPublicKey": {
+                          "type": "string"
+                        },
+                        "assignments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "borrowerPublicKey",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "borrowerPublicKey": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer token."
+          },
+          "403": {
+            "description": "Requires the agent role."
+          }
+        }
+      }
+    },
+    "/agents/{agentPublicKey}/assignees": {
+      "post": {
+        "summary": "Assign a borrower to an agent (admin only)",
+        "description": "Grants an agent read access to a borrower's data. Idempotent: assigning the same pair twice returns the existing assignment. Admin only.\n",
+        "tags": [
+          "Agents"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agentPublicKey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Agent's Stellar public key receiving the assignment"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "borrowerPublicKey"
+                ],
+                "properties": {
+                  "borrowerPublicKey": {
+                    "type": "string",
+                    "description": "Borrower's Stellar public key to assign"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Assignment created (or already present)."
+          },
+          "400": {
+            "description": "Invalid public key."
+          },
+          "401": {
+            "description": "Missing or invalid Bearer token."
+          },
+          "403": {
+            "description": "Requires the admin role."
+          }
+        }
+      }
+    },
+    "/agents/{agentPublicKey}/assignees/{borrowerPublicKey}": {
+      "delete": {
+        "summary": "Revoke a borrower assignment from an agent (admin only)",
+        "description": "Removes the agent's read access to the borrower. Admin only.\n",
+        "tags": [
+          "Agents"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agentPublicKey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "borrowerPublicKey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment revoked."
+          },
+          "400": {
+            "description": "Invalid public key."
+          },
+          "401": {
+            "description": "Missing or invalid Bearer token."
+          },
+          "403": {
+            "description": "Requires the admin role."
+          },
+          "404": {
+            "description": "Assignment not found."
+          }
+        }
+      }
+    },
     "/audit/proof/{logId}": {
       "get": {
         "summary": "Get the Merkle inclusion proof for an audit log",
@@ -4968,9 +5150,14 @@
     "/pool/agent/dashboard/{agentAddress}": {
       "get": {
         "summary": "Get an agent's lending dashboard",
-        "description": "Returns a single agent's float balance, collateral balance, active state, and number of active loans. Public endpoint; cached for 30 seconds.\n",
+        "description": "Returns a single agent's float balance, collateral balance, active state, and number of active loans. Restricted to the dashboard owner (agent/lender), admins and auditors under tenant isolation; cached for the active scope for 30 seconds.\n",
         "tags": [
           "Pool"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
         ],
         "parameters": [
           {
@@ -6086,7 +6273,7 @@
     "/score/{userId}": {
       "get": {
         "summary": "Retrieve a user's credit score",
-        "description": "Returns the current credit score for the authenticated wallet only: `userId` must match the Stellar public key in the JWT.\n",
+        "description": "Returns the current credit score for the authenticated wallet, or for a borrower explicitly assigned to an agent. Admin and auditor roles may read any wallet's score; borrowers may only read their own.\n",
         "tags": [
           "Score"
         ],
@@ -6103,7 +6290,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Must equal the JWT wallet (`publicKey`)"
+            "description": "Stellar public key (own wallet, or assigned borrower for agents)"
           }
         ],
         "responses": {
@@ -6131,7 +6318,7 @@
             "description": "Missing or invalid Bearer token."
           },
           "403": {
-            "description": "userId does not match the authenticated wallet."
+            "description": "No tenant access to the requested wallet."
           }
         }
       }
@@ -6139,7 +6326,7 @@
     "/score/{walletAddress}/history": {
       "get": {
         "summary": "Retrieve a user's on-chain credit score history",
-        "description": "Queries the RemittanceNFT contract for the score history vector and returns a chronologically sorted timeline. Cached for 60 seconds to avoid spamming the Soroban RPC.\n",
+        "description": "Queries the RemittanceNFT contract for the score history vector and returns a chronologically sorted timeline. Cached for 60 seconds to avoid spamming the Soroban RPC. Tenant scope: own wallet for borrowers, assigned borrowers for agents, any wallet for admins/auditors.\n",
         "tags": [
           "Score"
         ],
@@ -6156,7 +6343,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Must equal the JWT wallet (`publicKey`)"
+            "description": "Stellar public key (own wallet, or assigned borrower for agents)"
           }
         ],
         "responses": {
@@ -6167,7 +6354,7 @@
             "description": "Missing or invalid Bearer token."
           },
           "403": {
-            "description": "walletAddress does not match the authenticated wallet."
+            "description": "No tenant access to the requested wallet."
           }
         }
       }
@@ -6175,7 +6362,7 @@
     "/score/{walletAddress}/nft": {
       "get": {
         "summary": "Retrieve a wallet's on-chain credit score NFT metadata",
-        "description": "Queries the RemittanceNFT contract and returns the on-chain metadata backing a wallet's credit score NFT: the current score, a history digest hash, metadata URI, default counter, transfer cooldown and the ledger of the last update. `walletAddress` must match the JWT wallet. Returns `null` for the `nft` field when no NFT exists.\n",
+        "description": "Queries the RemittanceNFT contract and returns the on-chain metadata backing a wallet's credit score NFT: the current score, a history digest hash, metadata URI, default counter, transfer cooldown and the ledger of the last update. Returns `null` for the `nft` field when no NFT exists. Tenant scope: own wallet for borrowers, assigned borrowers for agents, any wallet for admins/auditors.\n",
         "tags": [
           "Score"
         ],
@@ -6192,7 +6379,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Must equal the JWT wallet (`publicKey`)"
+            "description": "Stellar public key (own wallet, or assigned borrower for agents)"
           }
         ],
         "responses": {
@@ -6257,7 +6444,7 @@
             "description": "Missing or invalid Bearer token."
           },
           "403": {
-            "description": "walletAddress does not match the authenticated wallet."
+            "description": "No tenant access to the requested wallet."
           }
         }
       }
@@ -6265,7 +6452,7 @@
     "/score/{userId}/breakdown": {
       "get": {
         "summary": "Get a detailed credit score breakdown",
-        "description": "Returns the user's credit score along with a detailed breakdown of contributing factors (repayment history, streaks, defaults) and a score history timeline. Derived from loan_events and scores tables. `userId` must match the Stellar public key in the JWT.\n",
+        "description": "Returns the user's credit score along with a detailed breakdown of contributing factors (repayment history, streaks, defaults) and a score history timeline. Derived from loan_events and scores tables. Tenant scope: own wallet for borrowers, assigned borrowers for agents, any wallet for admins/auditors.\n",
         "tags": [
           "Score"
         ],
@@ -6282,7 +6469,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Must equal the JWT wallet (`publicKey`)"
+            "description": "Stellar public key (own wallet, or assigned borrower for agents)"
           }
         ],
         "responses": {
@@ -6300,7 +6487,7 @@
             "description": "Missing or invalid Bearer token."
           },
           "403": {
-            "description": "userId does not match the authenticated wallet."
+            "description": "No tenant access to the requested wallet."
           }
         }
       }
@@ -6382,7 +6569,7 @@
     "/history/{userId}": {
       "get": {
         "summary": "Get remittance history for a user",
-        "description": "Retrieve the remittance history for the authenticated user. The userId path parameter must match the JWT wallet.",
+        "description": "Retrieve the remittance history for the authenticated user. The userId path parameter must match the JWT wallet (or an assigned borrower for agents).",
         "tags": [
           "Simulation"
         ],

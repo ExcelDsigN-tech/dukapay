@@ -83,7 +83,7 @@ export const swaggerSchemas = {
       publicKey: { type: 'string', nullable: true },
       role: {
         type: 'string',
-        enum: ['admin', 'borrower', 'lender'],
+        enum: ['admin', 'agent', 'borrower', 'auditor', 'lender'],
         nullable: true,
       },
       scopes: {

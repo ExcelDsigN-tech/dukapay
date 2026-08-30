@@ -17,6 +17,12 @@ export interface JwtPayload {
   tokenType?: 'access' | 'refresh' | undefined;
   familyId?: string | undefined;
   deviceFingerprint?: string | undefined;
+  /**
+   * Wallets the caller is authorised to operate on under tenant isolation
+   * (agents only). Minted from `agent_assignments` at login and re-verified by
+   * `middleware/rbac.ts` against the current table state at request time.
+   */
+  assignedBorrowers?: string[] | undefined;
 }
 
 export interface ChallengeMessage {
@@ -139,11 +145,29 @@ export function generateDeviceFingerprint(req: {
 }
 
 /**
+ * Resolves the borrower wallets assigned to an agent from `agent_assignments`
+ * (see `tenantService.ts`). Any other role gets an empty list. DB failures
+ * degrade to an empty list so authentication never hard-fails on a transient
+ * read.
+ */
+export async function resolveAssignedBorrowers(
+  publicKey: string,
+  role?: UserRole,
+): Promise<string[]> {
+  const { resolveAssignedBorrowers } = await import('./tenantService.js');
+  return resolveAssignedBorrowers(publicKey, role);
+}
+
+/**
  * Generates an Access Token (15m) for API authentication.
  */
 export function generateJwtToken(
   publicKey: string,
-  options?: { familyId?: string | undefined; deviceFingerprint?: string | undefined },
+  options?: {
+    familyId?: string | undefined;
+    deviceFingerprint?: string | undefined;
+    assignedBorrowers?: string[] | undefined;
+  },
 ): string {
   const secret = getJwtSecret();
   const role = resolveRoleForWallet(publicKey);
@@ -159,6 +183,10 @@ export function generateJwtToken(
     deviceFingerprint: options?.deviceFingerprint,
   };
 
+  if (options?.assignedBorrowers?.length) {
+    payload.assignedBorrowers = options.assignedBorrowers;
+  }
+
   return jwt.sign(payload, secret, {
     expiresIn: ACCESS_TOKEN_EXPIRES_IN,
     algorithm: 'HS256',
@@ -172,6 +200,7 @@ export function generateRefreshToken(
   publicKey: string,
   familyId: string,
   deviceFingerprint?: string,
+  assignedBorrowers?: string[],
 ): { refreshToken: string; jti: string } {
   const secret = getJwtSecret();
   const role = resolveRoleForWallet(publicKey);
@@ -187,6 +216,10 @@ export function generateRefreshToken(
     familyId,
     deviceFingerprint,
   };
+
+  if (assignedBorrowers?.length) {
+    payload.assignedBorrowers = assignedBorrowers;
+  }
 
   const refreshToken = jwt.sign(payload, secret, {
     expiresIn: REFRESH_TOKEN_EXPIRES_IN,
@@ -205,8 +238,20 @@ export async function generateTokenPair(
   existingFamilyId?: string,
 ): Promise<TokenPair> {
   const familyId = existingFamilyId ?? crypto.randomUUID();
-  const accessToken = generateJwtToken(publicKey, { familyId, deviceFingerprint });
-  const { refreshToken, jti } = generateRefreshToken(publicKey, familyId, deviceFingerprint);
+  const role = resolveRoleForWallet(publicKey);
+  const assignedBorrowers = await resolveAssignedBorrowers(publicKey, role);
+
+  const accessToken = generateJwtToken(publicKey, {
+    familyId,
+    deviceFingerprint,
+    assignedBorrowers,
+  });
+  const { refreshToken, jti } = generateRefreshToken(
+    publicKey,
+    familyId,
+    deviceFingerprint,
+    assignedBorrowers,
+  );
 
   const now = Date.now();
   const meta: StoredRefreshTokenMetadata = {
