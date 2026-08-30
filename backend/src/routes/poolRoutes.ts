@@ -11,12 +11,8 @@ import {
   getAnalytics,
   getAgentDashboard,
 } from '../controllers/poolController.js';
-import {
-  requireLender,
-  requireJwtAuth,
-  requireScopes,
-  requireWalletParamMatchesJwt,
-} from '../middleware/jwtAuth.js';
+import { requireLender, requireJwtAuth, requireScopes } from '../middleware/jwtAuth.js';
+import { requireTenantAccess, requireRole } from '../middleware/rbac.js';
 import { validate, validateBody } from '../middleware/validation.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import { addressParamSchema } from '../schemas/stellarSchemas.js';
@@ -86,9 +82,12 @@ router.get('/analytics', getAnalytics);
  *     summary: Get an agent's lending dashboard
  *     description: >
  *       Returns a single agent's float balance, collateral balance, active
- *       state, and number of active loans. Public endpoint; cached for 30
- *       seconds.
+ *       state, and number of active loans. Restricted to the dashboard owner
+ *       (agent/lender), admins and auditors under tenant isolation; cached for
+ *       the active scope for 30 seconds.
  *     tags: [Pool]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: agentAddress
@@ -131,7 +130,13 @@ router.get('/analytics', getAnalytics);
  *       500:
  *         description: Internal server error.
  */
-router.get('/agent/dashboard/:agentAddress', getAgentDashboard);
+router.get(
+  '/agent/dashboard/:agentAddress',
+  requireJwtAuth,
+  requireRole('agent', 'lender', 'admin', 'auditor'),
+  requireTenantAccess,
+  getAgentDashboard,
+);
 
 /**
  * @swagger
@@ -191,7 +196,7 @@ router.get(
   requireJwtAuth,
   requireLender,
   requireScopes('read:pool'),
-  requireWalletParamMatchesJwt('address'),
+  requireTenantAccess,
   validate(addressParamSchema),
   getDepositorPortfolio,
 );
@@ -237,7 +242,7 @@ router.get(
   requireJwtAuth,
   requireLender,
   requireScopes('read:pool'),
-  requireWalletParamMatchesJwt('address'),
+  requireTenantAccess,
   validate(getDepositorYieldHistorySchema),
   getDepositorYieldHistory,
 );

@@ -11,7 +11,8 @@ import {
   simulateTransactionSchema,
 } from '../schemas/simulationSchemas.js';
 import { simulationRateLimiter } from '../middleware/rateLimiter.js';
-import { requireJwtAuth, requireWalletParamMatchesJwt } from '../middleware/jwtAuth.js';
+import { requireJwtAuth } from '../middleware/jwtAuth.js';
+import { requireTenantAccess } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ const router = Router();
  * /history/{userId}:
  *   get:
  *     summary: Get remittance history for a user
- *     description: Retrieve the remittance history for the authenticated user. The userId path parameter must match the JWT wallet.
+ *     description: Retrieve the remittance history for the authenticated user. The userId path parameter must match the JWT wallet (or an assigned borrower for agents).
  *     tags: [Simulation]
  *     security:
  *       - BearerAuth: []
@@ -61,7 +62,7 @@ router.get(
   '/history/:userId',
   simulationRateLimiter,
   requireJwtAuth,
-  requireWalletParamMatchesJwt('userId'),
+  requireTenantAccess,
   validate(getRemittanceHistorySchema),
   getRemittanceHistory,
 );

@@ -22,6 +22,7 @@ import remittanceRoutes from '../src/routes/remittanceRoutes.js';
 import transactionRoutes from '../src/routes/transactionRoutes.js';
 import privacyRoutes from '../src/routes/privacyRoutes.js';
 import auditRoutes from '../src/routes/auditRoutes.js';
+import agentRoutes from '../src/routes/agentRoutes.js';
 
 export const OPENAPI_ARTIFACT = 'openapi.json';
 
@@ -50,6 +51,7 @@ const MOUNTS: Array<[specBasePath: string, router: Router]> = [
   ['/privacy', privacyRoutes],
   ['/audit', auditRoutes],
   ['/user', userRoutes],
+  ['/agents', agentRoutes],
 ];
 
 interface LayerLike {
@@ -145,7 +147,7 @@ function findUndocumented(
 }
 
 async function main(): Promise<void> {
-  const ok = <T,>(label: string, fn: () => T): T => {
+  const ok = <T>(label: string, fn: () => T): T => {
     const value = fn();
     console.log(`  ✓ ${label}`);
     return value;
@@ -165,9 +167,7 @@ async function main(): Promise<void> {
 
   const pathCount = Object.keys(spec.paths ?? {}).length;
   const operationCount = Object.values(spec.paths ?? {}).reduce(
-    (acc, item) =>
-      acc +
-      Object.values(item ?? {}).filter((o) => o && typeof o === 'object').length,
+    (acc, item) => acc + Object.values(item ?? {}).filter((o) => o && typeof o === 'object').length,
     0,
   );
 
