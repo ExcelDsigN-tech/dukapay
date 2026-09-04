@@ -16,14 +16,54 @@ import {
 } from '../schemas/scoreSchemas.js';
 import { requireApiKey } from '../middleware/auth.js';
 import { scoreUpdateRateLimit } from '../middleware/rateLimitMiddleware.js';
-import {
-  requireJwtAuth,
-  requireScopes,
-  requireWalletParamMatchesJwt,
-} from '../middleware/jwtAuth.js';
+import { requireJwtAuth, requireScopes } from '../middleware/jwtAuth.js';
+import { requireTenantAccess } from '../middleware/rbac.js';
 
 const router = Router();
 
+/**
+ * @swagger
+ * /score/leaderboard:
+ *   get:
+ *     summary: Retrieve the credit score leaderboard
+ *     description: >
+ *       Returns the top 50 credit scores ordered descending. Public endpoint;
+ *       cached for 60 seconds. Each entry contains the wallet address, its
+ *       current score, and the corresponding band.
+ *     tags: [Score]
+ *     responses:
+ *       200:
+ *         description: Leaderboard retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, leaderboard, source]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 leaderboard:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     required: [userId, score, band]
+ *                     properties:
+ *                       userId:
+ *                         type: string
+ *                         example: GBABCDEFGHIJK...
+ *                       score:
+ *                         type: integer
+ *                         example: 750
+ *                       band:
+ *                         type: string
+ *                         enum: [Excellent, Good, Fair, Poor]
+ *                 source:
+ *                   type: string
+ *                   enum: [cache, database]
+ *       500:
+ *         description: Internal server error.
+ */
 router.get('/leaderboard', getLeaderboard);
 
 /**
@@ -32,8 +72,9 @@ router.get('/leaderboard', getLeaderboard);
  *   get:
  *     summary: Retrieve a user's credit score
  *     description: >
- *       Returns the current credit score for the authenticated wallet only:
- *       `userId` must match the Stellar public key in the JWT.
+ *       Returns the current credit score for the authenticated wallet, or for
+ *       a borrower explicitly assigned to an agent. Admin and auditor roles
+ *       may read any wallet's score; borrowers may only read their own.
  *     tags: [Score]
  *     security:
  *       - BearerAuth: []
@@ -43,7 +84,7 @@ router.get('/leaderboard', getLeaderboard);
  *         required: true
  *         schema:
  *           type: string
- *         description: Must equal the JWT wallet (`publicKey`)
+ *         description: Stellar public key (own wallet, or assigned borrower for agents)
  *     responses:
  *       200:
  *         description: Score retrieved successfully.
@@ -60,13 +101,13 @@ router.get('/leaderboard', getLeaderboard);
  *       401:
  *         description: Missing or invalid Bearer token.
  *       403:
- *         description: userId does not match the authenticated wallet.
+ *         description: No tenant access to the requested wallet.
  */
 router.get(
   '/:userId',
   requireJwtAuth,
   requireScopes('read:score'),
-  requireWalletParamMatchesJwt('userId'),
+  requireTenantAccess,
   validate(getScoreSchema),
   getScore,
 );
@@ -79,7 +120,8 @@ router.get(
  *     description: >
  *       Queries the RemittanceNFT contract for the score history vector and
  *       returns a chronologically sorted timeline. Cached for 60 seconds to
- *       avoid spamming the Soroban RPC.
+ *       avoid spamming the Soroban RPC. Tenant scope: own wallet for borrowers,
+ *       assigned borrowers for agents, any wallet for admins/auditors.
  *     tags: [Score]
  *     security:
  *       - BearerAuth: []
@@ -89,29 +131,89 @@ router.get(
  *         required: true
  *         schema:
  *           type: string
- *         description: Must equal the JWT wallet (`publicKey`)
+ *         description: Stellar public key (own wallet, or assigned borrower for agents)
  *     responses:
  *       200:
  *         description: Score history retrieved successfully.
  *       401:
  *         description: Missing or invalid Bearer token.
  *       403:
- *         description: walletAddress does not match the authenticated wallet.
+ *         description: No tenant access to the requested wallet.
  */
 router.get(
   '/:walletAddress/history',
   requireJwtAuth,
   requireScopes('read:score'),
-  requireWalletParamMatchesJwt('walletAddress'),
+  requireTenantAccess,
   validate(getScoreHistorySchema),
   getOnChainScoreHistory,
 );
 
+/**
+ * @swagger
+ * /score/{walletAddress}/nft:
+ *   get:
+ *     summary: Retrieve a wallet's on-chain credit score NFT metadata
+ *     description: >
+ *       Queries the RemittanceNFT contract and returns the on-chain metadata
+ *       backing a wallet's credit score NFT: the current score, a history
+ *       digest hash, metadata URI, default counter, transfer cooldown and the
+ *       ledger of the last update. Returns `null` for the `nft` field when no
+ *       NFT exists. Tenant scope: own wallet for borrowers, assigned borrowers
+ *       for agents, any wallet for admins/auditors.
+ *     tags: [Score]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: walletAddress
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Stellar public key (own wallet, or assigned borrower for agents)
+ *     responses:
+ *       200:
+ *         description: NFT metadata retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, walletAddress, nft]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 walletAddress:
+ *                   type: string
+ *                 nft:
+ *                   type: object
+ *                   nullable: true
+ *                   required:
+ *                     [score, historyHash, metadataUri, defaultCount, transferCooldownRemaining, lastUpdateLedger]
+ *                   properties:
+ *                     score:
+ *                       type: integer
+ *                     historyHash:
+ *                       type: string
+ *                     metadataUri:
+ *                       type: string
+ *                     defaultCount:
+ *                       type: integer
+ *                     transferCooldownRemaining:
+ *                       type: integer
+ *                       description: Remaining cooldown in seconds before the NFT can be transferred.
+ *                     lastUpdateLedger:
+ *                       type: integer
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: No tenant access to the requested wallet.
+ */
 router.get(
   '/:walletAddress/nft',
   requireJwtAuth,
   requireScopes('read:score'),
-  requireWalletParamMatchesJwt('walletAddress'),
+  requireTenantAccess,
   validate(getRemittanceNftSchema),
   getRemittanceNft,
 );
@@ -125,7 +227,8 @@ router.get(
  *       Returns the user's credit score along with a detailed breakdown of
  *       contributing factors (repayment history, streaks, defaults) and a
  *       score history timeline. Derived from loan_events and scores tables.
- *       `userId` must match the Stellar public key in the JWT.
+ *       Tenant scope: own wallet for borrowers, assigned borrowers for agents,
+ *       any wallet for admins/auditors.
  *     tags: [Score]
  *     security:
  *       - BearerAuth: []
@@ -135,7 +238,7 @@ router.get(
  *         required: true
  *         schema:
  *           type: string
- *         description: Must equal the JWT wallet (`publicKey`)
+ *         description: Stellar public key (own wallet, or assigned borrower for agents)
  *     responses:
  *       200:
  *         description: Score breakdown retrieved successfully.
@@ -146,13 +249,13 @@ router.get(
  *       401:
  *         description: Missing or invalid Bearer token.
  *       403:
- *         description: userId does not match the authenticated wallet.
+ *         description: No tenant access to the requested wallet.
  */
 router.get(
   '/:userId/breakdown',
   requireJwtAuth,
   requireScopes('read:score'),
-  requireWalletParamMatchesJwt('userId'),
+  requireTenantAccess,
   validate(getScoreSchema),
   getScoreBreakdown,
 );

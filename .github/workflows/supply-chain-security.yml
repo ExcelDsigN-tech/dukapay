@@ -1,0 +1,197 @@
+name: Supply Chain Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 0 * * 0"
+
+jobs:
+  npm-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run npm audit for backend
+        working-directory: ./backend
+        run: |
+          npm audit --audit-level=high --production
+          if [ $? -ne 0 ]; then
+            echo "High or critical vulnerabilities found in backend dependencies"
+            exit 1
+          fi
+
+      - name: Run npm audit for frontend
+        working-directory: ./frontend
+        run: |
+          npm audit --audit-level=high --production
+          if [ $? -ne 0 ]; then
+            echo "High or critical vulnerabilities found in frontend dependencies"
+            exit 1
+          fi
+
+  cargo-audit:
+    name: Cargo Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run cargo audit
+        working-directory: ./contracts
+        run: cargo audit
+
+  sbom-generation:
+    name: SBOM Generation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install CycloneDX CLI
+        run: npm install -g @cyclonedx/cyclonedx-npm
+
+      - name: Generate SBOM for backend
+        working-directory: ./backend
+        run: cyclonedx-npm --output-file sbom-backend.json
+
+      - name: Generate SBOM for frontend
+        working-directory: ./frontend
+        run: cyclonedx-npm --output-file sbom-frontend.json
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+
+      - name: Install cargo-cyclonedx
+        run: cargo install cargo-cyclonedx
+
+      - name: Generate SBOM for contracts
+        working-directory: ./contracts
+        run: cargo cyclonedx --format json --output-cdx
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-files
+          path: |
+            backend/sbom-backend.json
+            frontend/sbom-frontend.json
+            contracts/bom.json
+
+  lockfile-integrity:
+    name: Lockfile Integrity Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check backend lockfile integrity
+        working-directory: ./backend
+        run: |
+          npm ci --dry-run
+          if [ $? -ne 0 ]; then
+            echo "Backend package-lock.json is out of sync with package.json"
+            exit 1
+          fi
+
+      - name: Check frontend lockfile integrity
+        working-directory: ./frontend
+        run: |
+          npm ci --dry-run
+          if [ $? -ne 0 ]; then
+            echo "Frontend package-lock.json is out of sync with package.json"
+            exit 1
+          fi
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+
+      - name: Check Cargo lockfile integrity
+        working-directory: ./contracts
+        run: |
+          cargo verify-project
+          cargo tree --locked > /dev/null
+          if [ $? -ne 0 ]; then
+            echo "Cargo.lock is out of sync with Cargo.toml"
+            exit 1
+          fi
+
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Check backend licenses
+        working-directory: ./backend
+        run: |
+          npm install
+          license-checker --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;CC0-1.0" --production
+
+      - name: Check frontend licenses
+        working-directory: ./frontend
+        run: |
+          npm install
+          license-checker --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;CC0-1.0" --production
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+
+      - name: Install cargo-license
+        run: cargo install cargo-license
+
+      - name: Check Rust crate licenses
+        working-directory: ./contracts
+        run: |
+          cargo license --json > licenses.json
+          cat licenses.json | jq -r '.[] | .license' | sort -u | while read license; do
+            case "$license" in
+              MIT|Apache-2.0|BSD-2-Clause|BSD-3-Clause|ISC|CC0-1.0)
+                ;;
+              *)
+                echo "Disallowed license found: $license"
+                exit 1
+                ;;
+            esac
+          done

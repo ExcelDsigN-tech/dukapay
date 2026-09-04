@@ -86,7 +86,11 @@ export const createAnonymizationRequest = asyncHandler(async (req: Request, res:
 });
 
 export const exportUserData = asyncHandler(async (req: Request, res: Response) => {
-  const { publicKey } = req.params;
+  const paramVal = req.params.publicKey;
+  const publicKey = Array.isArray(paramVal) ? paramVal[0] : paramVal;
+  if (!publicKey) {
+    throw AppError.badRequest('publicKey parameter is required');
+  }
 
   const data = await privacyService.exportUserData(publicKey);
 
@@ -98,7 +102,11 @@ export const exportUserData = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const getDsarStatus = asyncHandler(async (req: Request, res: Response) => {
-  const { dsarId } = req.params;
+  const paramVal = req.params.dsarId;
+  const dsarId = Array.isArray(paramVal) ? paramVal[0] : paramVal;
+  if (!dsarId) {
+    throw AppError.badRequest('dsarId parameter is required');
+  }
 
   const dsar = await privacyService.getDsarRequest(dsarId);
   if (!dsar) {
@@ -111,7 +119,7 @@ export const getDsarStatus = asyncHandler(async (req: Request, res: Response) =>
   });
 });
 
-export const getPendingDsars = asyncHandler(async (req: Request, res: Response) => {
+export const getPendingDsars = asyncHandler(async (_req: Request, res: Response) => {
   const dsars = await privacyService.getPendingDsars();
 
   res.json({

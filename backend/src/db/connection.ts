@@ -1,5 +1,6 @@
 import pg, { type PoolClient } from 'pg';
 import logger from '../utils/logger.js';
+import { databaseQueryDuration } from '../metrics/index.js';
 
 export type { PoolClient };
 
@@ -17,6 +18,9 @@ const connectionTimeoutMillis = process.env.DB_CONN_TIMEOUT_MS
 const statementTimeoutMillis = process.env.DB_STATEMENT_TIMEOUT_MS
   ? parseInt(process.env.DB_STATEMENT_TIMEOUT_MS, 10)
   : 30000;
+const slowQueryThresholdMs = process.env.DB_SLOW_QUERY_THRESHOLD_MS
+  ? parseInt(process.env.DB_SLOW_QUERY_THRESHOLD_MS, 10)
+  : 100;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -41,9 +45,9 @@ const metricsInterval = setInterval(() => {
 // Unref the interval so it doesn't keep the process alive
 metricsInterval.unref();
 
-// Set statement_timeout on every newly acquired connection
+// Set statement_timeout on every newly acquired connection (parameterized — issue #406)
 pool.on('connect', (client) => {
-  client.query(`SET statement_timeout = ${statementTimeoutMillis}`);
+  client.query('SET statement_timeout = $1', [statementTimeoutMillis]);
 });
 
 // Log idle client errors
@@ -156,11 +160,17 @@ export const query = async (text: string, params?: unknown[]) => {
     const start = Date.now();
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
-    logger.debug('Executed query', {
-      text: text.substring(0, 50),
-      duration,
-      rows: result.rowCount,
-    });
+    const table = (text.match(/FROM\s+([a-z_]+)/i)?.[1] ?? 'unknown').toLowerCase();
+    databaseQueryDuration.observe({ operation: 'query', table }, duration / 1000);
+    if (duration > slowQueryThresholdMs) {
+      logger.warn('Slow database query', {
+        query: text.substring(0, 120),
+        durationMs: duration,
+        thresholdMs: slowQueryThresholdMs,
+        rows: result.rowCount,
+        params: params?.length ?? 0,
+      });
+    }
     return result;
   });
 };

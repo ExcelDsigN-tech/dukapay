@@ -120,10 +120,7 @@ export const updateScore = asyncHandler(async (req: Request, res: Response) => {
 
   // Invalidate score cache and leaderboard
   const cacheKey = `score:userId:${userId}`;
-  await Promise.all([
-    cacheService.delete(cacheKey),
-    cacheService.delete('score:leaderboard'),
-  ]);
+  await Promise.all([cacheService.delete(cacheKey), cacheService.delete('score:leaderboard')]);
 
   res.json({
     success: true,
@@ -404,7 +401,8 @@ export const getRemittanceNft = asyncHandler(async (req: Request, res: Response)
  */
 export const getLeaderboard = asyncHandler(async (_req: Request, res: Response) => {
   const cacheKey = 'score:leaderboard';
-  const cached = await cacheService.get<Array<{ userId: string; score: number; band: string }>>(cacheKey);
+  const cached =
+    await cacheService.get<Array<{ userId: string; score: number; band: string }>>(cacheKey);
 
   if (cached) {
     res.json({ success: true, leaderboard: cached, source: 'cache' });
@@ -428,4 +426,3 @@ export const getLeaderboard = asyncHandler(async (_req: Request, res: Response) 
 
   res.json({ success: true, leaderboard, source: 'database' });
 });
-

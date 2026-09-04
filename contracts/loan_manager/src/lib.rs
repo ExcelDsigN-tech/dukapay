@@ -22,6 +22,14 @@ pub trait RateOracleInterface {
     fn get_rate(env: Env, borrower: Address, amount: i128, score: u32) -> u32;
 }
 
+#[contractclient(name = "PriceOracleClient")]
+pub trait PriceOracleInterface {
+    /// Returns the manipulation-resistant USD price for `asset` (7-decimal
+    /// scale). Reverts when the feed is stale or has fewer than two fresh
+    /// sources (#454).
+    fn get_price(env: Env, asset: Address) -> i128;
+}
+
 #[contractclient(name = "PoolClient")]
 pub trait LendingPoolInterface {
     fn is_paused(env: Env) -> bool;
@@ -30,6 +38,13 @@ pub trait LendingPoolInterface {
 }
 
 mod events;
+
+/// Interface exposed by the DukaPay `CircuitBreaker` contract. The loan
+/// manager consults `is_blocked` before executing value-moving operations.
+#[contractclient(name = "BreakerClient")]
+pub trait BreakerInterface {
+    fn is_blocked(env: Env, contract: Address, function: Symbol) -> bool;
+}
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -62,6 +77,8 @@ pub enum LoanError {
     InsufficientCollateral = 26,
     LoanNotLiquidatable = 27,
     LoanNotPurgable = 28,
+    /// A global, contract, or function-level circuit-breaker pause is active.
+    CircuitBreakerTripped = 29,
 }
 
 #[contracttype]
@@ -115,6 +132,9 @@ pub enum DataKey {
     BorrowerLoanCount(Address),
     BorrowerLoans(Address),
     Paused,
+    /// Optional address of the DukaPay CircuitBreaker contract. When set, the
+    /// loan manager consults it before executing value-moving operations.
+    CircuitBreaker,
     PausedAtLedger,
     InterestRateBps,
     DefaultTermLedgers,
@@ -133,6 +153,9 @@ pub enum DataKey {
     MinRateBps,
     MaxRateBps,
     MigratedVersion,
+    PriceOracle,
+    CollateralToken,
+    ReentrancyLock,
 }
 
 #[contract]
@@ -169,6 +192,8 @@ impl LoanManager {
     /// Default maximum interest rate (configurable via set_rate_bounds). #631
     const MAX_RATE_BPS: u32 = 100_000; // Maximum 1000% interest rate
     const MAX_PENALTY_MULTIPLIER: i128 = 2; // Total debt cannot exceed 2x original principal
+    /// Price scale used by the manipulation-resistant price oracle (#454).
+    const PRICE_SCALE: i128 = 10_000_000;
 
     fn bump_instance_ttl(env: &Env) {
         env.storage()
@@ -321,7 +346,41 @@ impl LoanManager {
                 return Err(LoanError::NftPaused);
             }
         }
+        // Cascade: also check the global/contract-level circuit breaker.
+        Self::assert_circuit_ok(env, Symbol::new(env, "any"))?;
         Ok(())
+    }
+
+    /// Revert if the configured `CircuitBreaker` has tripped a pause that
+    /// covers this loan manager and `fn_sym`. When no breaker is configured
+    /// this is a no-op, so the loan manager remains fully backward compatible.
+    fn assert_circuit_ok(env: &Env, fn_sym: Symbol) -> Result<(), LoanError> {
+        Self::bump_instance_ttl(env);
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(env, &breaker);
+            if client.is_blocked(&env.current_contract_address(), &fn_sym) {
+                return Err(LoanError::CircuitBreakerTripped);
+            }
+        }
+        Ok(())
+    }
+
+    fn acquire_lock(env: &Env) -> Result<(), LoanError> {
+        let locked: bool = env.storage().instance().get(&DataKey::ReentrancyLock).unwrap_or(false);
+        if locked {
+            panic!("reentrancy guard triggered");
+        }
+        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
+        Ok(())
+    }
+
+    fn release_lock(env: &Env) {
+        env.storage().instance().set(&DataKey::ReentrancyLock, &false);
     }
 
     fn remaining_principal(loan: &Loan) -> i128 {
@@ -903,6 +962,9 @@ impl LoanManager {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::LoanCounter, &0u32);
         env.storage().instance().set(&DataKey::Paused, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::CircuitBreaker, &None::<Address>);
 
         let nft_client = NftClient::new(&env, &nft_contract);
         if !nft_client.is_authorized_minter(&env.current_contract_address()) {
@@ -964,6 +1026,33 @@ impl LoanManager {
             (old_version, new_version),
         );
         env.deployer().update_current_contract_wasm(new_wasm_hash);
+    }
+
+    /// Configure (or clear with `None`) the `CircuitBreaker` contract address
+    /// the loan manager consults before value-moving operations. Admin only.
+    pub fn set_circuit_breaker(env: Env, breaker: Option<Address>) {
+        Self::admin(&env).require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::CircuitBreaker, &breaker);
+        Self::bump_instance_ttl(&env);
+        events::loan_circuit_breaker_set(&env, breaker);
+    }
+
+    /// True when the active `CircuitBreaker` currently blocks this loan
+    /// manager and `function`. Returns false when no breaker is configured.
+    pub fn is_circuit_blocked(env: Env, function: Symbol) -> bool {
+        Self::bump_instance_ttl(&env);
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(&env, &breaker);
+            return client.is_blocked(&env.current_contract_address(), &function);
+        }
+        false
     }
 
     pub fn migrate(env: Env) {
@@ -1054,6 +1143,7 @@ impl LoanManager {
     ) -> Result<u32, LoanError> {
         borrower.require_auth();
         Self::require_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "request_loan"))?;
 
         if amount <= 0 {
             return Err(LoanError::InvalidAmount);
@@ -1171,7 +1261,7 @@ impl LoanManager {
         let admin = Self::admin(&env);
         admin.require_auth();
         Self::require_not_paused(&env)?;
-
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "approve_loan"))?;
         let loan_key = DataKey::Loan(loan_id);
         let mut loan: Loan = env
             .storage()
@@ -1206,6 +1296,9 @@ impl LoanManager {
             return Err(LoanError::InsufficientPoolLiquidity);
         }
 
+        // Acquire reentrancy guard before state mutations (CEI)
+        Self::acquire_lock(&env)?;
+
         // ── EFFECTS (all state mutations before any external calls) ─────────
         // Capture values used in the transfer before mutating loan fields.
         let borrower = loan.borrower.clone();
@@ -1238,6 +1331,7 @@ impl LoanManager {
         );
         events::loan_approved_by_admin(&env, admin, loan_id, borrower);
 
+        Self::release_lock(&env);
         Ok(())
     }
 
@@ -1275,6 +1369,7 @@ impl LoanManager {
 
         borrower.require_auth();
         Self::require_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "repay"))?;
         Self::bump_instance_ttl(&env);
 
         if amount <= 0 {
@@ -1570,8 +1665,10 @@ impl LoanManager {
 
         let (total_debt, _) = Self::current_total_debt(&env, &mut loan)?;
         let threshold_bps = Self::liquidation_threshold_bps(&env);
+        let collateral_value =
+            Self::collateral_value_units(&env, loan.collateral_amount);
         Ok(Self::is_collateral_ratio_below_threshold(
-            loan.collateral_amount,
+            collateral_value,
             total_debt,
             threshold_bps,
         ))
@@ -1593,7 +1690,9 @@ impl LoanManager {
         }
 
         let (total_debt, _) = Self::current_total_debt(&env, &mut loan)?;
-        let ratio_bps = Self::current_ratio_bps(loan.collateral_amount, total_debt);
+        let collateral_value =
+            Self::collateral_value_units(&env, loan.collateral_amount);
+        let ratio_bps = Self::current_ratio_bps(collateral_value, total_debt);
         Ok((loan.collateral_amount, total_debt, ratio_bps))
     }
 
@@ -1636,8 +1735,10 @@ impl LoanManager {
             current_total_debt
         };
         let threshold_bps = Self::liquidation_threshold_bps(&env);
+        let collateral_value =
+            Self::collateral_value_units(&env, loan.collateral_amount);
         if !Self::is_collateral_ratio_below_threshold(
-            loan.collateral_amount,
+            collateral_value,
             total_debt,
             threshold_bps,
         ) {
@@ -2355,6 +2456,62 @@ impl LoanManager {
     pub fn get_rate_oracle(env: Env) -> Option<Address> {
         Self::bump_instance_ttl(&env);
         env.storage().instance().get(&DataKey::RateOracle)
+    }
+
+    /// Configure the manipulation-resistant price oracle used to value
+    /// collateral before liquidation decisions (#454).
+    pub fn set_price_oracle(env: Env, price_oracle: Address) {
+        Self::admin(&env).require_auth();
+        let old = env.storage().instance().get(&DataKey::PriceOracle);
+        env.storage()
+            .instance()
+            .set(&DataKey::PriceOracle, &price_oracle);
+        Self::bump_instance_ttl(&env);
+        events::price_oracle_updated(&env, old, price_oracle);
+    }
+
+    pub fn get_price_oracle(env: Env) -> Option<Address> {
+        Self::bump_instance_ttl(&env);
+        env.storage().instance().get(&DataKey::PriceOracle)
+    }
+
+    /// Configure the collateral asset address that the price oracle is queried
+    /// for. Without an oracle, liquidation uses raw on-chain amounts (legacy).
+    pub fn set_collateral_token(env: Env, collateral_token: Address) {
+        Self::admin(&env).require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::CollateralToken, &collateral_token);
+        Self::bump_instance_ttl(&env);
+    }
+
+    pub fn get_collateral_token(env: Env) -> Option<Address> {
+        Self::bump_instance_ttl(&env);
+        env.storage().instance().get(&DataKey::CollateralToken)
+    }
+
+    /// Collateral amount expressed in debt units using the configured price
+    /// oracle. Returns the raw amount when no oracle or collateral token is
+    /// configured (legacy behaviour), so existing deployments are unaffected.
+    fn collateral_value_units(env: &Env, collateral_amount: i128) -> i128 {
+        if collateral_amount <= 0 {
+            return collateral_amount;
+        }
+        let (Some(oracle_addr), Some(collateral_token)) = (
+            env.storage().instance().get::<_, Address>(&DataKey::PriceOracle),
+            env.storage().instance().get::<_, Address>(&DataKey::CollateralToken),
+        ) else {
+            return collateral_amount;
+        };
+        let client = PriceOracleClient::new(env, &oracle_addr);
+        let price = client.get_price(&collateral_token);
+        if price <= 0 {
+            return collateral_amount;
+        }
+        collateral_amount
+            .checked_mul(price)
+            .and_then(|value| value.checked_div(Self::PRICE_SCALE))
+            .unwrap_or(collateral_amount)
     }
 
     pub fn set_min_rate_bps(env: Env, min_rate: u32) -> Result<(), LoanError> {

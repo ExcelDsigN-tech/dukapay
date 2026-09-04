@@ -12,7 +12,8 @@ export type ApiKeyScope =
   | 'admin:indexer'
   | 'admin:webhooks'
   | 'admin:loans'
-  | 'admin:audit';
+  | 'admin:audit'
+  | 'admin:privacy';
 
 interface ParsedKey {
   scope: ApiKeyScope | null; // null = legacy (all scopes)

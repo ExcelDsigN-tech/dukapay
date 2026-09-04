@@ -83,7 +83,7 @@ export const swaggerSchemas = {
       publicKey: { type: 'string', nullable: true },
       role: {
         type: 'string',
-        enum: ['admin', 'borrower', 'lender'],
+        enum: ['admin', 'agent', 'borrower', 'auditor', 'lender'],
         nullable: true,
       },
       scopes: {
@@ -390,6 +390,109 @@ export const swaggerSchemas = {
       newScore: { type: 'integer' },
     },
     required: ['success', 'message', 'newScore'],
+  },
+  Remittance: {
+    type: 'object',
+    description: 'A single remittance record persisted in the remittances table.',
+    properties: {
+      id: { type: 'string', format: 'uuid' },
+      senderId: { type: 'string', example: 'GABCDEFGHIJK...' },
+      recipientAddress: { type: 'string', example: 'GABCDEFGHIJK...' },
+      amount: { type: 'number' },
+      fromCurrency: { type: 'string', example: 'USDC' },
+      toCurrency: { type: 'string', example: 'EURC' },
+      memo: { type: 'string', nullable: true },
+      status: {
+        type: 'string',
+        enum: ['pending', 'processing', 'completed', 'failed'],
+      },
+      transactionHash: { type: 'string', nullable: true },
+      xdr: { type: 'string', description: 'Unsigned transaction XDR generated on creation' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+    required: [
+      'id',
+      'senderId',
+      'recipientAddress',
+      'amount',
+      'fromCurrency',
+      'toCurrency',
+      'status',
+      'createdAt',
+      'updatedAt',
+    ],
+  },
+  RemittancePage: {
+    type: 'object',
+    description: 'Keyset pagination envelope returned by the remittance list endpoint.',
+    properties: {
+      next_cursor: { type: 'string', nullable: true },
+      snapshot_seq: { type: 'string' },
+      total_at_snapshot: { type: 'integer' },
+      limit: { type: 'integer' },
+    },
+    required: ['next_cursor', 'snapshot_seq', 'total_at_snapshot', 'limit'],
+  },
+  RemittanceListData: {
+    type: 'object',
+    properties: {
+      data: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/Remittance' },
+      },
+      page: { $ref: '#/components/schemas/RemittancePage' },
+    },
+    required: ['data', 'page'],
+  },
+  RemittanceSubmitData: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' },
+      status: { type: 'string', enum: ['processing', 'completed', 'failed'] },
+      txHash: { type: 'string' },
+      message: { type: 'string' },
+    },
+    required: ['id', 'status', 'txHash', 'message'],
+  },
+  LoanDispute: {
+    type: 'object',
+    description: 'A loan dispute record stored in the loan_disputes table.',
+    properties: {
+      id: { type: 'integer' },
+      loan_id: { type: 'integer' },
+      borrower: { type: 'string' },
+      reason: { type: 'string' },
+      status: {
+        type: 'string',
+        enum: ['open', 'resolved', 'rejected'],
+      },
+      admin_note: { type: 'string', nullable: true },
+      resolution: { type: 'string', nullable: true },
+      created_at: { type: 'string', format: 'date-time' },
+      resolved_at: { type: 'string', format: 'date-time', nullable: true },
+      seq: { type: 'integer' },
+    },
+    required: ['id', 'loan_id', 'borrower', 'reason', 'status', 'created_at', 'seq'],
+  },
+  KycScreeningData: {
+    type: 'object',
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['approved', 'review', 'rejected'],
+      },
+      providerReference: { type: 'string', nullable: true },
+    },
+    required: ['status', 'providerReference'],
+  },
+  KycScreeningResponse: {
+    type: 'object',
+    properties: {
+      success: { type: 'boolean', example: true },
+      data: { $ref: '#/components/schemas/KycScreeningData' },
+    },
+    required: ['success', 'data'],
   },
   Notification: {
     type: 'object',

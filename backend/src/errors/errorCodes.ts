@@ -57,6 +57,9 @@ export enum ErrorCode {
   LOAN_NOT_ACTIVE = 'LOAN_NOT_ACTIVE',
   INVALID_LOAN_ID = 'INVALID_LOAN_ID',
   INVALID_TX_XDR = 'INVALID_TX_XDR',
+  TOKEN_REPLAY_DETECTED = 'TOKEN_REPLAY_DETECTED',
+  INVALID_REFRESH_TOKEN = 'INVALID_REFRESH_TOKEN',
+  CSRF_TOKEN_INVALID = 'CSRF_TOKEN_INVALID',
 }
 
 /**
@@ -298,6 +301,29 @@ export const ERROR_CODE_REGISTRY: Record<ErrorCode, ErrorCodeMetadata> = {
     httpStatus: 400,
     description: 'The provided transaction XDR is invalid or malformed',
     suggestedAction: 'Provide a valid signed transaction XDR',
+  },
+  [ErrorCode.TOKEN_REPLAY_DETECTED]: {
+    code: ErrorCode.TOKEN_REPLAY_DETECTED,
+    message: 'Token replay detected. All sessions in this token family have been revoked.',
+    httpStatus: 401,
+    description:
+      'A previously used or revoked refresh token was used, indicating possible token theft.',
+    suggestedAction: 'Re-authenticate with your wallet to establish a new session.',
+  },
+  [ErrorCode.INVALID_REFRESH_TOKEN]: {
+    code: ErrorCode.INVALID_REFRESH_TOKEN,
+    message: 'Invalid or expired refresh token',
+    httpStatus: 401,
+    description: 'The provided refresh token is invalid, expired, or malformed.',
+    suggestedAction: 'Provide a valid refresh token or sign in again.',
+  },
+  [ErrorCode.CSRF_TOKEN_INVALID]: {
+    code: ErrorCode.CSRF_TOKEN_INVALID,
+    message: 'Invalid or missing CSRF token',
+    httpStatus: 403,
+    description:
+      'State-changing requests require a valid X-CSRF-Token header matching the session cookie.',
+    suggestedAction: 'Include a valid X-CSRF-Token header in your request.',
   },
 };
 

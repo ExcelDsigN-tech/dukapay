@@ -106,6 +106,11 @@ pub fn rate_oracle_updated(env: &Env, old_oracle: Option<Address>, new_oracle: A
     env.events().publish(topics, (old_oracle, new_oracle));
 }
 
+pub fn price_oracle_updated(env: &Env, old_oracle: Option<Address>, new_oracle: Address) {
+    let topics = (Symbol::new(env, "PriceOracleUpdated"),);
+    env.events().publish(topics, (old_oracle, new_oracle));
+}
+
 pub fn collateral_returned(env: &Env, borrower: Address, loan_id: u32, amount: i128) {
     let topics = (Symbol::new(env, "CollateralReturned"), borrower, loan_id);
     env.events().publish(topics, amount);
@@ -193,4 +198,9 @@ pub fn max_rate_bps_updated(env: &Env, admin: Address, old_rate: u32, new_rate: 
 pub fn loan_purged(env: &Env, loan_id: u32) {
     let topics = (Symbol::new(env, "LoanPurged"),);
     env.events().publish(topics, loan_id);
+}
+
+pub fn loan_circuit_breaker_set(env: &Env, breaker: Option<Address>) {
+    let topics = (Symbol::new(env, "LoanCircuitBreakerSet"),);
+    env.events().publish(topics, breaker);
 }

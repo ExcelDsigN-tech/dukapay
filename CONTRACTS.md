@@ -77,6 +77,39 @@ is planned for parameter changes.
 
 ---
 
+## Contract Upgrade Governance (Issue #452)
+
+Every WASM upgrade of a DukaPay contract flows through the
+`multisig_governance` contract's **upgrade timelock** (`src/upgrade_timelock.rs`):
+
+| Step | Function | Who |
+|------|----------|-----|
+| Configure quorum (once) | `configure_upgrade_signers(signers, threshold)` | admin |
+| Queue an upgrade | `queue_upgrade(proposer, target, new_wasm_hash)` | any signer / admin |
+| Approve | `approve_upgrade(signer)` | configured signer (idempotent) |
+| Execute after timelock | `execute_upgrade(caller)` | anyone |
+| Abort | `cancel_upgrade(caller)` | any signer / admin |
+| Circuit breaker | `emergency_pause(caller)` / `emergency_unpause()` | pause: any signer • unpause: admin only |
+
+Enforced **on-chain**:
+
+- **48-hour timelock** (`UPGRADE_TIMELOCK_SECONDS = 172_800`) between queue and
+  execute — not overridable by the proposer.
+- **3-of-5 multi-sig** — DukaPay quorum is `[admin, security, ops, legal, community]`
+  with `threshold = 3`.
+- **14-day TTL** — a queued-but-unexecuted upgrade expires and can be replaced.
+- **Single in-flight upgrade** — a new one cannot be queued while one is pending.
+- **Emergency pause** halts *all* `execute_upgrade` calls immediately; any single
+  signer can trip it, only the admin can lift it.
+
+`execute_upgrade` performs a cross-contract call to `target.upgrade(new_wasm_hash)`.
+For this to work, **every managed contract must set its `admin` to the
+`multisig_governance` contract address** (via each contract's existing
+`set_admin` / admin-transfer flow). Until migrated, a contract's upgrades are
+still gated only by its raw admin key.
+
+---
+
 ## Fuzz Testing
 
 The `agent_vault` contract includes property-based fuzz tests (via `proptest`)

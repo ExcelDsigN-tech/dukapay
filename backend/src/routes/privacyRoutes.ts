@@ -203,11 +203,7 @@ router.get(
  *       404:
  *         description: DSAR not found
  */
-router.get(
-  '/dsar/:dsarId',
-  requireJwtAuth,
-  getDsarStatus,
-);
+router.get('/dsar/:dsarId', requireJwtAuth, getDsarStatus);
 
 /**
  * @swagger
@@ -221,10 +217,6 @@ router.get(
  *       200:
  *         description: List of pending DSARs
  */
-router.get(
-  '/dsar/pending',
-  requireApiKey('admin:privacy'),
-  getPendingDsars,
-);
+router.get('/dsar/pending', requireApiKey('admin:privacy'), getPendingDsars);
 
 export default router;

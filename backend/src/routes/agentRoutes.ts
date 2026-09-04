@@ -1,182 +1,155 @@
 import { Router } from 'express';
 import {
-  initiateFloatTransfer,
-  approveFloatTransfer,
-  rejectFloatTransfer,
-  getFloatTransfer,
-  listFloatTransfers,
-  getPairLimits,
-  setPairLimits,
+  assignBorrower,
+  getMyAssignments,
+  removeBorrower,
 } from '../controllers/agentController.js';
-import { optionalJwtAuth } from '../middleware/jwtAuth.js';
+import { requireJwtAuth } from '../middleware/jwtAuth.js';
+import { requireRole } from '../middleware/rbac.js';
 import { auditLog } from '../middleware/auditLog.js';
-import { idempotencyMiddleware } from '../middleware/idempotency.js';
 
 const router = Router();
 
-// Apply optional JWT authentication to attach req.user if token is present
-router.use(optionalJwtAuth);
+/**
+ * @swagger
+ * /agents/my-assignments:
+ *   get:
+ *     summary: List borrower wallets assigned to the authenticated agent
+ *     description: >
+ *       Returns the borrowers the authenticated agent (or admin) is scoped to
+ *       under tenant isolation (the `agents:view-assigned` scope). Agents can
+ *       read but not modify the data of these borrowers on the loan, score and
+ *       remittance endpoints, enforced both by the RBAC middleware and by RLS.
+ *     tags: [Agents]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Assignments retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, data]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   required: [agentPublicKey, assignments]
+ *                   properties:
+ *                     agentPublicKey:
+ *                       type: string
+ *                     assignments:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         required: [borrowerPublicKey, createdAt]
+ *                         properties:
+ *                           borrowerPublicKey:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Requires the agent role.
+ */
+router.get(
+  '/my-assignments',
+  requireJwtAuth,
+  requireRole('agent', 'lender', 'admin'),
+  getMyAssignments,
+);
 
 /**
  * @swagger
- * /api/agents/float-transfer:
+ * /agents/{agentPublicKey}/assignees:
  *   post:
- *     summary: Initiate an agent-to-agent float transfer request
- *     description: Enable agents to transfer float directly to other agents without borrower involvement. Subject to configurable daily/weekly pair limits.
+ *     summary: Assign a borrower to an agent (admin only)
+ *     description: >
+ *       Grants an agent read access to a borrower's data. Idempotent: assigning
+ *       the same pair twice returns the existing assignment. Admin only.
  *     tags: [Agents]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: agentPublicKey
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Agent's Stellar public key receiving the assignment
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [fromAgent, toAgent, amount]
+ *             required: [borrowerPublicKey]
  *             properties:
- *               fromAgent:
+ *               borrowerPublicKey:
  *                 type: string
- *                 description: Source agent wallet address
- *               toAgent:
- *                 type: string
- *                 description: Recipient agent wallet address
- *               amount:
- *                 type: number
- *                 description: Float amount to transfer
- *               reason:
- *                 type: string
- *                 description: Reason for float transfer (e.g., covering shortfalls, regional balancing)
+ *                 description: Borrower's Stellar public key to assign
  *     responses:
  *       201:
- *         description: Float transfer request created with initial approval
+ *         description: Assignment created (or already present).
  *       400:
- *         description: Validation error or pair limit exceeded
- *   get:
- *     summary: List agent float transfers
- *     tags: [Agents]
- *     parameters:
- *       - in: query
- *         name: agent
- *         schema:
- *           type: string
- *         description: Filter by agent address (source or recipient)
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *         description: Filter by transfer status (PENDING_APPROVAL, COMPLETED, REJECTED)
- *     responses:
- *       200:
- *         description: List of float transfers
+ *         description: Invalid public key.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Requires the admin role.
  */
-router.post('/float-transfer', auditLog, idempotencyMiddleware, initiateFloatTransfer);
-router.get('/float-transfer', listFloatTransfers);
+router.post(
+  '/:agentPublicKey/assignees',
+  requireJwtAuth,
+  requireRole('admin'),
+  auditLog,
+  assignBorrower,
+);
 
 /**
  * @swagger
- * /api/agents/float-transfer/limits:
- *   get:
- *     summary: Get daily and weekly float transfer limits for an agent pair
+ * /agents/{agentPublicKey}/assignees/{borrowerPublicKey}:
+ *   delete:
+ *     summary: Revoke a borrower assignment from an agent (admin only)
+ *     description: >
+ *       Removes the agent's read access to the borrower. Admin only.
  *     tags: [Agents]
- *     parameters:
- *       - in: query
- *         name: fromAgent
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: toAgent
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Transfer limits for the agent pair
- *   put:
- *     summary: Update daily and weekly float transfer limits for an agent pair (Admin)
- *     tags: [Agents]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [fromAgent, toAgent, dailyLimit, weeklyLimit]
- *             properties:
- *               fromAgent:
- *                 type: string
- *               toAgent:
- *                 type: string
- *               dailyLimit:
- *                 type: number
- *               weeklyLimit:
- *                 type: number
- *     responses:
- *       200:
- *         description: Pair limits updated
- */
-router.get('/float-transfer/limits', getPairLimits);
-router.put('/float-transfer/limits', auditLog, setPairLimits);
-
-/**
- * @swagger
- * /api/agents/float-transfer/{id}:
- *   get:
- *     summary: Get float transfer request details, approvals, and audit trail
- *     tags: [Agents]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: agentPublicKey
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: borrowerPublicKey
  *         required: true
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Detailed float transfer information
+ *         description: Assignment revoked.
+ *       400:
+ *         description: Invalid public key.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Requires the admin role.
  *       404:
- *         description: Transfer request not found
+ *         description: Assignment not found.
  */
-router.get('/float-transfer/:id', getFloatTransfer);
-
-/**
- * @swagger
- * /api/agents/float-transfer/{id}/approve:
- *   post:
- *     summary: Approve an agent float transfer (2-of-3 multisig workflow)
- *     description: Approves a pending float transfer. When 2 of 3 approvals (initiator, recipient, admin) are reached, the transfer completes and executes on-chain.
- *     tags: [Agents]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Approval recorded; status updated to COMPLETED if threshold reached
- *       400:
- *         description: Validation error or already approved
- *       403:
- *         description: Forbidden - approver is not a valid party
- */
-router.post('/float-transfer/:id/approve', auditLog, idempotencyMiddleware, approveFloatTransfer);
-
-/**
- * @swagger
- * /api/agents/float-transfer/{id}/reject:
- *   post:
- *     summary: Reject an agent float transfer
- *     tags: [Agents]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Float transfer request rejected
- *       403:
- *         description: Forbidden - rejector is not authorized
- */
-router.post('/float-transfer/:id/reject', auditLog, idempotencyMiddleware, rejectFloatTransfer);
+router.delete(
+  '/:agentPublicKey/assignees/:borrowerPublicKey',
+  requireJwtAuth,
+  requireRole('admin'),
+  auditLog,
+  removeBorrower,
+);
 
 export default router;

@@ -45,6 +45,11 @@ pub fn pool_unpaused(env: &Env) {
     env.events().publish(topics, ());
 }
 
+pub fn pool_circuit_breaker_set(env: &Env, breaker: Option<Address>) {
+    let topics = (Symbol::new(env, "PoolCircuitBreakerSet"),);
+    env.events().publish(topics, breaker);
+}
+
 pub fn withdrawal_cooldown_updated(env: &Env, old_cooldown: u32, new_cooldown: u32) {
     let topics = (Symbol::new(env, "WithdrawalCooldownUpdated"),);
     env.events().publish(topics, (old_cooldown, new_cooldown));

@@ -7,6 +7,7 @@ const mockEval =
 const mockTtl = jest.fn<(key: string) => Promise<number>>();
 const mockGet = jest.fn<(key: string) => Promise<string | null>>();
 const mockDel = jest.fn<(key: string) => Promise<number>>();
+const mockZCard = jest.fn<(key: string) => Promise<number>>();
 
 jest.unstable_mockModule('redis', () => ({
   createClient: () => ({
@@ -16,113 +17,121 @@ jest.unstable_mockModule('redis', () => ({
     ttl: mockTtl,
     get: mockGet,
     del: mockDel,
+    zCard: mockZCard,
   }),
 }));
 
-const { rateLimitService, SCORE_UPDATE_RATE_LIMIT } = await import('../rateLimitService.js');
+const {
+  rateLimitService,
+  RateLimitTier,
+  TIER_LIMITS,
+  EXPENSIVE_OPERATION_LIMITS,
+  SCORE_UPDATE_RATE_LIMIT,
+} = await import('../rateLimitService.js');
 
 describe('rateLimitService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockConnect.mockResolvedValue(undefined);
-    mockEval.mockResolvedValue([1, 60]);
+    mockEval.mockResolvedValue([1, 59, 1, 60]);
     mockTtl.mockResolvedValue(60);
     mockGet.mockResolvedValue(null);
     mockDel.mockResolvedValue(1);
+    mockZCard.mockResolvedValue(0);
   });
 
-  it('allows the first request and creates the rate-limit window', async () => {
-    mockEval.mockResolvedValueOnce([1, 86400]);
-
-    const result = await rateLimitService.checkRateLimit('user123', SCORE_UPDATE_RATE_LIMIT);
-
-    expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(4);
-    expect(result.currentCount).toBe(1);
-    expect(mockEval).toHaveBeenCalled();
-  });
-
-  it('guarantees the key always has a positive TTL after the first increment', async () => {
-    mockEval.mockResolvedValueOnce([1, 86400]);
-
-    const result = await rateLimitService.checkRateLimit('user123', SCORE_UPDATE_RATE_LIMIT);
-
-    expect(result.currentCount).toBe(1);
-    expect(mockEval).toHaveBeenCalled();
-    const evalCall = mockEval.mock.calls[0];
-    const script = evalCall[0] as string;
-    expect(script).toContain('INCR');
-    expect(script).toContain('EXPIRE');
-    expect(script).toContain('TTL');
-  });
-
-  it('blocks requests once the atomic counter reaches or exceeds the limit', async () => {
-    mockEval.mockResolvedValueOnce([5, 60]);
-
-    const result = await rateLimitService.checkRateLimit('user123', {
-      maxRequests: 5,
-      windowSeconds: 60,
+  describe('Tier Resolution', () => {
+    it('resolves internal tier for internal API keys', () => {
+      const { tier, identifier } = rateLimitService.resolveTier({
+        headers: { 'x-api-key': 'internal:metrics-svc' },
+      });
+      expect(tier).toBe(RateLimitTier.INTERNAL);
+      expect(identifier).toBe('svc:internal');
     });
 
-    expect(result.allowed).toBe(false);
-    expect(result.remaining).toBe(0);
-    expect(result.currentCount).toBe(5);
-  });
-
-  it('admits requests strictly below maxRequests under concurrent requests', async () => {
-    let counter = 0;
-    mockEval.mockImplementation(async () => {
-      counter += 1;
-      return [counter, 60 - counter];
+    it('resolves premium tier for custom API keys', () => {
+      const { tier, identifier } = rateLimitService.resolveTier({
+        headers: { 'x-api-key': 'partner-premium-key-123' },
+      });
+      expect(tier).toBe(RateLimitTier.PREMIUM);
+      expect(identifier).toBe('key:partner-premium-key-123');
     });
 
-    const results = await Promise.all(
-      Array.from({ length: 10 }, () =>
-        rateLimitService.checkRateLimit('score:user1', {
-          maxRequests: 5,
-          windowSeconds: 60,
-        }),
-      ),
-    );
+    it('resolves authenticated tier for user session', () => {
+      const { tier, identifier } = rateLimitService.resolveTier({
+        user: { publicKey: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H' },
+      });
+      expect(tier).toBe(RateLimitTier.AUTHENTICATED);
+      expect(identifier).toBe('user:GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H');
+    });
 
-    expect(results.filter((result) => result.allowed)).toHaveLength(4);
-    expect(results.filter((result) => !result.allowed)).toHaveLength(6);
-    expect(mockEval).toHaveBeenCalledTimes(10);
+    it('resolves anonymous tier by default', () => {
+      const { tier, identifier } = rateLimitService.resolveTier({});
+      expect(tier).toBe(RateLimitTier.ANONYMOUS);
+      expect(identifier).toBe('anon');
+    });
   });
 
-  it('preserves fail-open behavior when Redis is unavailable', async () => {
-    mockEval.mockRejectedValueOnce(new Error('Redis connection failed'));
+  describe('Sliding Window Rate Limiting', () => {
+    it('allows the first request and creates the rate-limit window', async () => {
+      mockEval.mockResolvedValueOnce([1, 4, 1, 86400]);
 
-    const result = await rateLimitService.checkRateLimit('user123', SCORE_UPDATE_RATE_LIMIT);
+      const result = await rateLimitService.checkRateLimit('user123', SCORE_UPDATE_RATE_LIMIT);
 
-    expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(4);
-    expect(result.currentCount).toBe(1);
-  });
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBe(4);
+      expect(result.currentCount).toBe(1);
+      expect(mockEval).toHaveBeenCalled();
+    });
 
-  it('resets the rate limit counter', async () => {
-    await rateLimitService.resetRateLimit('user123');
+    it('enforces configured limits for all tiers', () => {
+      expect(TIER_LIMITS[RateLimitTier.ANONYMOUS].maxRequests).toBe(30);
+      expect(TIER_LIMITS[RateLimitTier.AUTHENTICATED].maxRequests).toBe(100);
+      expect(TIER_LIMITS[RateLimitTier.PREMIUM].maxRequests).toBe(1000);
+      expect(TIER_LIMITS[RateLimitTier.INTERNAL].maxRequests).toBe(10000);
 
-    expect(mockDel).toHaveBeenCalledWith('rate_limit:user123');
-  });
+      expect(EXPENSIVE_OPERATION_LIMITS.SEARCH.maxRequests).toBe(10);
+      expect(EXPENSIVE_OPERATION_LIMITS.LOAN_APPLICATION.maxRequests).toBe(5);
+    });
 
-  it('returns current status without incrementing', async () => {
-    mockGet.mockResolvedValueOnce('2');
-    mockTtl.mockResolvedValueOnce(120);
+    it('blocks requests once the counter exceeds limit', async () => {
+      mockEval.mockResolvedValueOnce([0, 0, 5, 60]);
 
-    const result = await rateLimitService.getRateLimitStatus('user123', SCORE_UPDATE_RATE_LIMIT);
+      const result = await rateLimitService.checkRateLimit('user123', {
+        maxRequests: 5,
+        windowSeconds: 60,
+      });
 
-    expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(3);
-    expect(mockEval).not.toHaveBeenCalled();
-  });
+      expect(result.allowed).toBe(false);
+      expect(result.remaining).toBe(0);
+      expect(result.currentCount).toBe(5);
+    });
 
-  it('returns default status for new identifiers', async () => {
-    mockGet.mockResolvedValueOnce(null);
+    it('falls back to in-memory sliding window when Redis is unavailable', async () => {
+      mockEval.mockRejectedValueOnce(new Error('Redis connection failed'));
 
-    const result = await rateLimitService.getRateLimitStatus('user123', SCORE_UPDATE_RATE_LIMIT);
+      const result = await rateLimitService.checkRateLimit('inmem-user', {
+        maxRequests: 2,
+        windowSeconds: 60,
+      });
 
-    expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(5);
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBe(1);
+    });
+
+    it('resets the rate limit counter', async () => {
+      await rateLimitService.resetRateLimit('user123');
+      expect(mockDel).toHaveBeenCalledWith('rate_limit:user123');
+    });
+
+    it('returns current status without incrementing', async () => {
+      mockZCard.mockResolvedValueOnce(2);
+
+      const result = await rateLimitService.getRateLimitStatus('user123', SCORE_UPDATE_RATE_LIMIT);
+
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBe(3);
+      expect(mockEval).not.toHaveBeenCalled();
+    });
   });
 });

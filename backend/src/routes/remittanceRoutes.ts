@@ -64,8 +64,12 @@ const router = Router();
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 data:
  *                   $ref: '#/components/schemas/Remittance'
+ *                 message:
+ *                   type: string
+ *               required: [success, data]
  *       400:
  *         description: Invalid input data
  *       401:
@@ -130,6 +134,21 @@ router.post(
  *     responses:
  *       200:
  *         description: Remittances retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Remittance'
+ *                 page:
+ *                   $ref: '#/components/schemas/RemittancePage'
+ *               required: [success, data, page]
  *       401:
  *         description: Missing or invalid Bearer token
  */
@@ -219,6 +238,17 @@ router.get(
  *     responses:
  *       200:
  *         description: Transaction submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/RemittanceSubmitData'
+ *               required: [success, data]
  *       400:
  *         description: Invalid input or remittance already submitted
  *       401:

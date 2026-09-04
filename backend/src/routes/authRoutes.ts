@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   requestChallenge,
   login,
+  refresh,
   verify,
   logout,
   submitKyc,
@@ -13,6 +14,7 @@ import {
   loginRateLimiter,
   ipLoginRateLimiter,
 } from '../middleware/rateLimiter.js';
+import { getCsrfTokenController } from '../middleware/csrf.js';
 import { requireJwtAuth } from '../middleware/jwtAuth.js';
 import { validateBody } from '../middleware/validation.js';
 
@@ -104,6 +106,91 @@ router.post('/challenge', challengeRateLimiter, validateBody(challengeSchema), r
  */
 router.post('/login', ipLoginRateLimiter, loginRateLimiter, validateBody(loginSchema), login);
 
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh access token using rotated refresh token
+ *     description: Rotates refresh token and returns new access token. Detects token reuse.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New access and refresh tokens issued
+ *       401:
+ *         description: Invalid or replayed refresh token
+ */
+router.post('/refresh', refresh);
+
+/**
+ * @swagger
+ * /auth/csrf:
+ *   get:
+ *     summary: Retrieve CSRF token
+ *     description: Sets the CSRF cookie with SameSite=Strict and returns the token in response data.
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: CSRF token returned
+ */
+router.get('/csrf', getCsrfTokenController);
+
+/**
+ * @swagger
+ * /auth/kyc:
+ *   post:
+ *     summary: Submit a KYC screening for the authenticated user
+ *     description: >
+ *       Submits the authenticated user's identity details to the configured
+ *       screening provider and returns the screening outcome (`approved`,
+ *       `review`, or `rejected`) with the provider reference.
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [firstName, lastName]
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 maxLength: 100
+ *               lastName:
+ *                 type: string
+ *                 maxLength: 100
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *               countryCode:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 2
+ *                 description: ISO 3166-1 alpha-2 country code
+ *     responses:
+ *       200:
+ *         description: KYC screening completed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/KycScreeningResponse'
+ *       400:
+ *         description: Validation error.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       503:
+ *         description: Screening provider unavailable.
+ */
 router.post('/kyc', requireJwtAuth, validateBody(kycSchema), submitKyc);
 
 /**

@@ -1,0 +1,5 @@
+/target
+checkpoints.json
+checkpoints.json.tmp
+events.ndjson
+*.log

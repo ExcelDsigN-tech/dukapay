@@ -624,6 +624,16 @@
                         "key": {
                           "vec": [
                             {
+                              "symbol": "CircuitBreaker"
+                            }
+                          ]
+                        },
+                        "val": "void"
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
                               "symbol": "DepositorCount"
                             },
                             {

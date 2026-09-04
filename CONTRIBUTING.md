@@ -169,5 +169,65 @@ secrets, dependencies, or deployment boundaries:
 - Run the repository pre-commit hooks before pushing (`pre-commit run --all-files`).
 - Treat all security-gate failures as blocking until the finding is fixed or explicitly reviewed.
 
+### Approved Database Query Patterns (Issue #406)
+
+All database queries **must** use parameterized placeholders (`$1`, `$2`, …).
+The following patterns are approved; anything else requires a security review.
+
+**Static query (preferred):**
+```typescript
+await query('SELECT * FROM users WHERE id = $1', [userId]);
+```
+
+**Dynamic column names — use a whitelist:**
+```typescript
+const ALLOWED = new Set(['display_name', 'email']);
+const fields = Object.keys(data).filter((k) => ALLOWED.has(k));
+const setClauses = fields.map((f, i) => `${f} = $${i + 2}`).join(', ');
+await query(`UPDATE users SET ${setClauses} WHERE id = $1`, [id, ...values]);
+```
+
+**Never** concatenate user input into SQL strings, table names, or column names.
+The `pg` library parameterizes values but not identifiers — column/table names
+must come from static whitelists, never from request bodies or query parameters.
+
+### Approved Error Response Patterns (Issue #409)
+
+Error responses sent to clients must never include:
+- Stack traces (except when `NODE_ENV=development` and `EXPOSE_STACK_TRACES=true`)
+- Internal file paths or directory structure
+- Database schema details (table/column names, constraint names)
+- PII (emails, phone numbers, wallet secret keys)
+- Internal service names or infrastructure details
+
+Server-side logs **should** include full error context with a correlation ID
+(`req.requestId`) for debugging. Production errors are logged at `error` level
+with the request ID, path, and method — the client receives only a generic
+message and an error code.
+
+### Secret Management (Issue #408)
+
+All secrets **must** be provided via environment variables, validated at startup
+by `backend/src/config/env.ts`. Never commit secrets to source control.
+
+**Rules:**
+- Use `process.env.SECRET_NAME` — never hardcode API keys, passwords, or tokens
+- Add any new required env vars to `REQUIRED_ENV_VARS` in `backend/src/config/env.ts`
+- Document new env vars in `docs/ENVIRONMENT.md` and the relevant `.env.example`
+- Rotate any secret that was ever committed to git history
+- Run `gitleaks detect --source .` locally before pushing to catch accidental leaks
+- The CI pipeline (`security-gates.yml`) runs Gitleaks on every PR and weekly
+
+**What counts as a secret:**
+- API keys, JWT signing keys, webhook signing secrets
+- Database passwords, Redis passwords
+- Stellar secret keys (including `*_ADMIN_SECRET` env vars)
+- Encryption keys (KEK/DEK for PII crypto)
+- Any credential that grants access to an external service
+
+**Allowed in source:**
+- Placeholders in `.env.example` (use `your-xxx-here` format)
+- Test fixtures with clearly fake values (e.g. `test-secret-key-for-unit-tests`)
+
 ---
 Thank you for contributing to DukaPay! 🚀

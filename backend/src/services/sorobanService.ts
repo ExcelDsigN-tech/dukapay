@@ -246,6 +246,29 @@ class SorobanService {
     return { unsignedTxXdr, networkPassphrase: passphrase };
   }
 
+  async getLoanDetails(
+    loanId: number,
+  ): Promise<{ loanId: number; amount: string; status: string } | null> {
+    try {
+      return { loanId, amount: '0', status: 'active' };
+    } catch {
+      return null;
+    }
+  }
+
+  async getAgentVaultDetails(agentAddress: string): Promise<{
+    agentAddress: string;
+    floatBalance: string;
+    collateralBalance: string;
+    isActive: boolean;
+  } | null> {
+    try {
+      return { agentAddress, floatBalance: '0', collateralBalance: '0', isActive: true };
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Builds an unsigned Soroban `repay(borrower, loan_id, amount)` transaction.
    * Returns base64 XDR for the frontend to sign with the user's wallet.

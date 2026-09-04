@@ -876,7 +876,7 @@ describe('EventIndexer', () => {
       contractId: 'CINDEXERTEST',
     });
     const internal = indexer as unknown as {
-      digestEvents: (events: typeof oldEvent[]) => string;
+      digestEvents: (events: (typeof oldEvent)[]) => string;
       detectAndRollbackReorg: () => Promise<boolean>;
       rpc: { getEvents: unknown };
     };
@@ -900,9 +900,9 @@ describe('EventIndexer', () => {
         String(sql).includes('DELETE FROM contract_events WHERE contract_id'),
       ),
     ).toBe(true);
-    expect(
-      mockQuery.mock.calls.some(([sql]) => String(sql).includes('UPDATE indexer_state')),
-    ).toBe(true);
+    expect(mockQuery.mock.calls.some(([sql]) => String(sql).includes('UPDATE indexer_state'))).toBe(
+      true,
+    );
   });
 
   it('backfills and resolves suspect ledger ranges', async () => {
@@ -920,7 +920,8 @@ describe('EventIndexer', () => {
     await expect(indexer.backfillMissingRanges(25)).resolves.toBe(5);
     expect(
       mockQuery.mock.calls.some(
-        ([sql]) => String(sql).includes("SET status = 'verified'") && String(sql).includes('range_digest'),
+        ([sql]) =>
+          String(sql).includes("SET status = 'verified'") && String(sql).includes('range_digest'),
       ),
     ).toBe(true);
   });

@@ -59,12 +59,28 @@ describe('Swagger docs', () => {
     expect(jsonResponse.body.components.schemas.ErrorResponse).toBeDefined();
   });
 
+  it('serves the OpenAPI spec at the /api/docs aliases', async () => {
+    process.env.NODE_ENV = 'test';
+    delete process.env.ENABLE_SWAGGER;
+
+    const docsResponse = await request(app).get('/api/docs/');
+    expect(docsResponse.status).toBe(200);
+    expect(docsResponse.text).toContain('Swagger UI');
+
+    const jsonResponse = await request(app).get('/api/docs.json');
+    expect(jsonResponse.status).toBe(200);
+    expect(jsonResponse.body.openapi).toBe('3.0.0');
+    expect(jsonResponse.body.components.schemas.ErrorResponse).toBeDefined();
+  });
+
   it('returns 404 for docs endpoints in production unless explicitly enabled', async () => {
     process.env.NODE_ENV = 'production';
     delete process.env.ENABLE_SWAGGER;
 
     await request(app).get('/docs/').expect(404);
     await request(app).get('/docs.json').expect(404);
+    await request(app).get('/api/docs/').expect(404);
+    await request(app).get('/api/docs.json').expect(404);
   });
 
   it('allows docs in production when ENABLE_SWAGGER=true', async () => {
@@ -73,6 +89,8 @@ describe('Swagger docs', () => {
 
     await request(app).get('/docs/').expect(200);
     await request(app).get('/docs.json').expect(200);
+    await request(app).get('/api/docs/').expect(200);
+    await request(app).get('/api/docs.json').expect(200);
   });
 
   it('API routes do not have unsafe-inline in script-src CSP', async () => {

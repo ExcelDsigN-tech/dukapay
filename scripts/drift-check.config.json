@@ -1,0 +1,40 @@
+{
+  "$comment": "Config for scripts/drift-check.ts. Endpoints and DSNs come from env vars; this file declares what is ALLOWED to differ between staging and production so the sweep only alerts on genuine drift.",
+  "environments": {
+    "staging": {
+      "baseUrlEnv": "STAGING_BASE_URL",
+      "databaseUrlEnv": "STAGING_DATABASE_URL",
+      "dotenvFile": "backend/.env.staging"
+    },
+    "production": {
+      "baseUrlEnv": "PRODUCTION_BASE_URL",
+      "databaseUrlEnv": "PRODUCTION_DATABASE_URL",
+      "dotenvFile": "backend/.env.production"
+    }
+  },
+  "canonicalEnvExample": "backend/.env.example",
+  "featureFlags": [
+    "KYC_ENFORCEMENT_ENABLED",
+    "DEMO_MODE",
+    "LOG_REDACTION",
+    "AML_REPORTING_THRESHOLD",
+    "INDEXER_LAG_ALERT_THRESHOLD",
+    "INDEXER_FINALITY_DEPTH"
+  ],
+  "expectedDifferences": {
+    "$comment": "Keys/fields that legitimately differ (network-specific). Drift here is downgraded to INFO.",
+    "envKeys": [
+      "STELLAR_NETWORK",
+      "STELLAR_RPC_URL",
+      "STELLAR_NETWORK_PASSPHRASE",
+      "DATABASE_URL",
+      "REDIS_URL",
+      "FRONTEND_URL",
+      "CORS_ALLOWED_ORIGINS",
+      "SENTRY_DSN"
+    ],
+    "versionFields": ["gitSha", "builtAt"],
+    "contractIds": true
+  },
+  "secretEnvKeyPatterns": ["SECRET", "KEY", "PASSWORD", "TOKEN", "DSN", "PRIVATE", "KEK", "CREDENTIAL"]
+}

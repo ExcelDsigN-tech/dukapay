@@ -1,0 +1,12 @@
+{
+  "branches": ["main"],
+  "tagFormat": "sdk-v${version}",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    ["@semantic-release/changelog", { "changelogFile": "sdk/CHANGELOG.md" }],
+    ["@semantic-release/npm", { "pkgRoot": "sdk" }],
+    ["@semantic-release/git", { "assets": ["sdk/CHANGELOG.md", "sdk/package.json"] }],
+    "@semantic-release/github"
+  ]
+}

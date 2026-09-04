@@ -22,6 +22,7 @@ import notificationsRoutes from './routes/notificationsRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import remittanceRoutes from './routes/remittanceRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import agentRoutes from './routes/agentRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import privacyRoutes from './routes/privacyRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
@@ -109,7 +110,17 @@ const corsOptions: cors.CorsOptions = {
     return callback(AppError.forbidden('Origin is not allowed by CORS policy'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-request-id', 'Idempotency-Key'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-api-key',
+    'x-request-id',
+    'Idempotency-Key',
+    'x-csrf-token',
+    'X-CSRF-Token',
+    'x-xsrf-token',
+    'x-refresh-token',
+  ],
   credentials: true,
 };
 
@@ -353,6 +364,7 @@ app.use('/api/remittances', remittanceRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/audit', auditRoutes);
+app.use('/api/agents', agentRoutes);
 
 // Versioned API routes (v1 - current)
 app.use('/api/v1', simulationRoutes);
@@ -369,6 +381,7 @@ app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/privacy', privacyRoutes);
 app.use('/api/v1/agents', agentRoutes);
 app.use('/api/v1/audit', auditRoutes);
+app.use('/api/v1/agents', agentRoutes);
 app.use('/user', userRoutes);
 
 mountSwaggerDocs(app);
@@ -402,8 +415,10 @@ if (process.env.NODE_ENV === 'test') {
 // unmatched paths trigger a not-found error.
 // Express 5 uses path-to-regexp v8 which requires named params,
 // so we use a standard middleware function instead of app.all('*').
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  next(AppError.notFound(`Cannot ${req.method} ${req.path}`));
+app.use((_req: Request, _res: Response, next: NextFunction) => {
+  // Log the full path server-side; return a generic message to the client
+  // so the path structure isn't exposed (issue #409).
+  next(AppError.notFound('Resource not found'));
 });
 
 // ── Sentry Error Handler ──────────────────────────────────────────

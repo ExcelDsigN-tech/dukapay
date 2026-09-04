@@ -3,11 +3,19 @@
 use soroban_sdk::token::Client as TokenClient;
 use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, Address, BytesN, Env, Symbol,
+    contract, contractclient, contracterror, contractimpl, contracttype, symbol_short, Address,
+    BytesN, Env, Symbol,
 };
 
 mod events;
 use events::*;
+
+/// Interface exposed by the DukaPay `CircuitBreaker` contract. The lending
+/// pool consults `is_blocked` at the top of every value-moving entry point.
+#[contractclient(name = "BreakerClient")]
+pub trait BreakerInterface {
+    fn is_blocked(env: Env, contract: Address, function: Symbol) -> bool;
+}
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -22,7 +30,7 @@ pub enum PoolError {
     InvalidMaxPoolSize = 9,
     NoProposedAdmin = 10,
     CooldownTooLong = 11,
-    /// `deposit` would mint fewer shares than the caller's `min_shares_out`.
+    /// `deposit` would mint fewer shares than the caller's `min_shaxt_out`.
     MinSharesNotMet = 12,
     /// `redeem`/`withdraw` would return fewer assets than the caller's
     /// `min_assets_out`.
@@ -36,6 +44,7 @@ pub enum PoolError {
     InvalidCommitmentHash = 18,
     CallDepthExceeded = 19,
     ReentrancyGuardTriggered = 20,
+    CircuitBreakerTripped = 21,
 }
 
 /// Storage keys.
@@ -52,6 +61,9 @@ pub enum PoolError {
 pub enum DataKey {
     Admin,
     Paused,
+    /// Optional address of the DukaPay CircuitBreaker contract. When set, the
+    /// pool consults it before executing value-moving operations.
+    CircuitBreaker,
     WithdrawalCooldown,
     /// token → max pool size cap (0 = unlimited)
     MaxPoolSize(Address),
@@ -261,6 +273,52 @@ impl LendingPool {
         Ok(())
     }
 
+    /// Revert if the configured `CircuitBreaker` has tripped a pause that
+    /// covers this pool and `fn_sym`. When no breaker is configured this is a
+    /// no-op, so the pool remains fully backward compatible.
+    fn assert_circuit_ok(env: &Env, fn_sym: Symbol) -> Result<(), PoolError> {
+        Self::bump_instance_ttl(env);
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(env, &breaker);
+            if client.is_blocked(&env.current_contract_address(), &fn_sym) {
+                return Err(PoolError::CircuitBreakerTripped);
+            }
+        }
+        Ok(())
+    }
+
+    // ── Reentrancy Guard (CEI + nonReentrant) ───────────────────────────────
+
+    fn acquire_lock(env: &Env) -> Result<(), PoolError> {
+        let locked: bool = env.storage().instance().get(&DataKey::ReentrancyLock).unwrap_or(false);
+        if locked {
+            return Err(PoolError::ReentrancyGuardTriggered);
+        }
+        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
+        // Also bump call depth
+        let depth: u32 = env.storage().instance().get(&DataKey::CallDepth).unwrap_or(0);
+        if depth >= 3 {
+            env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+            return Err(PoolError::CallDepthExceeded);
+        }
+        env.storage().instance().set(&DataKey::CallDepth, &(depth + 1));
+        Ok(())
+    }
+
+    fn release_lock(env: &Env) {
+        let depth: u32 = env.storage().instance().get(&DataKey::CallDepth).unwrap_or(1);
+        let next = depth.saturating_sub(1);
+        env.storage().instance().set(&DataKey::CallDepth, &next);
+        if next == 0 {
+            env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+        }
+    }
+
     // ── Share / asset math ────────────────────────────────────────────────
 
     /// LP shares to mint for `amount` of deposited assets.
@@ -377,12 +435,7 @@ impl LendingPool {
             return Err(PoolError::InsufficientLiquidity);
         }
 
-        TokenClient::new(env, token).transfer(
-            &env.current_contract_address(),
-            provider,
-            &assets_to_return,
-        );
-
+        // ── EFFECTS (CEI): update all storage before external call ──────────
         let share_key = DataKey::Shares(provider.clone(), token.clone());
         let deposit_key = DataKey::DepositTimestamp(provider.clone(), token.clone());
         let remaining = cur_shares.checked_sub(shares).expect("share underflow");
@@ -418,8 +471,14 @@ impl LendingPool {
         Self::set_total_managed_assets(env, token, new_total_managed);
 
         Self::bump_instance_ttl(env);
-        // Emitted before the Withdraw event so existing event-order
-        // assumptions (Withdraw/Deposit as the last emitted event) hold.
+
+        // ── INTERACTIONS: external call last (CEI) ──────────────────────────
+        TokenClient::new(env, token).transfer(
+            &env.current_contract_address(),
+            provider,
+            &assets_to_return,
+        );
+
         price_updated(
             env,
             token.clone(),
@@ -445,6 +504,9 @@ impl LendingPool {
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Paused, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::CircuitBreaker, &None::<Address>);
         env.storage().instance().set(
             &DataKey::WithdrawalCooldown,
             &Self::DEFAULT_WITHDRAWAL_COOLDOWN,
@@ -568,11 +630,15 @@ impl LendingPool {
     ) -> Result<(), PoolError> {
         provider.require_auth();
         Self::assert_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, symbol_short!("deposit"))?;
+        Self::acquire_lock(&env)?;
 
         if amount <= 0 {
+            Self::release_lock(&env);
             return Err(PoolError::InvalidAmount);
         }
         if min_shares_out < 0 {
+            Self::release_lock(&env);
             return Err(PoolError::InvalidAmount);
         }
 
@@ -585,6 +651,7 @@ impl LendingPool {
         if max > 0 {
             let total = Self::total_deposits(&env, &token);
             if total.checked_add(amount).expect("overflow") > max {
+                Self::release_lock(&env);
                 return Err(PoolError::PoolSizeExceeded);
             }
         }
@@ -598,19 +665,15 @@ impl LendingPool {
         let shares_to_mint =
             Self::calc_shares_to_mint(amount, total_managed_before, cur_total_shares);
         if shares_to_mint <= 0 {
+            Self::release_lock(&env);
             return Err(PoolError::ZeroShares);
         }
         if shares_to_mint < min_shares_out {
+            Self::release_lock(&env);
             return Err(PoolError::MinSharesNotMet);
         }
 
-        TokenClient::new(&env, &token).transfer(
-            &provider,
-            &env.current_contract_address(),
-            &amount,
-        );
-
-        // Track new depositors.
+        // ── EFFECTS: update storage before external call (CEI) ─────────────
         let existing_shares = Self::read_shares(&env, &provider, &token);
         if existing_shares == 0 {
             let count = Self::read_depositor_count(&env, &token);
@@ -652,8 +715,14 @@ impl LendingPool {
         Self::set_total_managed_assets(&env, &token, new_total_managed);
 
         Self::bump_instance_ttl(&env);
-        // Emitted before the Deposit event so existing event-order
-        // assumptions (Deposit as the last emitted event) hold.
+
+        // ── INTERACTIONS: token transfer last ───────────────────────────────
+        TokenClient::new(&env, &token).transfer(
+            &provider,
+            &env.current_contract_address(),
+            &amount,
+        );
+
         price_updated(
             &env,
             token.clone(),
@@ -668,6 +737,7 @@ impl LendingPool {
             amount,
             shares_to_mint,
         );
+        Self::release_lock(&env);
         Ok(())
     }
 
@@ -715,19 +785,24 @@ impl LendingPool {
     ) -> Result<(), PoolError> {
         from.require_auth();
         Self::assert_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "distribute_yield"))?;
+        Self::acquire_lock(&env)?;
 
         if amount <= 0 {
+            Self::release_lock(&env);
             return Err(PoolError::InvalidAmount);
         }
 
-        TokenClient::new(&env, &token).transfer(&from, &env.current_contract_address(), &amount);
-
+        // ── EFFECTS: update managed assets before external call (CEI) ────
         let total_managed = Self::total_managed_assets(&env, &token);
         let updated = total_managed
             .checked_add(amount)
             .expect("total managed assets overflow");
         Self::set_total_managed_assets(&env, &token, updated);
         Self::bump_instance_ttl(&env);
+
+        // ── INTERACTIONS: token transfer last ─────────────────────────────
+        TokenClient::new(&env, &token).transfer(&from, &env.current_contract_address(), &amount);
 
         yield_distributed(&env, token.clone(), amount);
         price_updated(
@@ -737,6 +812,7 @@ impl LendingPool {
             updated,
             Self::total_shares(&env, &token),
         );
+        Self::release_lock(&env);
         Ok(())
     }
 
@@ -830,12 +906,16 @@ impl LendingPool {
     ) -> Result<(), PoolError> {
         provider.require_auth();
         Self::assert_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, symbol_short!("withdraw"))?;
         Self::assert_withdrawal_cooldown_elapsed(&env, &provider, &token);
-        Self::redeem_shares(&env, &provider, &token, shares, min_assets_out)
+        Self::acquire_lock(&env)?;
+        let res = Self::redeem_shares(&env, &provider, &token, shares, min_assets_out);
+        Self::release_lock(&env);
+        res
     }
 
     /// Same as `withdraw` but bypasses the pause flag and cooldown. Still
-    /// enforces `min_assets_out`.
+    /// enforces `min_assets_out`. Also guarded against reentrancy.
     pub fn emergency_withdraw(
         env: Env,
         provider: Address,
@@ -844,7 +924,10 @@ impl LendingPool {
         min_assets_out: i128,
     ) -> Result<(), PoolError> {
         provider.require_auth();
-        Self::redeem_shares(&env, &provider, &token, shares, min_assets_out)
+        Self::acquire_lock(&env)?;
+        let res = Self::redeem_shares(&env, &provider, &token, shares, min_assets_out);
+        Self::release_lock(&env);
+        res
     }
 
     // ── Cooldown views ────────────────────────────────────────────────────
@@ -983,6 +1066,33 @@ impl LendingPool {
             .instance()
             .get(&DataKey::Paused)
             .unwrap_or(false)
+    }
+
+    /// Configure (or clear with `None`) the `CircuitBreaker` contract address
+    /// the pool consults before value-moving operations. Admin only.
+    pub fn set_circuit_breaker(env: Env, breaker: Option<Address>) {
+        Self::admin(&env).require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::CircuitBreaker, &breaker);
+        Self::bump_instance_ttl(&env);
+        pool_circuit_breaker_set(&env, breaker);
+    }
+
+    /// True when the active `CircuitBreaker` currently blocks this pool and
+    /// `function`. Returns false when no breaker is configured.
+    pub fn is_circuit_blocked(env: Env, function: Symbol) -> bool {
+        Self::bump_instance_ttl(&env);
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(&env, &breaker);
+            return client.is_blocked(&env.current_contract_address(), &function);
+        }
+        false
     }
 
     pub fn get_total_outstanding(env: Env, token: Address) -> i128 {
