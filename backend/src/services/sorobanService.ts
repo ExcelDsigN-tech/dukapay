@@ -141,6 +141,14 @@ class SorobanService {
     return contractId;
   }
 
+  private getAgentVaultContractId(): string {
+    const contractId = process.env.AGENT_VAULT_CONTRACT_ID;
+    if (!contractId) {
+      throw AppError.internal('AGENT_VAULT_CONTRACT_ID is not configured');
+    }
+    return contractId;
+  }
+
   private getScoreReadSourceKeypair(): Keypair {
     const secret =
       process.env.SCORE_RECONCILIATION_SOURCE_SECRET ?? process.env.LOAN_MANAGER_ADMIN_SECRET;
@@ -718,6 +726,51 @@ class SorobanService {
     logger.withContext().info('Built liquidate transaction', {
       liquidator: liquidatorPublicKey,
       loanId,
+    });
+
+    return { unsignedTxXdr, networkPassphrase: passphrase };
+  }
+
+  /**
+   * Builds an unsigned Soroban `transfer_to_agent(from, to, amount)` transaction.
+   * Transfers float directly between agent vaults without borrower involvement.
+   */
+  async buildTransferToAgentTx(
+    fromAgent: string,
+    toAgent: string,
+    amount: number | bigint,
+  ): Promise<{ unsignedTxXdr: string; networkPassphrase: string }> {
+    const server = this.getRpcServer();
+    const contractId = this.getAgentVaultContractId();
+    const passphrase = this.getNetworkPassphrase();
+
+    const account = await server.getAccount(fromAgent);
+
+    const fromScVal = nativeToScVal(Address.fromString(fromAgent), { type: 'address' });
+    const toScVal = nativeToScVal(Address.fromString(toAgent), { type: 'address' });
+    const amountScVal = nativeToScVal(BigInt(amount), { type: 'i128' });
+
+    const tx = new TransactionBuilder(account, {
+      fee: BASE_FEE,
+      networkPassphrase: passphrase,
+    })
+      .addOperation(
+        Operation.invokeContractFunction({
+          contract: contractId,
+          function: 'transfer_to_agent',
+          args: [fromScVal, toScVal, amountScVal],
+        }),
+      )
+      .setTimeout(30)
+      .build();
+
+    const prepared = await server.prepareTransaction(tx);
+    const unsignedTxXdr = prepared.toXDR();
+
+    logger.withContext().info('Built transfer_to_agent transaction', {
+      fromAgent,
+      toAgent,
+      amount,
     });
 
     return { unsignedTxXdr, networkPassphrase: passphrase };
