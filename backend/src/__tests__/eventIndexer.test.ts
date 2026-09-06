@@ -654,7 +654,10 @@ describe('EventIndexer', () => {
 
     mockQuery.mockImplementation(async (sql: string, params: unknown[] = []) => {
       if (sql.includes('SELECT last_ledger') || sql.includes('COALESCE(last_finalized_ledger')) {
-        return { rows: stateExists ? [{ last_ledger: lastLedgerWritten }] : [], rowCount: stateExists ? 1 : 0 };
+        return {
+          rows: stateExists ? [{ last_ledger: lastLedgerWritten }] : [],
+          rowCount: stateExists ? 1 : 0,
+        };
       }
 
       if (sql.includes('INSERT INTO indexer_state')) {
