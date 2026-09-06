@@ -2002,7 +2002,8 @@ fn test_mev_commit_reveal_workflow() {
     pool_client.commit_settlement(&settler, &hash);
 
     // Advance ledger by 1 to satisfy minimum delay
-    env.ledger().set_sequence_number(env.ledger().sequence() + 1);
+    env.ledger()
+        .set_sequence_number(env.ledger().sequence() + 1);
 
     // 2. Reveal
     pool_client.reveal_settlement(&settler, &token_id, &amount, &nonce);
@@ -2077,7 +2078,9 @@ fn test_reentrancy_guard_blocks_reentrant_withdraw() {
 
     // Simulate reentrancy: manually set lock then attempt withdraw
     env.as_contract(&pool_id, || {
-        env.storage().instance().set(&crate::DataKey::ReentrancyLock, &true);
+        env.storage()
+            .instance()
+            .set(&crate::DataKey::ReentrancyLock, &true);
     });
 
     let result = pool_client.try_withdraw(&provider, &token_id, &100, &0);
@@ -2085,8 +2088,12 @@ fn test_reentrancy_guard_blocks_reentrant_withdraw() {
 
     // After clearing lock, withdraw succeeds
     env.as_contract(&pool_id, || {
-        env.storage().instance().set(&crate::DataKey::ReentrancyLock, &false);
-        env.storage().instance().set(&crate::DataKey::CallDepth, &0u32);
+        env.storage()
+            .instance()
+            .set(&crate::DataKey::ReentrancyLock, &false);
+        env.storage()
+            .instance()
+            .set(&crate::DataKey::CallDepth, &0u32);
     });
     pool_client.withdraw(&provider, &token_id, &100, &0);
     assert_eq!(pool_client.get_shares(&provider, &token_id), 900);
@@ -2107,7 +2114,9 @@ fn test_reentrancy_guard_blocks_reentrant_deposit() {
     stellar.mint(&provider, &1000);
 
     env.as_contract(&pool_id, || {
-        env.storage().instance().set(&crate::DataKey::ReentrancyLock, &true);
+        env.storage()
+            .instance()
+            .set(&crate::DataKey::ReentrancyLock, &true);
     });
 
     let result = pool_client.try_deposit(&provider, &token_id, &100, &0);
@@ -2182,9 +2191,15 @@ fn test_fuzz_reentrancy_random_sequence() {
         }
         // Invariant: lock must be released after each call
         let locked: bool = env.as_contract(&pool_id, || {
-            env.storage().instance().get(&crate::DataKey::ReentrancyLock).unwrap_or(false)
+            env.storage()
+                .instance()
+                .get(&crate::DataKey::ReentrancyLock)
+                .unwrap_or(false)
         });
-        assert!(!locked, "reentrancy lock must be released after each operation");
+        assert!(
+            !locked,
+            "reentrancy lock must be released after each operation"
+        );
     }
 }
 
@@ -2212,4 +2227,3 @@ fn test_cei_ordering_withdraw_does_not_lose_funds_on_reentrancy_attempt() {
     assert_eq!(bal_after, bal_before - 400);
     assert_eq!(pool_client.get_shares(&provider, &token_id), 600);
 }
-

@@ -16,7 +16,11 @@ function openDb() {
   });
 }
 
-export async function enqueueRepayment(item: { loanId: number; amount: number; borrowerAddress: string }) {
+export async function enqueueRepayment(item: {
+  loanId: number;
+  amount: number;
+  borrowerAddress: string;
+}) {
   const db = await openDb();
   return new Promise<number>((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");

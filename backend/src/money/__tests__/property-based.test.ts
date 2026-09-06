@@ -12,7 +12,7 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 0, max: 1000000 }),
-          fc.float({ min: 0, max: 1 }),
+          fc.float({ min: Math.fround(0), max: Math.fround(1) }).filter((v) => !Number.isNaN(v)),
           fc.integer({ min: 1, max: 365 }),
           (principal, rate, days) => {
             const interest = calculateInterest(principal, rate, days);
@@ -27,7 +27,9 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 100, max: 500000 }),
-          fc.float({ min: 0.01, max: 0.5 }),
+          fc
+            .float({ min: Math.fround(0.01), max: Math.fround(0.5) })
+            .filter((v) => !Number.isNaN(v)),
           fc.integer({ min: 1, max: 365 }),
           (principal, rate, days) => {
             const interest1 = calculateInterest(principal, rate, days);
@@ -43,7 +45,9 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 1000, max: 100000 }),
-          fc.float({ min: 0.01, max: 0.4 }),
+          fc
+            .float({ min: Math.fround(0.01), max: Math.fround(0.4) })
+            .filter((v) => !Number.isNaN(v)),
           fc.integer({ min: 1, max: 365 }),
           (principal, rate, days) => {
             const interest1 = calculateInterest(principal, rate, days);
@@ -58,7 +62,7 @@ describe('Property-Based Tests for Financial Calculations', () => {
     it('zero principal should result in zero interest', () => {
       fc.assert(
         fc.property(
-          fc.float({ min: 0, max: 1 }),
+          fc.float({ min: Math.fround(0), max: Math.fround(1) }).filter((v) => !Number.isNaN(v)),
           fc.integer({ min: 1, max: 365 }),
           (rate, days) => {
             const interest = calculateInterest(0, rate, days);
@@ -76,7 +80,9 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 0, max: 1000000 }),
-          fc.float({ min: 0, max: MAX_FEE_RATE }),
+          fc
+            .float({ min: Math.fround(0), max: Math.fround(MAX_FEE_RATE) })
+            .filter((v) => !Number.isNaN(v)),
           (principal, feeRate) => {
             const fee = calculateFee(principal, feeRate);
             expect(fee).toBeLessThanOrEqual(principal * MAX_FEE_RATE);
@@ -90,7 +96,9 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 100, max: 100000 }),
-          fc.float({ min: 0.01, max: 0.1 }),
+          fc
+            .float({ min: Math.fround(0.01), max: Math.fround(0.1) })
+            .filter((v) => !Number.isNaN(v)),
           (principal, feeRate) => {
             const fee1 = calculateFee(principal, feeRate);
             const fee2 = calculateFee(principal * 2, feeRate);
@@ -115,21 +123,31 @@ describe('Property-Based Tests for Financial Calculations', () => {
   describe('Rounding Consistency', () => {
     it('rounding should be idempotent', () => {
       fc.assert(
-        fc.property(fc.float({ min: 0, max: 1000000 }), (amount) => {
-          const rounded = roundAmount(amount);
-          const doubleRounded = roundAmount(rounded);
-          expect(rounded).toBe(doubleRounded);
-        }),
+        fc.property(
+          fc
+            .float({ min: Math.fround(0), max: Math.fround(1000000) })
+            .filter((v) => !Number.isNaN(v)),
+          (amount) => {
+            const rounded = roundAmount(amount);
+            const doubleRounded = roundAmount(rounded);
+            expect(rounded).toBe(doubleRounded);
+          },
+        ),
         { numRuns: 10000 },
       );
     });
 
     it('rounding should not increase value beyond one cent', () => {
       fc.assert(
-        fc.property(fc.float({ min: 0, max: 1000000 }), (amount) => {
-          const rounded = roundAmount(amount);
-          expect(rounded - amount).toBeLessThanOrEqual(0.01);
-        }),
+        fc.property(
+          fc
+            .float({ min: Math.fround(0), max: Math.fround(1000000) })
+            .filter((v) => !Number.isNaN(v)),
+          (amount) => {
+            const rounded = roundAmount(amount);
+            expect(rounded - amount).toBeLessThanOrEqual(0.01);
+          },
+        ),
         { numRuns: 10000 },
       );
     });
@@ -155,7 +173,9 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 1000, max: 100000 }),
-          fc.float({ min: 0.05, max: 0.3 }),
+          fc
+            .float({ min: Math.fround(0.05), max: Math.fround(0.3) })
+            .filter((v) => !Number.isNaN(v)),
           fc.integer({ min: 3, max: 12 }),
           (principal, annualRate, months) => {
             const schedule = calculateAmortization(principal, annualRate, months);
@@ -172,7 +192,9 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 1000, max: 100000 }),
-          fc.float({ min: 0.05, max: 0.3 }),
+          fc
+            .float({ min: Math.fround(0.05), max: Math.fround(0.3) })
+            .filter((v) => !Number.isNaN(v)),
           fc.integer({ min: 1, max: 12 }),
           (principal, annualRate, months) => {
             const schedule = calculateAmortization(principal, annualRate, months);
@@ -191,7 +213,9 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 1000, max: 100000 }),
-          fc.float({ min: 0.05, max: 0.3 }),
+          fc
+            .float({ min: Math.fround(0.05), max: Math.fround(0.3) })
+            .filter((v) => !Number.isNaN(v)),
           fc.integer({ min: 1, max: 12 }),
           (principal, annualRate, months) => {
             const schedule = calculateAmortization(principal, annualRate, months);
@@ -207,7 +231,9 @@ describe('Property-Based Tests for Financial Calculations', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 10000, max: 100000 }),
-          fc.float({ min: 0.1, max: 0.3 }),
+          fc
+            .float({ min: Math.fround(0.1), max: Math.fround(0.3) })
+            .filter((v) => !Number.isNaN(v)),
           fc.integer({ min: 6, max: 12 }),
           (principal, annualRate, months) => {
             const schedule = calculateAmortization(principal, annualRate, months);

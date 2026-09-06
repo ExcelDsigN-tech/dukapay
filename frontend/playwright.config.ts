@@ -8,14 +8,20 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  
+
   // Multiple reporters for different purposes
-  reporter: [
-    ["html", { open: "never" }],
-    ["json", { outputFile: "test-results/results.json" }],
-    ["list"],
-    ...(process.env.CI ? [["github" as const]] : []),
-  ],
+  reporter: process.env.CI
+    ? [
+        ["html", { open: "never" }],
+        ["json", { outputFile: "test-results/results.json" }],
+        ["list"],
+        ["github"],
+      ]
+    : [
+        ["html", { open: "never" }],
+        ["json", { outputFile: "test-results/results.json" }],
+        ["list"],
+      ],
 
   use: {
     baseURL: process.env.BASE_URL || "http://localhost:3000",

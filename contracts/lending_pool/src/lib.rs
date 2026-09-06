@@ -295,27 +295,47 @@ impl LendingPool {
     // ── Reentrancy Guard (CEI + nonReentrant) ───────────────────────────────
 
     fn acquire_lock(env: &Env) -> Result<(), PoolError> {
-        let locked: bool = env.storage().instance().get(&DataKey::ReentrancyLock).unwrap_or(false);
+        let locked: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::ReentrancyLock)
+            .unwrap_or(false);
         if locked {
             return Err(PoolError::ReentrancyGuardTriggered);
         }
-        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::ReentrancyLock, &true);
         // Also bump call depth
-        let depth: u32 = env.storage().instance().get(&DataKey::CallDepth).unwrap_or(0);
+        let depth: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CallDepth)
+            .unwrap_or(0);
         if depth >= 3 {
-            env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+            env.storage()
+                .instance()
+                .set(&DataKey::ReentrancyLock, &false);
             return Err(PoolError::CallDepthExceeded);
         }
-        env.storage().instance().set(&DataKey::CallDepth, &(depth + 1));
+        env.storage()
+            .instance()
+            .set(&DataKey::CallDepth, &(depth + 1));
         Ok(())
     }
 
     fn release_lock(env: &Env) {
-        let depth: u32 = env.storage().instance().get(&DataKey::CallDepth).unwrap_or(1);
+        let depth: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CallDepth)
+            .unwrap_or(1);
         let next = depth.saturating_sub(1);
         env.storage().instance().set(&DataKey::CallDepth, &next);
         if next == 0 {
-            env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+            env.storage()
+                .instance()
+                .set(&DataKey::ReentrancyLock, &false);
         }
     }
 
@@ -1198,22 +1218,42 @@ impl LendingPool {
 
     /// Enter cross-contract execution with Reentrancy Guard & Call Depth checks (max 3).
     pub fn enter_cross_contract_call(env: &Env) -> Result<(), PoolError> {
-        let current_depth: u32 = env.storage().instance().get(&DataKey::CallDepth).unwrap_or(0);
+        let current_depth: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CallDepth)
+            .unwrap_or(0);
         if current_depth >= 3 {
             return Err(PoolError::CallDepthExceeded);
         }
-        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
-        env.storage().instance().set(&DataKey::CallDepth, &(current_depth + 1));
+        env.storage()
+            .instance()
+            .set(&DataKey::ReentrancyLock, &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::CallDepth, &(current_depth + 1));
         Ok(())
     }
 
     /// Exit cross-contract execution and reset call depth counter.
     pub fn exit_cross_contract_call(env: &Env) {
-        let current_depth: u32 = env.storage().instance().get(&DataKey::CallDepth).unwrap_or(1);
-        let next_depth = if current_depth > 0 { current_depth - 1 } else { 0 };
-        env.storage().instance().set(&DataKey::CallDepth, &next_depth);
+        let current_depth: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CallDepth)
+            .unwrap_or(1);
+        let next_depth = if current_depth > 0 {
+            current_depth - 1
+        } else {
+            0
+        };
+        env.storage()
+            .instance()
+            .set(&DataKey::CallDepth, &next_depth);
         if next_depth == 0 {
-            env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+            env.storage()
+                .instance()
+                .set(&DataKey::ReentrancyLock, &false);
         }
     }
 }

@@ -1,8 +1,8 @@
 /**
  * Dispute Management Page Object
  */
-import { type Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage.js';
+import { type Page, expect } from "@playwright/test";
+import { BasePage } from "./BasePage.js";
 
 export class DisputePage extends BasePage {
   constructor(page: Page) {
@@ -57,11 +57,11 @@ export class DisputePage extends BasePage {
     await this.navigateToFileDispute(data.loanId);
     await this.selectDisputeReason(data.reason);
     await this.fillDisputeDescription(data.description);
-    
+
     if (data.evidencePaths && data.evidencePaths.length > 0) {
       await this.uploadEvidence(data.evidencePaths);
     }
-    
+
     await this.submitDispute();
     await this.expectTextVisible(/dispute.*submitted|under review/i, 10000);
   }

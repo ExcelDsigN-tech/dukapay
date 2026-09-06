@@ -246,7 +246,9 @@ describe('Agent Float Transfer API (/api/agents/float-transfer)', () => {
         .send();
 
       expect(response.status).toBe(403);
-      expect(response.body.error.message).toMatch(/must be either the initiating agent, recipient agent, or an admin/i);
+      expect(response.body.error.message).toMatch(
+        /must be either the initiating agent, recipient agent, or an admin/i,
+      );
     });
   });
 
@@ -292,8 +294,9 @@ describe('Agent Float Transfer API (/api/agents/float-transfer)', () => {
         rows: [{ daily_limit: '150000', weekly_limit: '600000' }],
       });
 
-      const response = await request(app)
-        .get(`/api/agents/float-transfer/limits?fromAgent=${AGENT_A}&toAgent=${AGENT_B}`);
+      const response = await request(app).get(
+        `/api/agents/float-transfer/limits?fromAgent=${AGENT_A}&toAgent=${AGENT_B}`,
+      );
 
       expect(response.status).toBe(200);
       expect(response.body.data.dailyLimit).toBe(150000);

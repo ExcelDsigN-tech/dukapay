@@ -1,8 +1,8 @@
 /**
  * Remittance (Cash-in/out) Page Object
  */
-import { type Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage.js';
+import { type Page, expect } from "@playwright/test";
+import { BasePage } from "./BasePage.js";
 
 export class RemittancePage extends BasePage {
   constructor(page: Page) {
@@ -13,14 +13,14 @@ export class RemittancePage extends BasePage {
    * Navigate to send remittance page
    */
   async navigateToSendRemittance(): Promise<void> {
-    await this.goto('/en/remittances/send');
+    await this.goto("/en/remittances/send");
   }
 
   /**
    * Navigate to remittance history
    */
   async navigateToHistory(): Promise<void> {
-    await this.goto('/en/remittances');
+    await this.goto("/en/remittances");
   }
 
   /**
@@ -33,7 +33,7 @@ export class RemittancePage extends BasePage {
   /**
    * Fill remittance amount
    */
-  async fillAmount(amount: string, currency = 'USDC'): Promise<void> {
+  async fillAmount(amount: string, currency = "USDC"): Promise<void> {
     await this.selectOption('select[name="fromCurrency"]', currency);
     await this.fillInput('input[name="amount"]', amount);
   }
@@ -66,11 +66,11 @@ export class RemittancePage extends BasePage {
     await this.navigateToSendRemittance();
     await this.fillRecipientDetails(data.recipientAddress);
     await this.fillAmount(data.amount, data.fromCurrency);
-    
+
     if (data.toCurrency) {
       await this.selectDestinationCurrency(data.toCurrency);
     }
-    
+
     await this.reviewAndConfirm();
     await this.expectTextVisible(/success|sent|completed/i, 15000);
   }
@@ -78,7 +78,7 @@ export class RemittancePage extends BasePage {
   /**
    * Verify remittance in history
    */
-  async verifyRemittanceInHistory(amount: string, status = 'completed'): Promise<void> {
+  async verifyRemittanceInHistory(amount: string, status = "completed"): Promise<void> {
     await this.navigateToHistory();
     await this.expectTextVisible(/history/i);
     await expect(this.page.locator(`text=${amount}`)).toBeVisible();
@@ -106,6 +106,6 @@ export class RemittancePage extends BasePage {
    */
   async getExchangeRate(): Promise<string> {
     const rateElement = await this.page.locator('[data-testid="exchange-rate"]').textContent();
-    return rateElement || '0';
+    return rateElement || "0";
   }
 }

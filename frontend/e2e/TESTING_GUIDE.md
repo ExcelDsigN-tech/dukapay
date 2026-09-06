@@ -46,6 +46,7 @@ npx playwright test --project=chromium
 ### Page Object Model (POM)
 
 All UI interactions are encapsulated in Page Objects to:
+
 - Reduce code duplication
 - Improve maintainability
 - Make tests more readable
@@ -83,43 +84,43 @@ Each test is completely isolated:
 ### Basic Test Structure
 
 ```typescript
-import { test, expect, type Page } from '@playwright/test';
-import { LoanPage, TEST_USERS, createWalletState } from '../utils/index.js';
+import { test, expect, type Page } from "@playwright/test";
+import { LoanPage, TEST_USERS, createWalletState } from "../utils/index.js";
 
-test.describe('Loan Flow', () => {
+test.describe("Loan Flow", () => {
   let loanPage: LoanPage;
 
   test.beforeEach(async ({ page }: { page: Page }) => {
     loanPage = new LoanPage(page);
-    
+
     // Setup wallet and user
     const walletState = createWalletState(TEST_USERS.borrower);
     await page.addInitScript((stateJson: string) => {
-      window.localStorage.setItem('dukapay-wallet', stateJson);
+      window.localStorage.setItem("dukapay-wallet", stateJson);
     }, JSON.stringify(walletState));
-    
+
     // Mock APIs
-    await page.route('**/api/user/profile', async (route) => {
+    await page.route("**/api/user/profile", async (route) => {
       await route.fulfill({
         status: 200,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({
-          id: 'test_user',
+          id: "test_user",
           kycVerified: true,
         }),
       });
     });
   });
 
-  test('should apply for loan', async ({ page }) => {
+  test("should apply for loan", async ({ page }) => {
     // Arrange
-    await page.goto('/en');
-    
+    await page.goto("/en");
+
     // Act
-    await loanPage.applyForLoan('1000', 'USDC');
-    
+    await loanPage.applyForLoan("1000", "USDC");
+
     // Assert
-    await expect(page.locator('text=/application.*submitted/i')).toBeVisible();
+    await expect(page.locator("text=/application.*submitted/i")).toBeVisible();
   });
 });
 ```
@@ -127,23 +128,25 @@ test.describe('Loan Flow', () => {
 ### Using Page Objects
 
 **Good ✅:**
+
 ```typescript
-await loanPage.applyForLoan('1000', 'USDC');
-await loanPage.verifyLoanStatus('Active');
+await loanPage.applyForLoan("1000", "USDC");
+await loanPage.verifyLoanStatus("Active");
 ```
 
 **Bad ❌:**
+
 ```typescript
 await page.click('button:has-text("Apply")');
-await page.fill('input[name="amount"]', '1000');
+await page.fill('input[name="amount"]', "1000");
 // ... repeated across tests
 ```
 
 ### Creating a New Page Object
 
 ```typescript
-import { type Page } from '@playwright/test';
-import { BasePage } from './BasePage.js';
+import { type Page } from "@playwright/test";
+import { BasePage } from "./BasePage.js";
 
 export class MyNewPage extends BasePage {
   constructor(page: Page) {
@@ -154,7 +157,7 @@ export class MyNewPage extends BasePage {
    * Navigate to page
    */
   async navigateToMyPage(): Promise<void> {
-    await this.goto('/en/my-page');
+    await this.goto("/en/my-page");
   }
 
   /**
@@ -175,13 +178,15 @@ export class MyNewPage extends BasePage {
 Always mock external APIs:
 
 ```typescript
-await page.route('**/api/endpoint', async (route) => {
+await page.route("**/api/endpoint", async (route) => {
   await route.fulfill({
     status: 200,
-    contentType: 'application/json',
+    contentType: "application/json",
     body: JSON.stringify({
       success: true,
-      data: { /* your test data */ },
+      data: {
+        /* your test data */
+      },
     }),
   });
 });
@@ -192,11 +197,11 @@ await page.route('**/api/endpoint', async (route) => {
 Use fixtures for consistent test data:
 
 ```typescript
-import { createMockLoan, TEST_USERS } from '../utils/fixtures.js';
+import { createMockLoan, TEST_USERS } from "../utils/fixtures.js";
 
 const testLoan = createMockLoan({
   amount: 1000,
-  status: 'active',
+  status: "active",
   borrower: TEST_USERS.borrower.publicKey,
 });
 ```
@@ -204,11 +209,13 @@ const testLoan = createMockLoan({
 ### 3. Waiting for Elements
 
 **Preferred:**
+
 ```typescript
-await expect(page.locator('text=Success')).toBeVisible({ timeout: 10000 });
+await expect(page.locator("text=Success")).toBeVisible({ timeout: 10000 });
 ```
 
 **Avoid:**
+
 ```typescript
 await page.waitForTimeout(5000); // ❌ Flaky!
 ```
@@ -219,11 +226,11 @@ Be specific with assertions:
 
 ```typescript
 // Good ✅
-await expect(page.locator('[data-testid="balance"]')).toContainText('1,000');
-await expect(page.locator('text=Active')).toBeVisible();
+await expect(page.locator('[data-testid="balance"]')).toContainText("1,000");
+await expect(page.locator("text=Active")).toBeVisible();
 
 // Bad ❌
-await expect(page.locator('div')).toBeVisible(); // Too generic
+await expect(page.locator("div")).toBeVisible(); // Too generic
 ```
 
 ### 5. Error Handling
@@ -231,19 +238,19 @@ await expect(page.locator('div')).toBeVisible(); // Too generic
 Test both success and failure paths:
 
 ```typescript
-test('should handle insufficient balance', async ({ page }) => {
-  await page.route('**/api/transfer', async (route) => {
+test("should handle insufficient balance", async ({ page }) => {
+  await page.route("**/api/transfer", async (route) => {
     await route.fulfill({
       status: 400,
       body: JSON.stringify({
         success: false,
-        error: 'Insufficient balance',
+        error: "Insufficient balance",
       }),
     });
   });
 
   await page.click('button:has-text("Transfer")');
-  await expect(page.locator('text=/insufficient.*balance/i')).toBeVisible();
+  await expect(page.locator("text=/insufficient.*balance/i")).toBeVisible();
 });
 ```
 
@@ -281,33 +288,33 @@ Automatically captured on failure:
 
 ```typescript
 // Manual screenshot
-await page.screenshot({ path: 'debug-screenshot.png' });
+await page.screenshot({ path: "debug-screenshot.png" });
 
 // Full page screenshot
-await page.screenshot({ path: 'debug.png', fullPage: true });
+await page.screenshot({ path: "debug.png", fullPage: true });
 ```
 
 ### 4. Console Logs
 
 ```typescript
 // Listen to console
-page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
 
 // Listen to errors
-page.on('pageerror', error => console.log('PAGE ERROR:', error));
+page.on("pageerror", (error) => console.log("PAGE ERROR:", error));
 ```
 
 ### 5. Network Inspection
 
 ```typescript
 // Log all requests
-page.on('request', request => {
-  console.log('>>', request.method(), request.url());
+page.on("request", (request) => {
+  console.log(">>", request.method(), request.url());
 });
 
 // Log responses
-page.on('response', response => {
-  console.log('<<', response.status(), response.url());
+page.on("response", (response) => {
+  console.log("<<", response.status(), response.url());
 });
 ```
 
@@ -328,6 +335,7 @@ Tests run automatically on PR:
 ### Test Reports
 
 After CI run:
+
 1. Go to Actions tab
 2. Click on workflow run
 3. Download `playwright-report` artifact
@@ -338,12 +346,13 @@ After CI run:
 Tests tagged with `@flaky` run separately and don't block PRs:
 
 ```typescript
-test('[@flaky] Real-time sync', async ({ page }) => {
+test("[@flaky] Real-time sync", async ({ page }) => {
   // Test implementation
 });
 ```
 
 **Criteria for @flaky tag:**
+
 - Success rate < 95% in CI
 - Timing-dependent behavior
 - External dependency issues
@@ -351,42 +360,43 @@ test('[@flaky] Real-time sync', async ({ page }) => {
 
 ## Test Coverage Matrix
 
-| Flow | Feature | Status |
-|------|---------|--------|
-| KYC | Agent registration | ✅ |
-| KYC | Document upload | ✅ |
-| KYC | Approval/rejection | ✅ |
-| Cash-in/out | Send remittance | ✅ |
-| Cash-in/out | View history | ✅ |
-| Cash-in/out | NFT certificate | ✅ |
-| Loan | Application | ✅ |
-| Loan | Approval | ✅ |
-| Loan | Funding | ✅ |
-| Loan | Rejection | ✅ |
-| Repayment | Full repayment | ✅ |
-| Repayment | Partial payment | ✅ |
-| Repayment | Early payoff | ✅ |
-| Dispute | File dispute | ✅ |
-| Dispute | Add evidence | ✅ |
-| Dispute | Resolution | ✅ |
-| Dispute | Escalation | ✅ |
-| Float | Transfer | ✅ |
-| Float | Add liquidity | ✅ |
-| Float | Withdraw | ✅ |
-| Float | Reconciliation | ✅ |
-| Settlement | Single process | ✅ |
-| Settlement | Batch process | ✅ |
-| Settlement | Reconciliation | ✅ |
-| Settlement | Retry failed | ✅ |
+| Flow        | Feature            | Status |
+| ----------- | ------------------ | ------ |
+| KYC         | Agent registration | ✅     |
+| KYC         | Document upload    | ✅     |
+| KYC         | Approval/rejection | ✅     |
+| Cash-in/out | Send remittance    | ✅     |
+| Cash-in/out | View history       | ✅     |
+| Cash-in/out | NFT certificate    | ✅     |
+| Loan        | Application        | ✅     |
+| Loan        | Approval           | ✅     |
+| Loan        | Funding            | ✅     |
+| Loan        | Rejection          | ✅     |
+| Repayment   | Full repayment     | ✅     |
+| Repayment   | Partial payment    | ✅     |
+| Repayment   | Early payoff       | ✅     |
+| Dispute     | File dispute       | ✅     |
+| Dispute     | Add evidence       | ✅     |
+| Dispute     | Resolution         | ✅     |
+| Dispute     | Escalation         | ✅     |
+| Float       | Transfer           | ✅     |
+| Float       | Add liquidity      | ✅     |
+| Float       | Withdraw           | ✅     |
+| Float       | Reconciliation     | ✅     |
+| Settlement  | Single process     | ✅     |
+| Settlement  | Batch process      | ✅     |
+| Settlement  | Reconciliation     | ✅     |
+| Settlement  | Retry failed       | ✅     |
 
 ## Troubleshooting
 
 ### Issue: Test timeouts
 
 **Solution:**
+
 ```typescript
 // Increase timeout for specific test
-test('slow operation', async ({ page }) => {
+test("slow operation", async ({ page }) => {
   test.setTimeout(90000); // 90 seconds
   // ... test code
 });
@@ -411,29 +421,32 @@ await page.getByTestId('submit-loan').click();
 Wait for network idle:
 
 ```typescript
-await page.goto('/en', { waitUntil: 'networkidle' });
-await page.waitForLoadState('networkidle');
+await page.goto("/en", { waitUntil: "networkidle" });
+await page.waitForLoadState("networkidle");
 ```
 
 ### Issue: Modal not appearing
 
 **Solution:**
+
 ```typescript
 // Wait for modal to be attached to DOM
 const modal = page.locator('[role="dialog"]');
-await modal.waitFor({ state: 'attached' });
+await modal.waitFor({ state: "attached" });
 await expect(modal).toBeVisible();
 ```
 
 ### Issue: Tests pass locally but fail in CI
 
 **Possible causes:**
+
 1. Timing differences (slower CI)
 2. Screen resolution differences
 3. Missing dependencies
 4. Environment variables
 
 **Solution:**
+
 ```bash
 # Run locally with CI settings
 CI=true npx playwright test

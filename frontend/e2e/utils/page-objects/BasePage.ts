@@ -2,7 +2,7 @@
  * Base Page Object Model
  * Provides common functionality for all page objects
  */
-import { type Page, type Locator, expect } from '@playwright/test';
+import { type Page, type Locator, expect } from "@playwright/test";
 
 export class BasePage {
   protected page: Page;
@@ -22,14 +22,14 @@ export class BasePage {
    * Wait for page to be fully loaded
    */
   async waitForLoad(): Promise<void> {
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState("networkidle");
   }
 
   /**
    * Click on a button by text
    */
   async clickButton(text: string | RegExp): Promise<void> {
-    await this.page.getByRole('button', { name: text }).click();
+    await this.page.getByRole("button", { name: text }).click();
   }
 
   /**

@@ -1,8 +1,8 @@
 /**
  * KYC/AML Onboarding Page Object
  */
-import { type Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage.js';
+import { type Page, expect } from "@playwright/test";
+import { BasePage } from "./BasePage.js";
 
 export class KycPage extends BasePage {
   constructor(page: Page) {
@@ -13,7 +13,7 @@ export class KycPage extends BasePage {
    * Navigate to KYC page
    */
   async navigateToKyc(): Promise<void> {
-    await this.goto('/en/kyc');
+    await this.goto("/en/kyc");
   }
 
   /**
@@ -34,7 +34,7 @@ export class KycPage extends BasePage {
   /**
    * Upload document
    */
-  async uploadDocument(filePath: string, documentType = 'passport'): Promise<void> {
+  async uploadDocument(filePath: string, documentType = "passport"): Promise<void> {
     await this.selectOption('select[name="documentType"]', documentType);
     const fileInput = this.page.locator('input[type="file"]');
     await fileInput.setInputFiles(filePath);
@@ -57,7 +57,7 @@ export class KycPage extends BasePage {
   /**
    * Verify KYC status
    */
-  async verifyKycStatus(expectedStatus: 'pending' | 'approved' | 'rejected'): Promise<void> {
+  async verifyKycStatus(expectedStatus: "pending" | "approved" | "rejected"): Promise<void> {
     const statusLocator = this.page.locator('[data-testid="kyc-status"]');
     await expect(statusLocator).toContainText(expectedStatus, { ignoreCase: true });
   }
@@ -73,14 +73,14 @@ export class KycPage extends BasePage {
     documentPath?: string;
   }): Promise<void> {
     await this.fillPersonalInfo(data);
-    
+
     if (data.documentPath) {
       await this.uploadDocument(data.documentPath);
     }
-    
+
     await this.acceptTerms();
     await this.submitKyc();
-    
+
     // Wait for submission confirmation
     await this.expectTextVisible(/submitted|pending review/i);
   }

@@ -286,6 +286,22 @@ beforeAll(async () => {
     notificationService: { createNotification: mockNotificationCreate },
   }));
 
+  jest.unstable_mockModule('../pubsubService.js', () => ({
+    pubsubService: { publish: jest.fn<() => Promise<void>>().mockResolvedValue(undefined) },
+  }));
+
+  jest.unstable_mockModule('../../middleware/metrics.js', () => ({
+    recordIndexerLedgers: jest.fn(),
+  }));
+
+  jest.unstable_mockModule('../../middleware/pauseGuard.js', () => ({
+    setPauseState: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  }));
+
+  jest.unstable_mockModule('../../money/decimal.js', () => ({
+    fromStroops: jest.fn((v: bigint) => String(Number(v) / 1e7)),
+  }));
+
   const mockLogMethods = {
     warn: jest.fn(),
     error: jest.fn(),
@@ -349,7 +365,7 @@ afterEach(() => {
 
 function makeIndexer() {
   return new EventIndexer({
-    rpcUrl: 'http://localhost:8000',
+    rpcUrl: 'https://localhost:8000',
     contractIds: ['CONTRACT001'],
   });
 }

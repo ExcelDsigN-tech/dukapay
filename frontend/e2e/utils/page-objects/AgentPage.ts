@@ -1,8 +1,8 @@
 /**
  * Agent Dashboard Page Object
  */
-import { type Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage.js';
+import { type Page, expect } from "@playwright/test";
+import { BasePage } from "./BasePage.js";
 
 export class AgentPage extends BasePage {
   constructor(page: Page) {
@@ -13,7 +13,7 @@ export class AgentPage extends BasePage {
    * Navigate to agent dashboard
    */
   async navigateToAgentDashboard(): Promise<void> {
-    await this.goto('/en/agent');
+    await this.goto("/en/agent");
   }
 
   /**
@@ -36,11 +36,11 @@ export class AgentPage extends BasePage {
    */
   async approveLoan(loanId: number, comment?: string): Promise<void> {
     await this.reviewLoanApplication(loanId);
-    
+
     if (comment) {
       await this.fillInput('textarea[name="comment"]', comment);
     }
-    
+
     await this.clickButton(/approve/i);
     await this.clickButton(/confirm.*approval/i);
     await this.expectTextVisible(/approved/i, 10000);
@@ -63,7 +63,7 @@ export class AgentPage extends BasePage {
   async getFloatBalance(): Promise<string> {
     await this.navigateToAgentDashboard();
     const balanceElement = await this.page.locator('[data-testid="float-balance"]').textContent();
-    return balanceElement || '0';
+    return balanceElement || "0";
   }
 
   /**
@@ -78,11 +78,11 @@ export class AgentPage extends BasePage {
     await this.clickButton(/transfer float|manage float/i);
     await this.fillInput('input[name="amount"]', data.amount);
     await this.fillInput('input[name="recipientAddress"]', data.recipientAddress);
-    
+
     if (data.currency) {
       await this.selectOption('select[name="currency"]', data.currency);
     }
-    
+
     await this.clickButton(/review transfer/i);
     await this.clickButton(/confirm transfer/i);
     await this.expectTextVisible(/transfer.*successful|sent/i, 10000);
@@ -97,11 +97,14 @@ export class AgentPage extends BasePage {
     totalVolume: string;
   }> {
     await this.navigateToAgentDashboard();
-    
-    const loansProcessed = await this.page.locator('[data-testid="loans-processed"]').textContent() || '0';
-    const remittancesCompleted = await this.page.locator('[data-testid="remittances-completed"]').textContent() || '0';
-    const totalVolume = await this.page.locator('[data-testid="total-volume"]').textContent() || '0';
-    
+
+    const loansProcessed =
+      (await this.page.locator('[data-testid="loans-processed"]').textContent()) || "0";
+    const remittancesCompleted =
+      (await this.page.locator('[data-testid="remittances-completed"]').textContent()) || "0";
+    const totalVolume =
+      (await this.page.locator('[data-testid="total-volume"]').textContent()) || "0";
+
     return { loansProcessed, remittancesCompleted, totalVolume };
   }
 
@@ -135,7 +138,7 @@ export class AgentPage extends BasePage {
   /**
    * Export agent report
    */
-  async exportReport(reportType = 'monthly'): Promise<void> {
+  async exportReport(reportType = "monthly"): Promise<void> {
     await this.navigateToAgentDashboard();
     await this.selectOption('select[name="reportType"]', reportType);
     await this.clickButton(/export|download report/i);

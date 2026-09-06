@@ -7,12 +7,14 @@ Comprehensive Playwright E2E test coverage for DukaPay's critical user flows.
 This test suite covers 8 critical user flows with complete Page Object Model implementation:
 
 ### 1. **Agent Onboarding & KYC** (`flows/01-agent-onboarding-kyc.spec.ts`)
+
 - Agent registration and wallet connection
 - KYC form submission with document upload
 - KYC approval/rejection handling
 - Dashboard access after verification
 
 ### 2. **Cash-in/Cash-out (Remittance)** (`flows/02-cash-in-out.spec.ts`)
+
 - Send remittance with currency conversion
 - View remittance history and status
 - Exchange rate calculation
@@ -20,6 +22,7 @@ This test suite covers 8 critical user flows with complete Page Object Model imp
 - Balance validation
 
 ### 3. **Loan Application → Approval → Funding** (`flows/03-loan-application-approval-funding.spec.ts`)
+
 - Complete loan application flow
 - Credit score verification
 - Agent loan review and approval
@@ -28,6 +31,7 @@ This test suite covers 8 critical user flows with complete Page Object Model imp
 - Event timeline tracking
 
 ### 4. **Loan Repayment** (`flows/04-loan-repayment.spec.ts`)
+
 - Full and partial repayments
 - Multiple payment installments
 - Early repayment with interest reduction
@@ -35,6 +39,7 @@ This test suite covers 8 critical user flows with complete Page Object Model imp
 - Repayment history and receipts
 
 ### 5. **Dispute Filing** (`flows/05-dispute-filing.spec.ts`)
+
 - Dispute creation with evidence upload
 - Dispute status tracking
 - Agent review and resolution
@@ -43,6 +48,7 @@ This test suite covers 8 critical user flows with complete Page Object Model imp
 - Dispute withdrawal
 
 ### 6. **Float Transfer** (`flows/06-float-transfer.spec.ts`)
+
 - Agent float balance management
 - Float transfers between agents
 - Liquidity addition and withdrawal
@@ -51,6 +57,7 @@ This test suite covers 8 critical user flows with complete Page Object Model imp
 - Float reconciliation
 
 ### 7. **Settlement** (`flows/07-settlement.spec.ts`)
+
 - Pending settlements dashboard
 - Single and batch settlement processing
 - Settlement reconciliation
@@ -59,6 +66,7 @@ This test suite covers 8 critical user flows with complete Page Object Model imp
 - Settlement statistics and reports
 
 ### 8. **Complete User Journey** (`flows/08-complete-user-journey.spec.ts`)
+
 - End-to-end integration tests
 - Multi-flow user lifecycle
 - Agent workflow integration
@@ -83,6 +91,7 @@ All page interactions are abstracted into reusable Page Objects located in `util
 ### Test Fixtures
 
 `utils/fixtures.ts` provides:
+
 - Mock user data (borrowers, lenders, agents, admins)
 - Test loan generation
 - Test remittance generation
@@ -132,10 +141,10 @@ npm run test:e2e
 Each test uses isolated mock data:
 
 ```typescript
-import { TEST_USERS, createMockLoan } from '../utils/fixtures.js';
+import { TEST_USERS, createMockLoan } from "../utils/fixtures.js";
 
 // Create isolated test data
-const loan = createMockLoan({ amount: 1000, status: 'active' });
+const loan = createMockLoan({ amount: 1000, status: "active" });
 ```
 
 ### API Mocking
@@ -143,7 +152,7 @@ const loan = createMockLoan({ amount: 1000, status: 'active' });
 All API calls are mocked using Playwright's route mocking:
 
 ```typescript
-await page.route('**/api/loans', async (route) => {
+await page.route("**/api/loans", async (route) => {
   await route.fulfill({
     status: 200,
     body: JSON.stringify({ success: true, data: mockLoan }),
@@ -156,7 +165,7 @@ await page.route('**/api/loans', async (route) => {
 Tests that show intermittent failures are tagged with `@flaky`:
 
 ```typescript
-test('[@flaky] Cross-browser wallet synchronization', async ({ page }) => {
+test("[@flaky] Cross-browser wallet synchronization", async ({ page }) => {
   // Test implementation
 });
 ```
@@ -241,22 +250,22 @@ use: {
 ### Example
 
 ```typescript
-import { test, expect } from '@playwright/test';
-import { LoanPage } from '../utils/page-objects/LoanPage.js';
-import { TEST_USERS, createWalletState } from '../utils/fixtures.js';
+import { test, expect } from "@playwright/test";
+import { LoanPage } from "../utils/page-objects/LoanPage.js";
+import { TEST_USERS, createWalletState } from "../utils/fixtures.js";
 
-test.describe('My New Flow', () => {
-  test('should do something', async ({ page }) => {
+test.describe("My New Flow", () => {
+  test("should do something", async ({ page }) => {
     const loanPage = new LoanPage(page);
-    
+
     // Setup
-    await page.route('**/api/endpoint', mockHandler);
-    
+    await page.route("**/api/endpoint", mockHandler);
+
     // Action
     await loanPage.performAction();
-    
+
     // Assert
-    await expect(page.locator('text=Success')).toBeVisible();
+    await expect(page.locator("text=Success")).toBeVisible();
   });
 });
 ```
@@ -278,6 +287,7 @@ When adding E2E tests:
 ### Playwright Config
 
 See `playwright.config.ts` for:
+
 - Browser configurations (Chromium, Firefox, WebKit)
 - Retry logic (2 retries in CI)
 - Timeouts and navigation settings
@@ -304,6 +314,7 @@ CI=true
 ## 💬 Support
 
 Join our Telegram community for questions and discussions:
+
 - 💬 Telegram: https://t.me/+eRqhka27TVo0NzM8
 
 All official decisions happen on GitHub. Telegram is for informal discussion and peer support.

@@ -446,7 +446,12 @@ export const getLoanRepaymentPreview = asyncHandler(async (req: Request, res: Re
     ? new Date(approvalEvent.ledger_closed_at as string)
     : new Date();
 
-  const preview = buildRepaymentPreviewSchedule(principal, interestRateBps, termLedgers, approvedAt);
+  const preview = buildRepaymentPreviewSchedule(
+    principal,
+    interestRateBps,
+    termLedgers,
+    approvedAt,
+  );
 
   res.json({
     success: true,

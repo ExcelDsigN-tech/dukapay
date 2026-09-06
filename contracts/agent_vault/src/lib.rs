@@ -160,16 +160,24 @@ impl AgentVault {
     }
 
     fn acquire_lock(env: &Env) -> Result<(), VaultError> {
-        let locked: bool = env.storage().instance().get(&DataKey::ReentrancyLock).unwrap_or(false);
+        let locked: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::ReentrancyLock)
+            .unwrap_or(false);
         if locked {
             panic!("reentrancy guard triggered");
         }
-        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::ReentrancyLock, &true);
         Ok(())
     }
 
     fn release_lock(env: &Env) {
-        env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::ReentrancyLock, &false);
     }
 
     fn read_vault(env: &Env, agent: &Address) -> Vault {
