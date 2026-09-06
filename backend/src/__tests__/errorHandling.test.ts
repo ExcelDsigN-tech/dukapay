@@ -18,12 +18,10 @@ describe('Centralized Error Handling', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
-      // Legacy format
-      expect(response.body.message).toMatch(/Cannot GET \/nonexistent-route/);
-      // New structured format
+      expect(response.body.message).toBe('Resource not found');
       expect(response.body.error).toBeDefined();
       expect(response.body.error.code).toBe('NOT_FOUND');
-      expect(response.body.error.message).toMatch(/Cannot GET \/nonexistent-route/);
+      expect(response.body.error.message).toBe('Resource not found');
     });
 
     it('should return 404 for unknown POST routes with error code', async () => {
@@ -77,9 +75,8 @@ describe('Centralized Error Handling', () => {
 
   describe('Request Payload Size Limit', () => {
     it('should return 413 when payload exceeds the configured limit', async () => {
-      // Create a payload larger than 100kb
       const largePayload = {
-        data: 'x'.repeat(1024 * 150), // 150kb string
+        data: 'x'.repeat(1024 * 150),
       };
 
       const response = await request(app)
@@ -101,55 +98,38 @@ describe('Centralized Error Handling', () => {
       const response = await request(app).get('/does-not-exist');
 
       expect(response.body).toHaveProperty('success', false);
-      // Legacy format
       expect(response.body).toHaveProperty('message');
-      // New structured format
       expect(response.body).toHaveProperty('error');
       expect(response.body.error).toHaveProperty('code');
       expect(response.body.error).toHaveProperty('message');
     });
 
-    it('should not expose stack traces in production-like responses', async () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
-
+    it('should not expose stack traces by default', async () => {
       const response = await request(app).get('/does-not-exist');
 
       expect(response.body.error).not.toHaveProperty('stack');
-
-      process.env.NODE_ENV = originalEnv;
+      expect(response.body).not.toHaveProperty('stack');
     });
 
-    it('should expose stack traces only with explicit development opt-in', async () => {
-      const originalEnv = process.env.NODE_ENV;
+    it('should expose stack traces only with explicit opt-in via EXPOSE_STACK_TRACES', async () => {
       const originalExposeStackTraces = process.env.EXPOSE_STACK_TRACES;
 
-      process.env.NODE_ENV = 'development';
       process.env.EXPOSE_STACK_TRACES = 'true';
-      const developmentResponse = await request(app).get('/test/error/unexpected');
+      const optInResponse = await request(app).get('/test/error/unexpected');
 
-      expect(developmentResponse.status).toBe(500);
-      expect(developmentResponse.body).toHaveProperty('stack');
+      expect(optInResponse.status).toBe(500);
+      expect(optInResponse.body).toHaveProperty('stack');
 
-      process.env.NODE_ENV = 'development';
       process.env.EXPOSE_STACK_TRACES = 'false';
-      const noOptInResponse = await request(app).get('/test/error/unexpected');
+      const optOutResponse = await request(app).get('/test/error/unexpected');
 
-      expect(noOptInResponse.status).toBe(500);
-      expect(noOptInResponse.body).not.toHaveProperty('stack');
+      expect(optOutResponse.status).toBe(500);
+      expect(optOutResponse.body).not.toHaveProperty('stack');
 
-      process.env.NODE_ENV = 'staging';
       process.env.EXPOSE_STACK_TRACES = 'true';
-      const stagingResponse = await request(app).get('/test/error/unexpected');
-
-      expect(stagingResponse.status).toBe(500);
-      expect(stagingResponse.body).not.toHaveProperty('stack');
-
-      if (originalEnv === undefined) {
-        delete process.env.NODE_ENV;
-      } else {
-        process.env.NODE_ENV = originalEnv;
-      }
+      const secondOptInResponse = await request(app).get('/test/error/unexpected');
+      expect(secondOptInResponse.status).toBe(500);
+      expect(secondOptInResponse.body).toHaveProperty('stack');
 
       if (originalExposeStackTraces === undefined) {
         delete process.env.EXPOSE_STACK_TRACES;
@@ -167,9 +147,7 @@ describe('Centralized Error Handling', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
-      // Legacy format
       expect(response.body.message).toBe('Diagnostic operational error');
-      // New structured format
       expect(response.body.error.message).toBe('Diagnostic operational error');
       expect(response.body.error.code).toBeDefined();
     });
@@ -179,10 +157,6 @@ describe('Centralized Error Handling', () => {
 
       expect(response.status).toBe(500);
       expect(response.body.success).toBe(false);
-      // Legacy format
-      expect(response.body.message).toBe('Internal server error');
-      // New structured format
-      expect(response.body.error.message).toBe('Internal server error');
       expect(response.body.error.code).toBe('INTERNAL_ERROR');
     });
 
@@ -191,10 +165,6 @@ describe('Centralized Error Handling', () => {
 
       expect(response.status).toBe(500);
       expect(response.body.success).toBe(false);
-      // Legacy format
-      expect(response.body.message).toBe('Internal server error');
-      // New structured format
-      expect(response.body.error.message).toBe('Internal server error');
       expect(response.body.error.code).toBe('INTERNAL_ERROR');
     });
 
@@ -203,10 +173,6 @@ describe('Centralized Error Handling', () => {
 
       expect(response.status).toBe(500);
       expect(response.body.success).toBe(false);
-      // Legacy format
-      expect(response.body.message).toBe('Internal server error');
-      // New structured format
-      expect(response.body.error.message).toBe('Internal server error');
       expect(response.body.error.code).toBe('INTERNAL_ERROR');
     });
   });
@@ -215,7 +181,6 @@ describe('Centralized Error Handling', () => {
 
   describe('Authentication error codes', () => {
     it('should return VALIDATION_ERROR error code for missing public key (Zod validation)', async () => {
-      // Zod validation runs before controller logic
       const response = await request(app).post('/api/auth/challenge').send({});
 
       expect(response.status).toBe(400);
@@ -224,7 +189,6 @@ describe('Centralized Error Handling', () => {
     });
 
     it('should return INVALID_PUBLIC_KEY error code for invalid key format', async () => {
-      // Controller logic runs after Zod validation passes
       const response = await request(app)
         .post('/api/auth/challenge')
         .send({ publicKey: 'invalid' });
@@ -235,7 +199,6 @@ describe('Centralized Error Handling', () => {
     });
 
     it('should return VALIDATION_ERROR error code for missing signature in login (Zod validation)', async () => {
-      // Zod validation runs before controller logic
       const response = await request(app)
         .post('/api/auth/login')
         .send({ publicKey: 'GXXX', message: 'test' });

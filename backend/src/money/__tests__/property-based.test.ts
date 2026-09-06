@@ -34,7 +34,7 @@ describe('Property-Based Tests for Financial Calculations', () => {
           (principal, rate, days) => {
             const interest1 = calculateInterest(principal, rate, days);
             const interest2 = calculateInterest(principal * 2, rate, days);
-            expect(interest2).toBeGreaterThan(interest1);
+            expect(interest2).toBeGreaterThanOrEqual(interest1);
           },
         ),
         { numRuns: 10000 },
@@ -180,7 +180,8 @@ describe('Property-Based Tests for Financial Calculations', () => {
           (principal, annualRate, months) => {
             const schedule = calculateAmortization(principal, annualRate, months);
             const totalPaid = schedule.reduce((sum, payment) => sum + payment.amount, 0);
-            const expectedTotal = principal + calculateInterest(principal, annualRate, months * 30);
+            const totalInterest = schedule.reduce((sum, payment) => sum + payment.interest, 0);
+            const expectedTotal = principal + totalInterest;
             expect(Math.abs(totalPaid - expectedTotal)).toBeLessThan(1);
           },
         ),

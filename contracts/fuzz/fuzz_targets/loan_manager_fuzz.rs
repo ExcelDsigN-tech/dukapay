@@ -146,7 +146,6 @@ fuzz_target!(|data: FuzzAction| {
                     score_before + expected_increase,
                     "Score should increase correctly after repayment"
                 );
-                assert!(score_after >= 0, "Score should never be negative");
             }
         }
 

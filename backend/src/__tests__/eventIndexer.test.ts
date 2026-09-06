@@ -115,6 +115,10 @@ jest.unstable_mockModule('../utils/requestContext.js', () => ({
   runWithRequestContext: async (_requestId: string, callback: () => Promise<unknown>) => callback(),
 }));
 
+jest.unstable_mockModule('../services/pubsubService.js', () => ({
+  pubsubService: { publish: jest.fn<() => Promise<void>>().mockResolvedValue(undefined) },
+}));
+
 const { EventIndexer } = await import('../services/eventIndexer.js');
 
 function makeAddress() {
@@ -645,24 +649,31 @@ describe('EventIndexer', () => {
 
   it('initializes missing indexer state and persists the last indexed ledger during polling', async () => {
     const stateWrites: number[] = [];
+    let stateExists = false;
+    let lastLedgerWritten = 0;
 
     mockQuery.mockImplementation(async (sql: string, params: unknown[] = []) => {
-      if (sql.includes('SELECT last_ledger')) {
-        return { rows: [], rowCount: 0 };
+      if (sql.includes('SELECT last_ledger') || sql.includes('COALESCE(last_finalized_ledger')) {
+        return { rows: stateExists ? [{ last_ledger: lastLedgerWritten }] : [], rowCount: stateExists ? 1 : 0 };
       }
 
       if (sql.includes('INSERT INTO indexer_state')) {
         if (sql.includes('$1, $2')) {
+          // updateLastIndexedLedger fallback: VALUES ($1, $2, $2)
           stateWrites.push(Number(params[1] ?? 0));
         } else {
-          const match = sql.match(/VALUES\s*\(\$1,\s*(\d+)\)/);
-          stateWrites.push(match ? Number(match[1] ?? 0) : Number(params[0] ?? 0));
+          // getLastIndexedLedger initial insert: VALUES ($1, 0, 0) — extract the hardcoded 0
+          const match = sql.match(/VALUES\s*\(\s*\$\d+\s*,\s*(\d+)/);
+          stateWrites.push(match ? Number(match[1]) : 0);
         }
+        stateExists = true;
+        lastLedgerWritten = stateWrites[stateWrites.length - 1] ?? 0;
         return { rows: [], rowCount: 1 };
       }
 
       if (sql.includes('UPDATE indexer_state')) {
         stateWrites.push(Number(params[0]));
+        lastLedgerWritten = Number(params[0]);
         return { rows: [], rowCount: 1 };
       }
 
