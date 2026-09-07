@@ -220,7 +220,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$
     DECLARE
-      table_name text;
+      target_table text;
       owner_col text;
       related_col text;
       is_agent_view boolean;
@@ -239,7 +239,7 @@ exports.up = (pgm) => {
         ('user_profiles', 'public_key', NULL, true::boolean, true::boolean),
         ('user_notification_preferences', 'user_id', NULL, false::boolean, true::boolean),
         ('transaction_submissions', 'submitted_by', NULL, false::boolean, false::boolean),
-        ('dsar_requests', 'public_key', NULL, false::boolean, true::boolean),
+        ('dsar_requests', 'public_key', NULL, true::boolean, true::boolean),
         ('compliance_profiles', 'subject_id', NULL, false::boolean, false::boolean),
         ('transaction_monitoring_alerts', 'subject_id', NULL, false::boolean, false::boolean),
         ('cross_contract_reconciliation', 'borrower', NULL, true::boolean, false::boolean),
@@ -247,7 +247,7 @@ exports.up = (pgm) => {
         ('agent_vaults', 'agent_address', NULL, false::boolean, false::boolean),
         ('loan_disputes', 'borrower', NULL, true::boolean, true::boolean)
       LOOP
-        table_name := c.column1;
+        target_table := c.column1;
         owner_col := quote_ident(c.column2);
         related_col := NULLIF(c.column3, '');
         is_agent_view := c.column4;
@@ -257,33 +257,33 @@ exports.up = (pgm) => {
           own_expr := '(' || own_expr || ' OR ' || related_col || ' = public.dukapay_request_wallet()' || ')';
         END IF;
 
-        IF to_regclass('public.' || table_name) IS NOT NULL
+        IF to_regclass('public.' || target_table) IS NOT NULL
            AND EXISTS (SELECT 1 FROM information_schema.columns
-                       WHERE table_schema = 'public' AND information_schema.columns.table_name = table_name
+                       WHERE table_schema = 'public' AND table_name = target_table
                          AND column_name = c.column2) THEN
           IF own_all THEN
             EXECUTE format(
               'CREATE POLICY %I ON public.%I FOR ALL USING (%s) WITH CHECK (%s)',
-              table_name || '_rls_own', table_name, own_expr, own_expr
+              target_table || '_rls_own', target_table, own_expr, own_expr
             );
           ELSE
             EXECUTE format(
               'CREATE POLICY %I ON public.%I FOR SELECT USING (%s)',
-              table_name || '_rls_own_read', table_name, own_expr
+              target_table || '_rls_own_read', target_table, own_expr
             );
           END IF;
 
           IF is_agent_view THEN
             IF related_col IS NOT NULL THEN
-              agent_expr := '(a.borrower_public_key = ' || quote_ident(table_name) || '.' || owner_col
-                || ' OR a.borrower_public_key = ' || quote_ident(table_name) || '.' || related_col || ')';
+              agent_expr := '(a.borrower_public_key = ' || quote_ident(target_table) || '.' || owner_col
+                || ' OR a.borrower_public_key = ' || quote_ident(target_table) || '.' || related_col || ')';
             ELSE
-              agent_expr := 'a.borrower_public_key = ' || quote_ident(table_name) || '.' || owner_col;
+              agent_expr := 'a.borrower_public_key = ' || quote_ident(target_table) || '.' || owner_col;
             END IF;
 
             EXECUTE format(
               'CREATE POLICY %I ON public.%I FOR SELECT USING (public.dukapay_request_is_agent() AND EXISTS (SELECT 1 FROM public.agent_assignments a WHERE a.agent_public_key = public.dukapay_request_wallet() AND %s))',
-              table_name || '_rls_agent_assigned', table_name, agent_expr
+              target_table || '_rls_agent_assigned', target_table, agent_expr
             );
           END IF;
         END IF;
@@ -295,7 +295,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$
     DECLARE
-      table_name text;
+      target_table text;
       owner_col text;
     BEGIN
       FOR c IN VALUES
@@ -303,14 +303,14 @@ exports.up = (pgm) => {
         ('sar_reports', 'subject_id'),
         ('pii_access_log', 'actor')
       LOOP
-        table_name := c.column1;
+        target_table := c.column1;
         owner_col := quote_ident(c.column2);
-        IF to_regclass('public.' || table_name) IS NOT NULL
+        IF to_regclass('public.' || target_table) IS NOT NULL
            AND EXISTS (SELECT 1 FROM information_schema.columns
-                       WHERE table_schema = 'public' AND information_schema.columns.table_name = table_name AND column_name = c.column2) Then
+                       WHERE table_schema = 'public' AND table_name = target_table AND column_name = c.column2) Then
           EXECUTE format(
             'CREATE POLICY %I ON public.%I FOR SELECT USING ((%s = public.dukapay_request_wallet()) OR public.dukapay_request_is_auditor())',
-            table_name || '_rls_subject_own', table_name, owner_col
+            target_table || '_rls_subject_own', target_table, owner_col
           );
         END IF;
       END LOOP;
