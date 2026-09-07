@@ -11,8 +11,10 @@ export const DEFAULT_HALF_LIFE_DAYS = 30;
 export const DEFAULT_PENALTY_HALF_LIFE_DAYS = 90;
 
 export const HALF_LIFE_BY_EVENT: Record<string, number> = {
-  LoanRepaid: Number.parseInt(process.env.SCORE_DECAY_HALF_LIFE_REPAID ?? '', 10) || DEFAULT_HALF_LIFE_DAYS,
-  LoanApproved: Number.parseInt(process.env.SCORE_DECAY_HALF_LIFE_APPROVED ?? '', 10) || DEFAULT_HALF_LIFE_DAYS,
+  LoanRepaid:
+    Number.parseInt(process.env.SCORE_DECAY_HALF_LIFE_REPAID ?? '', 10) || DEFAULT_HALF_LIFE_DAYS,
+  LoanApproved:
+    Number.parseInt(process.env.SCORE_DECAY_HALF_LIFE_APPROVED ?? '', 10) || DEFAULT_HALF_LIFE_DAYS,
   LoanDefaulted:
     Number.parseInt(process.env.SCORE_DECAY_HALF_LIFE_DEFAULTED ?? '', 10) ||
     DEFAULT_PENALTY_HALF_LIFE_DAYS,
@@ -88,7 +90,13 @@ export async function recordDecayEvent(event: DecayEvent): Promise<void> {
     `INSERT INTO decay_events (borrower, event_type, event_timestamp, initial_score, half_life_days)
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT DO NOTHING`,
-    [event.borrower, event.event_type, event.event_timestamp, event.initial_score, event.half_life_days],
+    [
+      event.borrower,
+      event.event_type,
+      event.event_timestamp,
+      event.initial_score,
+      event.half_life_days,
+    ],
   );
 }
 

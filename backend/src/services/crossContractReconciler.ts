@@ -19,7 +19,12 @@ import logger from '../utils/logger.js';
 
 export type SettlementState = 'PENDING' | 'PARTIAL' | 'COMPLETED' | 'FAILED';
 // Legacy compatibility union
-export type ReconciliationState = SettlementState | 'pending' | 'half_applied' | 'reconciled' | 'failed';
+export type ReconciliationState =
+  | SettlementState
+  | 'pending'
+  | 'half_applied'
+  | 'reconciled'
+  | 'failed';
 
 interface UnresolvedRow {
   id: number;
@@ -92,7 +97,8 @@ export class SettlementSaga {
       }
     }
     // If all steps succeeded
-    const state: SettlementState = this.executed.length === this.steps.length ? 'COMPLETED' : 'PARTIAL';
+    const state: SettlementState =
+      this.executed.length === this.steps.length ? 'COMPLETED' : 'PARTIAL';
     return { state };
   }
 
@@ -109,7 +115,10 @@ export class SettlementSaga {
 }
 
 // Compensation handlers registry — each contract interaction has a compensating action
-export const compensationHandlers: Record<string, (params: Record<string, unknown>) => Promise<void>> = {
+export const compensationHandlers: Record<
+  string,
+  (params: Record<string, unknown>) => Promise<void>
+> = {
   // Lending pool deposit compensation: withdraw equivalent
   lending_pool_deposit: async (params) => {
     logger.withContext().warn('compensating lending_pool deposit', params);
@@ -132,7 +141,10 @@ export const compensationHandlers: Record<string, (params: Record<string, unknow
   },
 };
 
-export async function runCompensation(operation: string, params: Record<string, unknown>): Promise<boolean> {
+export async function runCompensation(
+  operation: string,
+  params: Record<string, unknown>,
+): Promise<boolean> {
   const handler = compensationHandlers[operation];
   if (!handler) {
     logger.withContext().warn('no compensation handler for operation', { operation });
@@ -299,11 +311,15 @@ class CrossContractReconciler {
     );
   }
 
-  private async markState(id: number, state: SettlementState | 'pending' | 'half_applied'): Promise<void> {
+  private async markState(
+    id: number,
+    state: SettlementState | 'pending' | 'half_applied',
+  ): Promise<void> {
     // Normalize to legacy for DB compatibility (new states will be migrated)
-    const dbState = typeof state === 'string' && ['PENDING', 'PARTIAL', 'COMPLETED', 'FAILED'].includes(state)
-      ? toLegacyState(state as SettlementState)
-      : state;
+    const dbState =
+      typeof state === 'string' && ['PENDING', 'PARTIAL', 'COMPLETED', 'FAILED'].includes(state)
+        ? toLegacyState(state as SettlementState)
+        : state;
     await query(
       `/* update */
       UPDATE cross_contract_reconciliation
@@ -367,7 +383,11 @@ class CrossContractReconciler {
   async compensatePartial(row: UnresolvedRow): Promise<boolean> {
     const operation = row.operation;
     const handlerKey =
-      operation === 'repay' ? 'score_update' : operation === 'default' ? 'score_update' : 'lending_pool_deposit';
+      operation === 'repay'
+        ? 'score_update'
+        : operation === 'default'
+          ? 'score_update'
+          : 'lending_pool_deposit';
 
     const compensated = await runCompensation(handlerKey, {
       borrower: row.borrower,
@@ -425,7 +445,10 @@ class CrossContractReconciler {
           continue;
         }
 
-        const scoreLedger = await this.findMatchingScoreLedger(row.borrower, row.disbursementLedger);
+        const scoreLedger = await this.findMatchingScoreLedger(
+          row.borrower,
+          row.disbursementLedger,
+        );
 
         if (scoreLedger !== null) {
           await this.markReconciled(row.id, scoreLedger, true);

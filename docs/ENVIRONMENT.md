@@ -85,9 +85,25 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `INTERNAL_API_KEY` | ✓ | ✓ | ✓ | `change-me` | API key for internal endpoints | `backend/src/middleware/auth.ts` |
 | `ADMIN_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the `admin` role (`admin:all` scope). **Security-critical**: any wallet listed here receives full admin privileges. Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
 | `LENDER_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the `lender` role (`read:loans`, `read:pool` scopes). Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
+| `AGENT_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the `agent` role (own data + assigned borrowers). Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
+| `AUDITOR_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the read-only `auditor` role. Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
 | `EXPOSE_STACK_TRACES` | — | — | — | `false` | When `"true"`, include stack traces in error responses. **Never enable in production.** | `backend/src/middleware/errorHandler.ts` |
 | `JWT_COOKIE_NAME` | ✓ | ✓ | ✓ | `dukapay_jwt` | Name of the HTTP cookie used to transport the JWT token | `backend/src/middleware/jwtAuth.ts` |
 | `WEBHOOK_REQUEST_TIMEOUT_MS` | ✓ | ✓ | ✓ | `30000` | Outgoing webhook request timeout | `backend/src/services/webhookService.ts` |
+| `INDEXER_FINALITY_DEPTH` | ✓ | ✓ | ✓ | `5` | Number of confirmed ledgers before an event is considered final | `backend/src/config/indexer.ts` |
+| `INDEXER_LAG_ALERT_THRESHOLD` | ✓ | ✓ | ✓ | `100` | Ledger lag threshold that triggers an alert | `backend/src/config/indexer.ts` |
+| `KYC_ENFORCEMENT_ENABLED` | — | ✓ | ✓ | `false` | Enable KYC/AML enforcement on borrower onboarding | `backend/src/middleware/kycEnforcement.ts` |
+| `COMPLYADVANTAGE_API_KEY` | — | ✓ | ✓ | — | ComplyAdvantage API key for AML screening | `backend/src/services/complyAdvantageService.ts` |
+| `COMPLYADVANTAGE_API_URL` | — | ✓ | ✓ | `https://api.complyadvantage.com` | ComplyAdvantage API base URL | `backend/src/services/complyAdvantageService.ts` |
+| `COMPLYADVANTAGE_SEARCH_PROFILE` | — | ✓ | ✓ | — | ComplyAdvantage search profile configured for OFAC, UN, EU, PEP and adverse-media sources | `backend/src/services/complyAdvantageService.ts` |
+| `AML_REPORTING_THRESHOLD` | — | ✓ | ✓ | `10000` | Transaction amount threshold for SAR filing | `backend/src/services/amlService.ts` |
+| `AML_DAILY_TX_LIMIT` | — | ✓ | ✓ | `10` | Maximum daily transaction count before alerting | `backend/src/services/amlService.ts` |
+| `AML_HIGH_RISK_COUNTRIES` | — | ✓ | ✓ | — | Comma-separated ISO 3166-1 alpha-2 codes maintained by compliance | `backend/src/services/amlService.ts` |
+| `SAR_FILING_API_URL` | — | ✓ | ✓ | — | Regulator/provider filing gateway; reports remain pending when unset | `backend/src/services/amlService.ts` |
+| `SAR_FILING_API_TOKEN` | — | ✓ | ✓ | — | API token for SAR filing gateway | `backend/src/services/amlService.ts` |
+| `AUDIT_ANCHOR_ENABLED` | — | ✓ | ✓ | `false` | Enable hourly tamper-evident audit anchoring | `backend/src/services/auditAnchorService.ts` |
+| `AUDIT_ANCHOR_CONTRACT_ID` | — | ✓ | ✓ | — | Deployed audit anchor contract address | `backend/src/services/auditAnchorService.ts` |
+| `AUDIT_ANCHOR_SOURCE_SECRET` | — | ✓ | ✓ | — | Stellar secret key for the audit anchor source account | `backend/src/services/auditAnchorService.ts` |
 | `SENTRY_DSN` | — | ✓ | ✓ | — | Sentry DSN for backend error tracking | `backend/src/app.ts` |
 | `NOTIFICATION_RETENTION_DAYS` | ✓ | ✓ | ✓ | `90` | Days to keep unread notifications | `backend/src/services/notificationService.ts` |
 | `READ_NOTIFICATION_RETENTION_DAYS` | ✓ | ✓ | ✓ | `30` | Days to keep read notifications | `backend/src/services/notificationService.ts` |

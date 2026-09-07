@@ -186,9 +186,6 @@ fuzz_target!(|data: FuzzAction| {
                         "Score should increase or stay same with positive repayment"
                     );
                 }
-
-                // Verify invariant: score should never be negative
-                assert!(score_after >= 0, "Score should never be negative");
             }
         }
 

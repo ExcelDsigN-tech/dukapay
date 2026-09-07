@@ -53,8 +53,10 @@ impl AuditAnchor {
         env.storage()
             .persistent()
             .set(&DataKey::LeafCount(epoch), &leaf_count);
-        env.events()
-            .publish((soroban_sdk::Symbol::new(&env, "auditroot"), epoch), (root, leaf_count));
+        env.events().publish(
+            (soroban_sdk::Symbol::new(&env, "auditroot"), epoch),
+            (root, leaf_count),
+        );
         Ok(())
     }
 
@@ -79,6 +81,8 @@ mod test {
         let root = BytesN::from_array(&env, &[7; 32]);
         client.anchor(&1, &root, &3);
         assert_eq!(client.get_root(&1), Some(root));
-        assert!(client.try_anchor(&1, &BytesN::from_array(&env, &[8; 32]), &3).is_err());
+        assert!(client
+            .try_anchor(&1, &BytesN::from_array(&env, &[8; 32]), &3)
+            .is_err());
     }
 }

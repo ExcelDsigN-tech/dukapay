@@ -200,7 +200,7 @@ jobs:
       - name: Migrate all the way down (reversibility check)
         run: |
           # Count migrations and roll them all back one by one
-          MIGRATION_COUNT=$(ls migrations/*.js 2>/dev/null | wc -l)
+          MIGRATION_COUNT=$(ls migrations/*.cjs 2>/dev/null | wc -l)
           for i in $(seq 1 "$MIGRATION_COUNT"); do
             npm run migrate:down -- --count 1
           done

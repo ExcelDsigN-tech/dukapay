@@ -18,9 +18,8 @@ jest.unstable_mockModule('../jobMetricsService.js', () => ({
   jobMetricsService: { recordSuccess: mockRecordSuccess, recordFailure: mockRecordFailure },
 }));
 
-const { crossContractReconciler, SettlementSaga, compensationHandlers, normalizeState } = await import(
-  '../crossContractReconciler.js'
-);
+const { crossContractReconciler, SettlementSaga, compensationHandlers, normalizeState } =
+  await import('../crossContractReconciler.js');
 
 function routeQueries(opts: {
   backfilled?: number;
@@ -38,7 +37,8 @@ function routeQueries(opts: {
       const ledger = matchByBorrower[borrower];
       return ledger != null ? { rows: [{ ledger }], rowCount: 1 } : { rows: [], rowCount: 0 };
     }
-    if (sql.includes('/* alert-partials */')) return { rows: partialRows, rowCount: partialRows.length };
+    if (sql.includes('/* alert-partials */'))
+      return { rows: partialRows, rowCount: partialRows.length };
     if (sql.includes('/* update')) return { rows: [], rowCount: 1 };
     return { rows: [], rowCount: 0 };
   });
@@ -175,8 +175,18 @@ describe('crossContractReconciler saga & partial settlement', () => {
 
   it('partial failure scenario triggers state PARTIAL and compensation per contract', async () => {
     process.env.CROSS_RECONCILE_STALE_ATTEMPTS = '1';
-    const repayRow = row({ id: 10, borrower: 'GB...REPAY', operation: 'repay', expected_score_delta: 5 });
-    const defaultRow = row({ id: 11, borrower: 'GB...DEFAULT', operation: 'default', expected_score_delta: -50 });
+    const repayRow = row({
+      id: 10,
+      borrower: 'GB...REPAY',
+      operation: 'repay',
+      expected_score_delta: 5,
+    });
+    const defaultRow = row({
+      id: 11,
+      borrower: 'GB...DEFAULT',
+      operation: 'default',
+      expected_score_delta: -50,
+    });
     routeQueries({
       unresolved: [repayRow, defaultRow],
       matchByBorrower: {},

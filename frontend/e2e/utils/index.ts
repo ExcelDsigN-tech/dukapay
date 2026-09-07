@@ -4,6 +4,20 @@
  */
 
 // Fixtures
+import {
+  TEST_USERS,
+  MOCK_CREDIT_SCORES,
+  MOCK_POOL_STATS,
+  MOCK_LOAN_CONFIG,
+  createMockLoan,
+  createMockRemittance,
+  createWalletState,
+  TestDatabaseSeeder,
+  type TestUser,
+  type TestLoan,
+  type TestRemittance,
+} from "./fixtures.js";
+
 export {
   TEST_USERS,
   MOCK_CREDIT_SCORES,
@@ -16,17 +30,17 @@ export {
   type TestUser,
   type TestLoan,
   type TestRemittance,
-} from './fixtures.js';
+};
 
 // Page Objects
-export { BasePage } from './page-objects/BasePage.js';
-export { WalletPage } from './page-objects/WalletPage.js';
-export { KycPage } from './page-objects/KycPage.js';
-export { LoanPage } from './page-objects/LoanPage.js';
-export { RemittancePage } from './page-objects/RemittancePage.js';
-export { DisputePage } from './page-objects/DisputePage.js';
-export { AgentPage } from './page-objects/AgentPage.js';
-export { SettlementPage } from './page-objects/SettlementPage.js';
+export { BasePage } from "./page-objects/BasePage.js";
+export { WalletPage } from "./page-objects/WalletPage.js";
+export { KycPage } from "./page-objects/KycPage.js";
+export { LoanPage } from "./page-objects/LoanPage.js";
+export { RemittancePage } from "./page-objects/RemittancePage.js";
+export { DisputePage } from "./page-objects/DisputePage.js";
+export { AgentPage } from "./page-objects/AgentPage.js";
+export { SettlementPage } from "./page-objects/SettlementPage.js";
 
 /**
  * Common test helpers
@@ -50,7 +64,7 @@ export async function waitForApiCall(
 export async function mockSuccessResponse(route: any, data: any): Promise<void> {
   await route.fulfill({
     status: 200,
-    contentType: 'application/json',
+    contentType: "application/json",
     body: JSON.stringify({
       success: true,
       data,
@@ -68,7 +82,7 @@ export async function mockErrorResponse(
 ): Promise<void> {
   await route.fulfill({
     status: statusCode,
-    contentType: 'application/json',
+    contentType: "application/json",
     body: JSON.stringify({
       success: false,
       error,
@@ -83,13 +97,13 @@ export async function setupAuthenticatedUser(page: any, user: any): Promise<void
   // Setup wallet state
   const walletState = createWalletState(user);
   await page.addInitScript((stateJson: string) => {
-    window.localStorage.setItem('dukapay-wallet', stateJson);
+    window.localStorage.setItem("dukapay-wallet", stateJson);
   }, JSON.stringify(walletState));
 
   // Mock user profile
-  await page.route('**/api/user/profile', async (route: any) => {
+  await page.route("**/api/user/profile", async (route: any) => {
     await mockSuccessResponse(route, {
-      id: user.id || 'test_user',
+      id: user.id || "test_user",
       email: user.email,
       walletAddress: user.publicKey,
       kycVerified: user.kycVerified,

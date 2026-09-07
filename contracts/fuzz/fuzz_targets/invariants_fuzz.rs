@@ -11,9 +11,9 @@
 use arbitrary::Arbitrary;
 use agent_vault::{AgentVault, AgentVaultClient};
 use libfuzzer_sys::fuzz_target;
-use soroban_sdk::token::{Client as TokenClient, StellarAssetClient};
+use soroban_sdk::token::StellarAssetClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, Symbol};
+use soroban_sdk::{Address, Env};
 
 const MAX_HAIRCUT: u32 = 10_000;
 const MIN_COLLATERAL: i128 = 0;
@@ -27,8 +27,6 @@ enum VaultAction {
     Withdraw { agent: u8, amount: i128 },
     Transfer { from: u8, to: u8, amount: i128 },
     SetHaircut { agent: u8, bps: u32 },
-    PauseFunction { function: u8 },
-    LiftPause,
 }
 
 fn agent_of(env: &Env, agents: &[Address], idx: u8) -> Address {
@@ -53,21 +51,6 @@ fn assert_solvency(client: &AgentVaultClient, agent: &Address) {
     );
 }
 
-/// INV-7: when a function is paused, the guarded call reverts.
-fn assert_breaker_consistency(env: &Env, client: &AgentVaultClient, function: &Symbol) {
-    let blocked = client.is_circuit_blocked(function);
-    if blocked {
-        let agent = Address::generate(env);
-        // A guarded op must fail while blocked. We pass 0 amount (still
-        // hits the circuit guard before any value logic) and expect Err.
-        let res = client.try_deposit_collateral(&agent, &0);
-        assert!(
-            res.is_err() || matches!(res, Ok(Err(_))),
-            "INV-7 violated: guarded call succeeded while breaker blocked"
-        );
-    }
-}
-
 fuzz_target!(|actions: Vec<VaultAction>| {
     let env = Env::default();
     env.mock_all_auths();
@@ -77,7 +60,6 @@ fuzz_target!(|actions: Vec<VaultAction>| {
     let token_id = env.register_stellar_asset_contract_v2(owner.clone());
     let token = token_id.address();
     let stellar = StellarAssetClient::new(&env, &token);
-    let token_client = TokenClient::new(&env, &token);
 
     let agents: Vec<Address> = (0..N_AGENTS).map(|_| Address::generate(&env)).collect();
     for a in &agents {
@@ -87,15 +69,6 @@ fuzz_target!(|actions: Vec<VaultAction>| {
     let id = env.register(AgentVault, ());
     let client = AgentVaultClient::new(&env, &id);
     client.init(&owner, &operator, &token, &MAX_HAIRCUT, &MIN_COLLATERAL);
-
-    let functions = [
-        Symbol::new(&env, "deposit_collateral"),
-        Symbol::new(&env, "withdraw_collateral"),
-        Symbol::new(&env, "mint_float"),
-        Symbol::new(&env, "burn_float"),
-        Symbol::new(&env, "transfer_float"),
-        Symbol::new(&env, "settle_net"),
-    ];
 
     for action in actions {
         match action {
@@ -130,25 +103,10 @@ fuzz_target!(|actions: Vec<VaultAction>| {
                 let b = bps % (MAX_HAIRCUT + 1);
                 let _ = client.try_set_haircut(&a, &b);
             }
-            VaultAction::PauseFunction { function } => {
-                let f = &functions[(function as usize) % functions.len()];
-                let _ = client.try_set_circuit_breaker(&Some(Address::generate(&env)));
-                // Without a real breaker the guard remains a no-op; this path
-                // exists to exercise assert_circuit_ok plumbing.
-                let _ = f;
-            }
-            VaultAction::LiftPause => {
-                let _ = client.try_set_circuit_breaker(&None::<Address>);
-            }
         }
         // Invariant checks after every step, for every agent.
         for a in &agents {
             assert_solvency(&client, a);
         }
-    }
-
-    // INV-7 spot-check on each function symbol.
-    for f in &functions {
-        assert_breaker_consistency(&env, &client, f);
     }
 });

@@ -1,8 +1,8 @@
 /**
  * Settlement Management Page Object
  */
-import { type Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage.js';
+import { type Page, expect } from "@playwright/test";
+import { BasePage } from "./BasePage.js";
 
 export class SettlementPage extends BasePage {
   constructor(page: Page) {
@@ -13,7 +13,7 @@ export class SettlementPage extends BasePage {
    * Navigate to settlement dashboard
    */
   async navigateToSettlement(): Promise<void> {
-    await this.goto('/en/settlement');
+    await this.goto("/en/settlement");
   }
 
   /**
@@ -29,12 +29,12 @@ export class SettlementPage extends BasePage {
    */
   async processBatchSettlement(remittanceIds: string[]): Promise<void> {
     await this.navigateToSettlement();
-    
+
     // Select remittances for batch settlement
     for (const id of remittanceIds) {
       await this.page.click(`input[type="checkbox"][data-remittance-id="${id}"]`);
     }
-    
+
     await this.clickButton(/batch settle|process selected/i);
     await this.clickButton(/confirm settlement/i);
     await this.expectTextVisible(/settlement.*successful|processed/i, 15000);
@@ -67,11 +67,14 @@ export class SettlementPage extends BasePage {
     completedToday: string;
   }> {
     await this.navigateToSettlement();
-    
-    const pendingCount = await this.page.locator('[data-testid="pending-count"]').textContent() || '0';
-    const totalPendingAmount = await this.page.locator('[data-testid="pending-amount"]').textContent() || '0';
-    const completedToday = await this.page.locator('[data-testid="completed-today"]').textContent() || '0';
-    
+
+    const pendingCount =
+      (await this.page.locator('[data-testid="pending-count"]').textContent()) || "0";
+    const totalPendingAmount =
+      (await this.page.locator('[data-testid="pending-amount"]').textContent()) || "0";
+    const completedToday =
+      (await this.page.locator('[data-testid="completed-today"]').textContent()) || "0";
+
     return { pendingCount, totalPendingAmount, completedToday };
   }
 
@@ -94,7 +97,7 @@ export class SettlementPage extends BasePage {
   /**
    * Export settlement report
    */
-  async exportSettlementReport(format = 'csv'): Promise<void> {
+  async exportSettlementReport(format = "csv"): Promise<void> {
     await this.navigateToSettlement();
     await this.selectOption('select[name="exportFormat"]', format);
     await this.clickButton(/export|download/i);

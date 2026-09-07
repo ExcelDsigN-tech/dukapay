@@ -1,8 +1,8 @@
 /**
  * Wallet Connection Page Object
  */
-import { type Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage.js';
+import { type Page, expect } from "@playwright/test";
+import { BasePage } from "./BasePage.js";
 
 export class WalletPage extends BasePage {
   constructor(page: Page) {
@@ -13,7 +13,7 @@ export class WalletPage extends BasePage {
    * Connect wallet (mock)
    */
   async connectWallet(): Promise<void> {
-    const connectButton = this.page.getByRole('button', { name: /connect wallet/i });
+    const connectButton = this.page.getByRole("button", { name: /connect wallet/i });
     if (await connectButton.isVisible()) {
       await connectButton.click();
     }
@@ -38,7 +38,7 @@ export class WalletPage extends BasePage {
    * Verify wallet is disconnected
    */
   async verifyDisconnected(): Promise<void> {
-    await expect(this.page.getByRole('button', { name: /connect wallet/i })).toBeVisible();
+    await expect(this.page.getByRole("button", { name: /connect wallet/i })).toBeVisible();
   }
 
   /**
@@ -46,6 +46,6 @@ export class WalletPage extends BasePage {
    */
   async getBalance(asset: string): Promise<string> {
     const balanceText = await this.page.locator(`text=${asset}`).textContent();
-    return balanceText || '0';
+    return balanceText || "0";
   }
 }

@@ -144,7 +144,7 @@ async fn fetcher_loop(
             let page = match rpc
                 .get_events(
                     next_ledger,
-                    &[contract.clone()],
+                    std::slice::from_ref(&contract),
                     cursor.as_deref(),
                     cfg.batch_size,
                 )

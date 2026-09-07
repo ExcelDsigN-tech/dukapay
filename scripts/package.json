@@ -29,7 +29,8 @@
     "pg": "^8.18.0"
   },
   "overrides": {
-    "axios": "1.13.5"
+    "axios": "1.13.5",
+    "toml": "4.3.0"
   },
   "allowScripts": {
     "esbuild@0.28.1": true

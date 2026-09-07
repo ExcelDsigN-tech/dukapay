@@ -126,10 +126,7 @@ impl Oracle {
     fn twap(env: &Env, asset: &Address, now: u64) -> Option<i128> {
         let key = DataKey::TwapSeries(asset.clone());
         let series: Option<Vec<TwapSample>> = env.storage().persistent().get(&key);
-        let series = match series {
-            Some(s) => s,
-            None => return None,
-        };
+        let series = series?;
         if series.is_empty() {
             return None;
         }
@@ -179,10 +176,7 @@ impl Oracle {
     /// `MAX_SOURCE_AGE_SECS` are excluded. Requires `MIN_SOURCES` fresh sources.
     fn fresh_median(env: &Env, asset: &Address, now: u64) -> Result<i128, OracleError> {
         let list_key = DataKey::SourceList(asset.clone());
-        let sources: Option<Vec<Symbol>> = env
-            .storage()
-            .persistent()
-            .get(&list_key);
+        let sources: Option<Vec<Symbol>> = env.storage().persistent().get(&list_key);
         let sources = sources.unwrap_or_else(|| Vec::new(env));
 
         let mut fresh: Vec<i128> = Vec::new(env);
@@ -203,11 +197,16 @@ impl Oracle {
         // Median of the fresh set.
         sort_in_place(&mut fresh);
         let mid = fresh.get_unchecked(fresh.len() / 2);
-        Ok(mid.clone())
+        Ok(mid)
     }
 
     /// Submit a price for `asset` from an authorized source.
-    pub fn submit_price(env: Env, source: Symbol, asset: Address, price: i128) -> Result<(), OracleError> {
+    pub fn submit_price(
+        env: Env,
+        source: Symbol,
+        asset: Address,
+        price: i128,
+    ) -> Result<(), OracleError> {
         use soroban_sdk::Symbol;
         if !Self::is_authorized_source(&env, &source) {
             return Err(OracleError::UnauthorizedSource);
@@ -290,8 +289,8 @@ impl Oracle {
             return Err(OracleError::StalePrice);
         }
 
-        let median = Self::fresh_median(&env, &asset, now)?;
-        match Self::twap(&env, &asset, now) {
+        let median = Self::fresh_median(env, &asset, now)?;
+        match Self::twap(env, &asset, now) {
             Some(twap_price) if twap_price > 0 => Ok(twap_price),
             _ => Ok(median),
         }
@@ -325,7 +324,7 @@ fn sort_in_place(arr: &mut Vec<i128>) {
     }
 }
 
-#[cfg(test)]#[cfg(test)]
+#[cfg(test)]
 mod test {
     use super::*;
     use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
@@ -345,7 +344,12 @@ mod test {
             max_entry_ttl: 0,
         });
         let admin = Address::generate(&env);
-        let sources = vec![&env, symbol_short!("pyth"), symbol_short!("chain"), symbol_short!("dex")];
+        let sources = vec![
+            &env,
+            symbol_short!("pyth"),
+            symbol_short!("chain"),
+            symbol_short!("dex"),
+        ];
         let oracle_id = env.register(Oracle, ());
         let client = OracleClient::new(&env, &oracle_id);
         client.initialize(&admin, &sources);
@@ -353,11 +357,23 @@ mod test {
         (env, oracle_id, asset)
     }
 
-    fn submit(env: &Env, oracle_id: &Address, source: soroban_sdk::Symbol, asset: Address, price: i128) -> Result<(), OracleError> {
-        env.as_contract(oracle_id, || Oracle::submit_price(env.clone(), source, asset, price))
+    fn submit(
+        env: &Env,
+        oracle_id: &Address,
+        source: soroban_sdk::Symbol,
+        asset: Address,
+        price: i128,
+    ) -> Result<(), OracleError> {
+        env.as_contract(oracle_id, || {
+            Oracle::submit_price(env.clone(), source, asset, price)
+        })
     }
 
-    fn get_price_result(env: &Env, oracle_id: &Address, asset: Address) -> Result<i128, OracleError> {
+    fn get_price_result(
+        env: &Env,
+        oracle_id: &Address,
+        asset: Address,
+    ) -> Result<i128, OracleError> {
         env.as_contract(oracle_id, || Oracle::get_price_result(env, asset))
     }
 
@@ -370,9 +386,30 @@ mod test {
     #[test]
     fn median_of_three_sources() {
         let (env, oracle_id, asset) = setup();
-        submit(&env, &oracle_id, symbol_short!("pyth"), asset.clone(), 10_000_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("chain"), asset.clone(), 10_100_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("dex"), asset.clone(), 9_900_000).unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("pyth"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("chain"),
+            asset.clone(),
+            10_100_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("dex"),
+            asset.clone(),
+            9_900_000,
+        )
+        .unwrap();
         let price = get_price_result(&env, &oracle_id, asset.clone()).unwrap();
         assert_eq!(price, 10_000_000);
     }
@@ -380,44 +417,145 @@ mod test {
     #[test]
     fn circuit_breaker_rejects_manipulation() {
         let (env, oracle_id, asset) = setup();
-        submit(&env, &oracle_id, symbol_short!("pyth"), asset.clone(), 10_000_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("chain"), asset.clone(), 10_100_000).unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("pyth"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("chain"),
+            asset.clone(),
+            10_100_000,
+        )
+        .unwrap();
         // A single manipulated source submitting +50% must be rejected.
-        let err = submit(&env, &oracle_id, symbol_short!("dex"), asset.clone(), 15_000_000);
+        let err = submit(
+            &env,
+            &oracle_id,
+            symbol_short!("dex"),
+            asset.clone(),
+            15_000_000,
+        );
         assert_eq!(err, Err(OracleError::CircuitBroken));
-        assert_eq!(get_price_result(&env, &oracle_id, asset.clone()).unwrap(), 10_000_000);
+        assert_eq!(
+            get_price_result(&env, &oracle_id, asset.clone()).unwrap(),
+            10_000_000
+        );
     }
 
     #[test]
     fn stale_feed_is_rejected() {
         let (env, oracle_id, asset) = setup();
-        submit(&env, &oracle_id, symbol_short!("pyth"), asset.clone(), 10_000_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("chain"), asset.clone(), 10_000_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("dex"), asset.clone(), 10_000_000).unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("pyth"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("chain"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("dex"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
         bump(&env, MAX_SOURCE_AGE_SECS + 60);
-        assert_eq!(get_price_result(&env, &oracle_id, asset.clone()), Err(OracleError::StalePrice));
+        assert_eq!(
+            get_price_result(&env, &oracle_id, asset.clone()),
+            Err(OracleError::StalePrice)
+        );
     }
 
     #[test]
     fn unauthorized_source_rejected() {
         let (env, oracle_id, asset) = setup();
-        let err = submit(&env, &oracle_id, symbol_short!("evil"), asset.clone(), 10_000_000);
+        let err = submit(
+            &env,
+            &oracle_id,
+            symbol_short!("evil"),
+            asset.clone(),
+            10_000_000,
+        );
         assert_eq!(err, Err(OracleError::UnauthorizedSource));
     }
 
     #[test]
     fn twap_smooths_spike() {
         let (env, oracle_id, asset) = setup();
-        submit(&env, &oracle_id, symbol_short!("pyth"), asset.clone(), 10_000_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("chain"), asset.clone(), 10_000_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("dex"), asset.clone(), 10_000_000).unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("pyth"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("chain"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("dex"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
         bump(&env, 600);
-        submit(&env, &oracle_id, symbol_short!("pyth"), asset.clone(), 10_250_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("chain"), asset.clone(), 10_250_000).unwrap();
-        submit(&env, &oracle_id, symbol_short!("dex"), asset.clone(), 10_250_000).unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("pyth"),
+            asset.clone(),
+            10_250_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("chain"),
+            asset.clone(),
+            10_250_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("dex"),
+            asset.clone(),
+            10_250_000,
+        )
+        .unwrap();
         let price = get_price_result(&env, &oracle_id, asset.clone()).unwrap();
-        assert!(price > 10_000_000, "twap must be above old baseline, got {price}");
-        assert!(price < 10_250_000, "twap must smooth below the spike, got {price}");
+        assert!(
+            price > 10_000_000,
+            "twap must be above old baseline, got {price}"
+        );
+        assert!(
+            price < 10_250_000,
+            "twap must smooth below the spike, got {price}"
+        );
     }
 
     #[test]
@@ -428,15 +566,35 @@ mod test {
         let (env, oracle_id, asset) = setup();
         let base = PRICE_SCALE;
         submit(&env, &oracle_id, symbol_short!("pyth"), asset.clone(), base).unwrap();
-        submit(&env, &oracle_id, symbol_short!("chain"), asset.clone(), base).unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("chain"),
+            asset.clone(),
+            base,
+        )
+        .unwrap();
         submit(&env, &oracle_id, symbol_short!("dex"), asset.clone(), base).unwrap();
         for frac_bps in [100u32, 299, 300, 301, 500, 1_000, 10_000] {
             submit(&env, &oracle_id, symbol_short!("pyth"), asset.clone(), base).unwrap();
-            submit(&env, &oracle_id, symbol_short!("chain"), asset.clone(), base).unwrap();
+            submit(
+                &env,
+                &oracle_id,
+                symbol_short!("chain"),
+                asset.clone(),
+                base,
+            )
+            .unwrap();
             let attack = base
                 .checked_add(base.checked_mul(frac_bps as i128).unwrap() / 10_000)
                 .unwrap();
-            let res = submit(&env, &oracle_id, symbol_short!("dex"), asset.clone(), attack);
+            let res = submit(
+                &env,
+                &oracle_id,
+                symbol_short!("dex"),
+                asset.clone(),
+                attack,
+            );
             if frac_bps > MAX_DEVIATION_BPS as u32 {
                 assert_eq!(res, Err(OracleError::CircuitBroken), "at {frac_bps}bps");
             }

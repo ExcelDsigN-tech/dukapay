@@ -187,7 +187,9 @@ export class AgentFloatService {
     const { fromAgent, toAgent, amount, reason, createdBy } = input;
 
     if (fromAgent === toAgent) {
-      throw AppError.badRequest('Self-transfer is not allowed. fromAgent and toAgent must be different.');
+      throw AppError.badRequest(
+        'Self-transfer is not allowed. fromAgent and toAgent must be different.',
+      );
     }
     if (!amount || amount <= 0) {
       throw AppError.badRequest('Transfer amount must be positive.');

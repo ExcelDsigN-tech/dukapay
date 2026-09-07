@@ -1,8 +1,8 @@
 /**
  * Loan Management Page Object
  */
-import { type Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage.js';
+import { type Page, expect } from "@playwright/test";
+import { BasePage } from "./BasePage.js";
 
 export class LoanPage extends BasePage {
   constructor(page: Page) {
@@ -19,7 +19,7 @@ export class LoanPage extends BasePage {
   /**
    * Fill loan amount and asset
    */
-  async fillLoanDetails(amount: string, asset = 'USDC'): Promise<void> {
+  async fillLoanDetails(amount: string, asset = "USDC"): Promise<void> {
     await this.selectOption('select[name="asset"]', asset);
     await this.fillInput('input[placeholder="0.00"]', amount);
   }
@@ -55,7 +55,7 @@ export class LoanPage extends BasePage {
   /**
    * Complete full loan application flow
    */
-  async applyForLoan(amount: string, asset = 'USDC'): Promise<void> {
+  async applyForLoan(amount: string, asset = "USDC"): Promise<void> {
     await this.navigateToLoanApplication();
     await this.fillLoanDetails(amount, asset);
     await this.continueToCollateral();
@@ -98,7 +98,7 @@ export class LoanPage extends BasePage {
    */
   async getLoanBalance(): Promise<string> {
     const balanceElement = await this.page.locator('[data-testid="loan-balance"]').textContent();
-    return balanceElement || '0';
+    return balanceElement || "0";
   }
 
   /**
@@ -106,7 +106,7 @@ export class LoanPage extends BasePage {
    */
   async verifyTimelineEvents(expectedEvents: string[]): Promise<void> {
     await this.expectTextVisible(/timeline|history/i);
-    
+
     for (const event of expectedEvents) {
       await expect(this.page.locator(`text=${event}`)).toBeVisible();
     }

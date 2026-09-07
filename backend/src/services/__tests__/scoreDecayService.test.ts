@@ -65,7 +65,9 @@ describe('scoreDecayService', () => {
     it('fixtures: exponential values match formula', () => {
       const score = 700;
       // 15 days at halfLife 30 => factor 0.7071 => ~495
-      expect(decayedScore(score, 15, 30)).toBe(Math.max(300, Math.round(score * Math.exp(- (Math.log(2)/30)*15))));
+      expect(decayedScore(score, 15, 30)).toBe(
+        Math.max(300, Math.round(score * Math.exp(-(Math.log(2) / 30) * 15))),
+      );
       // 90 days at halfLife 30 => 0.125 => 88 but floored to 300
       expect(decayedScore(score, 90, 30)).toBe(300);
       // 90 days at halfLife 90 => 0.5 => 350
@@ -169,8 +171,18 @@ describe('scoreDecayService', () => {
       const oldDefault = new Date();
       oldDefault.setUTCDate(oldDefault.getUTCDate() - 60);
 
-      const recent = { borrower: 'recent', score: 700, last_repayment: oneDayAgo.toISOString(), last_event_type: 'LoanDefaulted' };
-      const old = { borrower: 'old', score: 700, last_repayment: oldDefault.toISOString(), last_event_type: 'LoanDefaulted' };
+      const recent = {
+        borrower: 'recent',
+        score: 700,
+        last_repayment: oneDayAgo.toISOString(),
+        last_event_type: 'LoanDefaulted',
+      };
+      const old = {
+        borrower: 'old',
+        score: 700,
+        last_repayment: oldDefault.toISOString(),
+        last_event_type: 'LoanDefaulted',
+      };
 
       // Use halfLife 90 for defaults: recent should retain more
       const recentScore = await applyScoreDecay(recent);

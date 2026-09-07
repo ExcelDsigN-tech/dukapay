@@ -7,14 +7,14 @@ export interface TestUser {
   publicKey: string;
   email: string;
   kycVerified: boolean;
-  role?: 'borrower' | 'lender' | 'agent' | 'admin';
+  role?: "borrower" | "lender" | "agent" | "admin";
 }
 
 export interface TestLoan {
   id: number;
   principal: number;
   asset: string;
-  status: 'pending' | 'active' | 'repaid' | 'defaulted';
+  status: "pending" | "active" | "approved" | "repaid" | "defaulted";
   borrower: string;
   totalOwed: number;
   amountPaid?: number;
@@ -27,7 +27,7 @@ export interface TestRemittance {
   amount: number;
   fromCurrency: string;
   toCurrency: string;
-  status: 'pending' | 'completed' | 'failed';
+  status: "pending" | "completed" | "failed";
   recipientAddress: string;
   sender: string;
 }
@@ -37,34 +37,34 @@ export interface TestRemittance {
  */
 export const TEST_USERS = {
   borrower: {
-    publicKey: 'GCJPBXSE6WCQDCEYZW6C3YVZCSSCHC4AE72L5KWKCYL2CLLL7NH5VSCI',
-    email: 'borrower@test.dukapay.com',
+    publicKey: "GCJPBXSE6WCQDCEYZW6C3YVZCSSCHC4AE72L5KWKCYL2CLLL7NH5VSCI",
+    email: "borrower@test.dukapay.com",
     kycVerified: true,
-    role: 'borrower' as const,
+    role: "borrower" as const,
   },
   lender: {
-    publicKey: 'GDLENDERXAMPLEKEY123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    email: 'lender@test.dukapay.com',
+    publicKey: "GDLENDERXAMPLEKEY123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    email: "lender@test.dukapay.com",
     kycVerified: true,
-    role: 'lender' as const,
+    role: "lender" as const,
   },
   agent: {
-    publicKey: 'GDAGENTXAMPLEKEY123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ1',
-    email: 'agent@test.dukapay.com',
+    publicKey: "GDAGENTXAMPLEKEY123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ1",
+    email: "agent@test.dukapay.com",
     kycVerified: false,
-    role: 'agent' as const,
+    role: "agent" as const,
   },
   admin: {
-    publicKey: 'GDADMINXAMPLEKEY123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ2',
-    email: 'admin@test.dukapay.com',
+    publicKey: "GDADMINXAMPLEKEY123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ2",
+    email: "admin@test.dukapay.com",
     kycVerified: true,
-    role: 'admin' as const,
+    role: "admin" as const,
   },
   unverified: {
-    publicKey: 'GDUNVERXAMPLEKEY123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    email: 'unverified@test.dukapay.com',
+    publicKey: "GDUNVERXAMPLEKEY123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    email: "unverified@test.dukapay.com",
     kycVerified: false,
-    role: 'borrower' as const,
+    role: "borrower" as const,
   },
 } as const;
 
@@ -74,8 +74,8 @@ export const TEST_USERS = {
 export const createMockLoan = (overrides?: Partial<TestLoan>): TestLoan => ({
   id: 1,
   principal: 1000,
-  asset: 'USDC',
-  status: 'active',
+  asset: "USDC",
+  status: "active",
   borrower: TEST_USERS.borrower.publicKey,
   totalOwed: 1080,
   amountPaid: 0,
@@ -90,10 +90,10 @@ export const createMockLoan = (overrides?: Partial<TestLoan>): TestLoan => ({
 export const createMockRemittance = (overrides?: Partial<TestRemittance>): TestRemittance => ({
   id: `rem_${Date.now()}`,
   amount: 250,
-  fromCurrency: 'USDC',
-  toCurrency: 'NGN',
-  status: 'completed',
-  recipientAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+  fromCurrency: "USDC",
+  toCurrency: "NGN",
+  status: "completed",
+  recipientAddress: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
   sender: TEST_USERS.borrower.publicKey,
   ...overrides,
 });
@@ -103,12 +103,12 @@ export const createMockRemittance = (overrides?: Partial<TestRemittance>): TestR
  */
 export const createWalletState = (user: TestUser, balances?: any[]) => ({
   state: {
-    status: 'connected',
+    status: "connected",
     address: user.publicKey,
-    network: { chainId: 2, name: 'TESTNET', isSupported: true },
+    network: { chainId: 2, name: "TESTNET", isSupported: true },
     balances: balances || [
-      { symbol: 'USDC', amount: '5000.00', usdValue: 5000 },
-      { symbol: 'XLM', amount: '100.00', usdValue: 12.5 },
+      { symbol: "USDC", amount: "5000.00", usdValue: 5000 },
+      { symbol: "XLM", amount: "100.00", usdValue: 12.5 },
     ],
     shouldAutoReconnect: true,
   },
@@ -122,7 +122,7 @@ export const createWalletState = (user: TestUser, balances?: any[]) => ({
 export class TestDatabaseSeeder {
   private baseUrl: string;
 
-  constructor(baseUrl = 'http://localhost:4000') {
+  constructor(baseUrl = "http://localhost:4000") {
     this.baseUrl = baseUrl;
   }
 
@@ -141,7 +141,7 @@ export class TestDatabaseSeeder {
   }
 
   async cleanup(): Promise<void> {
-    console.log('[TEST] Cleaning up test data');
+    console.log("[TEST] Cleaning up test data");
   }
 }
 

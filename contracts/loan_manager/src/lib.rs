@@ -371,16 +371,24 @@ impl LoanManager {
     }
 
     fn acquire_lock(env: &Env) -> Result<(), LoanError> {
-        let locked: bool = env.storage().instance().get(&DataKey::ReentrancyLock).unwrap_or(false);
+        let locked: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::ReentrancyLock)
+            .unwrap_or(false);
         if locked {
             panic!("reentrancy guard triggered");
         }
-        env.storage().instance().set(&DataKey::ReentrancyLock, &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::ReentrancyLock, &true);
         Ok(())
     }
 
     fn release_lock(env: &Env) {
-        env.storage().instance().set(&DataKey::ReentrancyLock, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::ReentrancyLock, &false);
     }
 
     fn remaining_principal(loan: &Loan) -> i128 {
@@ -1665,8 +1673,7 @@ impl LoanManager {
 
         let (total_debt, _) = Self::current_total_debt(&env, &mut loan)?;
         let threshold_bps = Self::liquidation_threshold_bps(&env);
-        let collateral_value =
-            Self::collateral_value_units(&env, loan.collateral_amount);
+        let collateral_value = Self::collateral_value_units(&env, loan.collateral_amount);
         Ok(Self::is_collateral_ratio_below_threshold(
             collateral_value,
             total_debt,
@@ -1690,8 +1697,7 @@ impl LoanManager {
         }
 
         let (total_debt, _) = Self::current_total_debt(&env, &mut loan)?;
-        let collateral_value =
-            Self::collateral_value_units(&env, loan.collateral_amount);
+        let collateral_value = Self::collateral_value_units(&env, loan.collateral_amount);
         let ratio_bps = Self::current_ratio_bps(collateral_value, total_debt);
         Ok((loan.collateral_amount, total_debt, ratio_bps))
     }
@@ -1735,13 +1741,8 @@ impl LoanManager {
             current_total_debt
         };
         let threshold_bps = Self::liquidation_threshold_bps(&env);
-        let collateral_value =
-            Self::collateral_value_units(&env, loan.collateral_amount);
-        if !Self::is_collateral_ratio_below_threshold(
-            collateral_value,
-            total_debt,
-            threshold_bps,
-        ) {
+        let collateral_value = Self::collateral_value_units(&env, loan.collateral_amount);
+        if !Self::is_collateral_ratio_below_threshold(collateral_value, total_debt, threshold_bps) {
             return Err(LoanError::LoanNotLiquidatable);
         }
 
@@ -2498,8 +2499,12 @@ impl LoanManager {
             return collateral_amount;
         }
         let (Some(oracle_addr), Some(collateral_token)) = (
-            env.storage().instance().get::<_, Address>(&DataKey::PriceOracle),
-            env.storage().instance().get::<_, Address>(&DataKey::CollateralToken),
+            env.storage()
+                .instance()
+                .get::<_, Address>(&DataKey::PriceOracle),
+            env.storage()
+                .instance()
+                .get::<_, Address>(&DataKey::CollateralToken),
         ) else {
             return collateral_amount;
         };
