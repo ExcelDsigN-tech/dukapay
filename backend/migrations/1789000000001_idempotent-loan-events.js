@@ -1,7 +1,7 @@
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // First, clean up any existing duplicates that would violate the new constraint.
   // We keep the one with the smallest id (the one indexed first).
   pgm.sql(`
@@ -55,7 +55,7 @@ export const up = (pgm) => {
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   // ALTER TABLE IF EXISTS still errors when the relation exists but isn't a
   // TABLE — and loan_events is a backward-compat VIEW after migration 1788.
   // Guard each drop on pg_tables so we only ALTER actual tables.

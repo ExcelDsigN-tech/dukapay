@@ -4,7 +4,7 @@
  *
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.sql(`
     DO $$
     BEGIN
@@ -25,6 +25,6 @@ export const up = (pgm) => {
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.sql('DROP INDEX IF EXISTS idx_loan_events_loan_id;');
 };

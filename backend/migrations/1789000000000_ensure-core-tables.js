@@ -1,7 +1,7 @@
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // Ensure scores table matches requested schema
   pgm.sql(`
     DO $$
@@ -77,7 +77,7 @@ export const up = (pgm) => {
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   // We don't necessarily want to drop tables in down if they were already there,
   // but for a clean rollback we'll just rename columns back if needed.
   pgm.sql(`

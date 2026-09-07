@@ -34,7 +34,7 @@
  */
 
 /** @param pgm {import('node-pg-migrate').MigrationBuilder} */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // ─────────────────────────────────────────────────────────────────────────
   // 1. Claim-resolution helper functions (public schema so every role's
   //    search_path can resolve them without GRANT gymnastics).
@@ -344,7 +344,7 @@ export const up = (pgm) => {
 };
 
 /** @param pgm {import('node-pg-migrate').MigrationBuilder} */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   const OWNED = [
     'scores',
     'remittance_history',

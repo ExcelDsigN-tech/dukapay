@@ -2,12 +2,12 @@
  * Decay events table for time-weighted exponential score decay (issue #419).
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.createTable('decay_events', {
     id: 'id',
     borrower: { type: 'varchar(255)', notNull: true },
@@ -52,6 +52,6 @@ export const up = (pgm) => {
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.dropTable('decay_events');
 };

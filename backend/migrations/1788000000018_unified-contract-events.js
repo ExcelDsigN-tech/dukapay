@@ -2,7 +2,7 @@
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // 1. Rename the table
   pgm.renameTable('loan_events', 'contract_events');
 
@@ -54,7 +54,7 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.sql('DROP VIEW IF EXISTS loan_events');
 
   pgm.renameColumn('contract_events', 'address', 'borrower');

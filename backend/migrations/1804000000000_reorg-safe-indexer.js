@@ -5,7 +5,7 @@
  *
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.addColumn('indexer_state', {
     last_finalized_ledger: { type: 'bigint', notNull: true, default: 0 },
   });
@@ -19,7 +19,7 @@ export const up = (pgm) => {
 };
 
 /** @param pgm {import('node-pg-migrate').MigrationBuilder} */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.dropColumn('ledger_checkpoints', 'range_digest');
   pgm.dropColumn('indexer_state', 'last_finalized_ledger');
 };

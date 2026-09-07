@@ -1,7 +1,7 @@
 /**
  * @param { import("node-pg-migrate").MigrationBuilder } @param pgm {import("node-pg-migrate").MigrationBuilder}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // The trigger below references update_updated_at_column(), but no earlier
   // migration creates it. Define it here (idempotent) so a fresh migrate up
   // from an empty schema works.
@@ -76,6 +76,6 @@ export const up = (pgm) => {
 /**
  * @param { import("node-pg-migrate").MigrationBuilder } @param pgm {import("node-pg-migrate").MigrationBuilder}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.dropTable('transaction_submissions');
 };

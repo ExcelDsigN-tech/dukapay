@@ -25,7 +25,7 @@
  */
 
 /** @type {import('node-pg-migrate').ColumnDefinitions | undefined} */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 const MONEY_COLUMNS = [
   { table: 'contract_events', column: 'amount', constraint: 'contract_events_amount_is_stroops' },
@@ -77,7 +77,7 @@ const CREATE_LOAN_EVENTS_VIEW = `
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.sql('DROP VIEW IF EXISTS loan_events;');
   for (const { table, column, constraint } of MONEY_COLUMNS) {
     // Round any pre-existing fractional values down to whole stroops before
@@ -100,7 +100,7 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.sql('DROP VIEW IF EXISTS loan_events;');
   for (const { table, column, constraint } of [...MONEY_COLUMNS].reverse()) {
     pgm.dropConstraint(table, constraint);

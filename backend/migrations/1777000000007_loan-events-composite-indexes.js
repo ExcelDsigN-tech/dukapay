@@ -1,7 +1,7 @@
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * Adds composite and partial indexes to `loan_events` to cover the six
@@ -39,7 +39,7 @@ export const shorthands = undefined;
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // (borrower, event_type) — borrower loan list + pool stats with borrower filter
   pgm.createIndex('loan_events', ['borrower', 'event_type'], {
     name: 'idx_loan_events_borrower_event_type',
@@ -78,7 +78,7 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.dropIndex('loan_events', 'borrower', {
     name: 'idx_loan_events_pool_deposits_withdraws',
     ifExists: true,

@@ -2,7 +2,7 @@
 // Uses node-pg-migrate's pgm.sql instead of the foreign db.query API the
 // original CJS module was written against.
 
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // loan_id is the on-chain loan identifier. loan_events has many rows per
   // loan, so a FK there would require a unique constraint Postgres can't
   // satisfy. Store the id as a plain integer and index it for lookup.
@@ -25,6 +25,6 @@ export const up = (pgm) => {
   pgm.sql(`CREATE INDEX IF NOT EXISTS idx_loan_disputes_loan_id ON loan_disputes(loan_id);`);
 };
 
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.sql(`DROP TABLE IF EXISTS loan_disputes;`);
 };

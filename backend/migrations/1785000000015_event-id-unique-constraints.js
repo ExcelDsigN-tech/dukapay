@@ -1,7 +1,7 @@
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 const eventIdTables = [
   {
@@ -22,7 +22,7 @@ const eventIdTables = [
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   for (const { table, indexName } of eventIdTables) {
     pgm.sql(`
       DELETE FROM ${table} current_row
@@ -54,7 +54,7 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   for (const { indexName } of eventIdTables) {
     pgm.sql(`DROP INDEX IF EXISTS ${indexName}`);
   }

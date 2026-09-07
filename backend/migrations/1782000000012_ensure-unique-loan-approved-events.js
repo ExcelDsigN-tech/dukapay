@@ -1,13 +1,13 @@
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {Promise<void> | void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // Keep only the earliest LoanApproved event per loan before enforcing uniqueness.
   pgm.sql(`
     DELETE FROM loan_events le
@@ -58,6 +58,6 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {Promise<void> | void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.sql('DROP INDEX IF EXISTS loan_events_unique_approved_event_per_loan');
 };

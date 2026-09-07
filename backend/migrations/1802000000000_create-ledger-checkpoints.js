@@ -1,7 +1,7 @@
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * ledger_checkpoints — per-contract record of ledger ranges the indexer has
@@ -24,7 +24,7 @@ export const shorthands = undefined;
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.createTable('ledger_checkpoints', {
     id: 'id',
     contract: { type: 'text', notNull: true },
@@ -61,6 +61,6 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.dropTable('ledger_checkpoints');
 };

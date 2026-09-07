@@ -9,13 +9,13 @@
  *
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.sql(`
     CREATE INDEX IF NOT EXISTS idx_contract_events_address_type_closed_at
       ON contract_events (address, event_type, ledger_closed_at)
@@ -27,7 +27,7 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.sql(`
     DROP INDEX IF EXISTS idx_contract_events_address_type_closed_at;
   `);

@@ -7,7 +7,7 @@
  */
 
 /** @type {import('node-pg-migrate').MigrationBuilder} */
-export const up = async (pgm) => {
+exports.up = async (pgm) => {
   // loan_events is now a backward-compat VIEW (created by
   // 1788000000018_unified-contract-events); the real table is contract_events.
   // Target the table so the index attaches to actual storage.
@@ -19,7 +19,7 @@ export const up = async (pgm) => {
 };
 
 /** @type {import('node-pg-migrate').MigrationBuilder} */
-export const down = async (pgm) => {
+exports.down = async (pgm) => {
   pgm.noTransaction();
   pgm.sql(`
     DROP INDEX CONCURRENTLY IF EXISTS idx_contract_events_type_created_at

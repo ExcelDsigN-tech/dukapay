@@ -1,7 +1,7 @@
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * Creates the `quarantine_events` table to store malformed Soroban contract
@@ -25,7 +25,7 @@ export const shorthands = undefined;
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.createTable('quarantine_events', {
     id: { type: 'serial', primaryKey: true },
     event_id: { type: 'varchar(255)', notNull: true, unique: true },
@@ -49,6 +49,6 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.dropTable('quarantine_events');
 };

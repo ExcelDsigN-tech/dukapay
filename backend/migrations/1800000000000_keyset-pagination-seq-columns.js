@@ -1,13 +1,13 @@
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {Promise<void> | void}
  */
-export const up = async (pgm) => {
+exports.up = async (pgm) => {
   // ─── Add seq identity columns for keyset pagination ───────────────────
 
   // 1. contract_events (formerly loan_events)
@@ -120,7 +120,7 @@ export const up = async (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {Promise<void> | void}
  */
-export const down = async (pgm) => {
+exports.down = async (pgm) => {
   // Drop seek indexes
   pgm.dropIndex('contract_events', [], { name: 'idx_contract_events_seek' });
   pgm.dropIndex('remittances', [], { name: 'idx_remittances_seek' });

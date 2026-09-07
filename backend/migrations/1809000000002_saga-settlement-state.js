@@ -3,12 +3,12 @@
  * Adds settlement_state tracking and compensation support.
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   // Extend state check to include new saga states (if not already inclusive)
   // Drop old constraint and add new one that includes PENDING/PARTIAL/COMPLETED/FAILED
   try {
@@ -61,7 +61,7 @@ export const up = (pgm) => {
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   try {
     pgm.dropConstraint('cross_contract_reconciliation', 'settlement_state_check');
   } catch {}

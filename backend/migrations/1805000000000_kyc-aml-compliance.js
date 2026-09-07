@@ -1,5 +1,5 @@
 /** @param pgm {import('node-pg-migrate').MigrationBuilder} */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.createTable('compliance_profiles', {
     subject_id: { type: 'varchar(56)', primaryKey: true },
     provider: { type: 'varchar(40)', notNull: true },
@@ -64,7 +64,7 @@ export const up = (pgm) => {
 };
 
 /** @param pgm {import('node-pg-migrate').MigrationBuilder} */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.dropTable('sar_reports');
   pgm.dropTable('transaction_monitoring_alerts');
   pgm.dropTable('compliance_audit_log');

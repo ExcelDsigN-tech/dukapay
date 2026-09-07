@@ -1,5 +1,5 @@
 /** @param pgm {import('node-pg-migrate').MigrationBuilder} */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.createTable('audit_epochs', {
     id: { type: 'bigserial', primaryKey: true },
     epoch_start: { type: 'timestamptz', notNull: true, unique: true },
@@ -53,7 +53,7 @@ export const up = (pgm) => {
 };
 
 /** @param pgm {import('node-pg-migrate').MigrationBuilder} */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.sql('DROP TRIGGER IF EXISTS audit_logs_immutable ON audit_logs');
   pgm.sql('DROP FUNCTION IF EXISTS protect_audit_history()');
   pgm.dropTable('audit_merkle_leaves');

@@ -1,7 +1,7 @@
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
-export const shorthands = undefined;
+exports.shorthands = undefined;
 
 /**
  * Issue #444: add indexes for the slow-query report — loan listing
@@ -13,7 +13,7 @@ export const shorthands = undefined;
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const up = (pgm) => {
+exports.up = (pgm) => {
   pgm.sql(`
     DO $$
     BEGIN
@@ -38,7 +38,7 @@ export const up = (pgm) => {
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {void}
  */
-export const down = (pgm) => {
+exports.down = (pgm) => {
   pgm.sql(`
     DROP INDEX IF EXISTS idx_scores_borrower_date;
     DROP INDEX IF EXISTS idx_loan_events_borrower_created;
