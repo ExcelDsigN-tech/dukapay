@@ -259,7 +259,7 @@ exports.up = (pgm) => {
 
         IF to_regclass('public.' || table_name) IS NOT NULL
            AND EXISTS (SELECT 1 FROM information_schema.columns
-                       WHERE table_schema = 'public' AND table_name = table_name
+                       WHERE table_schema = 'public' AND information_schema.columns.table_name = table_name
                          AND column_name = c.column2) THEN
           IF own_all THEN
             EXECUTE format(
@@ -307,7 +307,7 @@ exports.up = (pgm) => {
         owner_col := quote_ident(c.column2);
         IF to_regclass('public.' || table_name) IS NOT NULL
            AND EXISTS (SELECT 1 FROM information_schema.columns
-                       WHERE table_schema = 'public' AND table_name = table_name AND column_name = c.column2) Then
+                       WHERE table_schema = 'public' AND information_schema.columns.table_name = table_name AND column_name = c.column2) Then
           EXECUTE format(
             'CREATE POLICY %I ON public.%I FOR SELECT USING ((%s = public.dukapay_request_wallet()) OR public.dukapay_request_is_auditor())',
             table_name || '_rls_subject_own', table_name, owner_col
