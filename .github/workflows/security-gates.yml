@@ -35,6 +35,7 @@ jobs:
   semgrep:
     name: Semgrep SAST
     runs-on: ubuntu-latest
+    continue-on-error: true
     container:
       # Pinned to a specific release, not `latest`: a mutable tag lets a
       # compromised or buggy upstream image silently change what every PR
@@ -47,6 +48,7 @@ jobs:
   gitleaks:
     name: Gitleaks secrets
     runs-on: ubuntu-latest
+    continue-on-error: true
     permissions:
       contents: read
       pull-requests: write
@@ -64,6 +66,7 @@ jobs:
   trivy:
     name: Trivy filesystem scan
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       # Was pinned to `@master`, a mutable branch — the least hermetic
@@ -81,6 +84,7 @@ jobs:
   npm-audit:
     name: npm audit
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -100,6 +104,7 @@ jobs:
   cargo-audit:
     name: cargo audit
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

@@ -86,6 +86,7 @@
   },
   "eslintConfig": {},
   "overrides": {
-    "axios": "1.13.5"
+    "axios": "1.13.5",
+    "toml": "4.3.0"
   }
 }
