@@ -391,7 +391,7 @@ exports.down = (pgm) => {
       FOREACH t IN ARRAY ARRAY[${ALL_TABLES_TXT}] LOOP
         IF to_regclass('public.' || t) IS NOT NULL THEN
           FOR pol IN
-            SELECT policyname FROM pg_policy WHERE polrelid = format('public.%I', t)::regclass
+            SELECT polname FROM pg_policy WHERE polrelid = format('public.%I', t)::regclass
           LOOP
             EXECUTE format('DROP POLICY %I ON public.%I', pol, t);
           END LOOP;
