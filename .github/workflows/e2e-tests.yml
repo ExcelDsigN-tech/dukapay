@@ -1,14 +1,9 @@
 name: E2E Tests
 
 on:
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'frontend/**'
-      - 'backend/**'
-      - '.github/workflows/e2e-tests.yml'
-  push:
-    branches: [main]
+  schedule:
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
 
 jobs:
   e2e-tests:

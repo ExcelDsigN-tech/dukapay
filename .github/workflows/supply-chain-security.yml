@@ -1,12 +1,9 @@
 name: Supply Chain Security
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
   schedule:
     - cron: "0 0 * * 0"
+  workflow_dispatch:
 
 jobs:
   npm-audit:
