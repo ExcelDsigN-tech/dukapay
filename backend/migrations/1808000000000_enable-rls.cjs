@@ -297,6 +297,7 @@ exports.up = (pgm) => {
     DECLARE
       target_table text;
       owner_col text;
+      c record;
     BEGIN
       FOR c IN VALUES
         ('compliance_audit_log', 'subject_id'),
