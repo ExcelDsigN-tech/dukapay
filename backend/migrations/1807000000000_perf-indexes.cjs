@@ -20,8 +20,8 @@ exports.up = (pgm) => {
       IF to_regclass('public.scores') IS NOT NULL THEN
         EXECUTE format('CREATE INDEX IF NOT EXISTS idx_scores_borrower_date ON scores (borrower, updated_at)');
       END IF;
-      IF to_regclass('public.loan_events') IS NOT NULL THEN
-        EXECUTE format('CREATE INDEX IF NOT EXISTS idx_loan_events_borrower_created ON loan_events (borrower, created_at)');
+      IF to_regclass('public.contract_events') IS NOT NULL THEN
+        EXECUTE format('CREATE INDEX IF NOT EXISTS idx_contract_events_address_created ON contract_events (address, created_at)');
       END IF;
       IF to_regclass('public.agent_vaults') IS NOT NULL THEN
         EXECUTE format('CREATE INDEX IF NOT EXISTS idx_agent_vaults_agent ON agent_vaults (agent_address)');
@@ -41,7 +41,7 @@ exports.up = (pgm) => {
 exports.down = (pgm) => {
   pgm.sql(`
     DROP INDEX IF EXISTS idx_scores_borrower_date;
-    DROP INDEX IF EXISTS idx_loan_events_borrower_created;
+    DROP INDEX IF EXISTS idx_contract_events_address_created;
     DROP INDEX IF EXISTS idx_agent_vaults_agent;
     DROP INDEX IF EXISTS idx_agent_vaults_active;
     DROP INDEX IF EXISTS idx_notif_prefs_user;
