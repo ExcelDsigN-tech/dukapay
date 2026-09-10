@@ -5,7 +5,6 @@
 [![Backend: Express](https://img.shields.io/badge/Backend-Express.js-white?logo=express)](https://expressjs.com/)
 [![Smart Contracts: Soroban](https://img.shields.io/badge/Smart_Contracts-Soroban-orange)](https://soroban.stellar.org/)
 [![Stellar](https://img.shields.io/badge/Stellar-Soroban-purple)](https://stellar.org)
-[![Telegram](https://img.shields.io/badge/Telegram-Join_Community-2CA5E0?logo=telegram)](https://t.me/+eRqhka27TVo0NzM8)
 
 **DukaPay** (duka = shop in Swahili) is an on-chain agent-banking float & settlement protocol that turns local shops into stablecoin cash-in / cash-out points for the unbanked. It is the open, auditable, production-grade reference implementation of agent banking on Stellar — the liquidity/settlement spine beneath consumer payments.
 
