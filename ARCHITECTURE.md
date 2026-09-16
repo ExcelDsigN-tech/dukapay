@@ -54,11 +54,14 @@ Three Soroban contracts under `contracts/`. All use checked arithmetic; all exte
   - On net settlement: Σ entries = 0, every resulting float stays within bounds.
 - Risk mitigations: collateral is USDC (no price-feed risk); cross-contract calls only via internal `token_client`; bounded batch sizes (no storage DoS).
 
-### 3.3 `settlement-netter` *(P2)*
+### 3.3 Net settlement (implemented as `agent_vault.settle_net`, not a separate contract)
 
-- Storage: `Batch(id) → { txns, status, window_end, net_positions }`.
-- Functions: `open_batch`, `submit_txn` (operator-signed), `net`, `finalize` (atomic vault transfers), `raise_dispute`.
-- Invariants: batch finalized exactly once; Σ debits = Σ credits; finalize only after dispute window closes.
+Earlier design called for a standalone `settlement-netter` contract with a batch/window/dispute lifecycle (`open_batch`, `submit_txn`, `net`, `finalize`, `raise_dispute`). That contract was never built; the core netting invariant it was meant to enforce was instead implemented directly on `agent_vault`:
+
+- `settle_net(entries: Vec<(Address, i128)>)` — operator-only. Entries are `(agent, delta)` pairs; deltas must sum to zero (float conserved across the batch), each resulting float is re-checked against the solvency invariant, batch size is bounded (`BATCH_MAX`).
+- What's **not** built: the separate batch-lifecycle wrapper (`open_batch`/`window_end`/`raise_dispute` held on-chain pending adjudication). Loan-level disputes are handled off-chain today via `adminDisputeController.ts` / the `loan_disputes` table — there is no on-chain settlement-dispute hold.
+
+If an on-chain, windowed settlement-dispute mechanism is needed later, it would be new scope, not a revival of the original `settlement-netter` design as originally spec'd.
 
 ## 4. Data flow
 
