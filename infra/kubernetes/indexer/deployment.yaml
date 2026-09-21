@@ -43,6 +43,8 @@ spec:
       containers:
         - name: indexer
           image: ghcr.io/exceldsign-tech/dukapay-indexer:latest
+          securityContext:
+            readOnlyRootFilesystem: true
           ports:
             - { name: metrics, containerPort: 9464 }
           env:
