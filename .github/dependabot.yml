@@ -5,6 +5,8 @@ updates:
     directory: "/backend"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       backend-minor-patch:
@@ -23,6 +25,8 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       frontend-minor-patch:
@@ -46,6 +50,8 @@ updates:
     directory: "/contracts"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       contracts-minor-patch:
@@ -67,6 +73,8 @@ updates:
     directory: "/contracts/fuzz"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 3
     groups:
       fuzz-minor-patch:
@@ -78,6 +86,8 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       actions-minor-patch:
@@ -92,6 +102,8 @@ updates:
     directory: "/scripts"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       scripts-minor-patch:
