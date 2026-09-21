@@ -16,7 +16,7 @@ jobs:
     name: Socket malicious package blocking
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # Socket Firewall blocks installs when its supply-chain analysis finds a
       # malicious package. Pin the action itself to an immutable commit.
       - uses: SocketDev/action@2d3f25590c6ed6ba11a9a14c064d962a3a04698f # v1.3.1
@@ -43,7 +43,7 @@ jobs:
       # is scanned with.
       image: semgrep/semgrep:1.174.0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: semgrep scan --config p/ci --config p/sql-injection --error --exclude='**/node_modules/**' --exclude='**/target/**'
 
   gitleaks:
@@ -55,7 +55,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       # Pinned to a commit SHA (not the `v2` tag) so the action's code can't
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # Was pinned to `@master`, a mutable branch — the least hermetic
       # reference possible for a security-scanning action. Pinned to a
       # commit SHA on a tagged release instead.
@@ -94,8 +94,8 @@ jobs:
       matrix:
         directory: [backend, frontend, scripts]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -111,9 +111,9 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@stable # not SHA-pinned: rolling channel branch (stable/beta/nightly track new Rust releases); pinning would freeze the toolchain version
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cargo/bin/cargo-audit
           key: cargo-audit-${{ runner.os }}
