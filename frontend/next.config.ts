@@ -20,6 +20,21 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 // at all, so nothing hydrates. Production builds don't need it.
 const isDev = process.env.NODE_ENV !== "production";
 
+// The App Router streams its RSC/hydration payload through inline
+// <script> tags (self.__next_f.push(...), self.__next_r, etc.) on every
+// render, dev and prod alike — without 'unsafe-inline' those are blocked
+// and the app never hydrates (confirmed via
+// "Invariant: Expected a request ID to be defined for the document via
+// self.__next_r" in the browser console). The fully-strict fix is a
+// nonce-based CSP via middleware, but that forces dynamic rendering on
+// every route (no static optimization, no CDN caching) — a bigger call
+// than this fix should make alone. 'unsafe-inline' matches Next.js's own
+// documented non-nonce fallback and the precedent already set below for
+// style-src.
+// ponytail: unsafe-inline on script-src, upgrade to nonce-based CSP
+// (https://nextjs.org/docs/app/guides/content-security-policy#nonces) if
+// stricter XSS protection becomes a requirement.
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   // Issue #407: Security headers for XSS prevention
@@ -31,7 +46,7 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           value: [
             "default-src 'self'",
-            `script-src 'self'${isDev ? " 'unsafe-eval'" : ""}`,
+            `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: https:",
             "font-src 'self' https: data:",
