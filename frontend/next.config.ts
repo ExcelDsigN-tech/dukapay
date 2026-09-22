@@ -10,6 +10,11 @@ const withSerwist = withSerwistInit({
   swDest: "public/sw.js",
 });
 
+// The documented local/dev default (http://localhost:3001, see .env.example)
+// is neither 'self' (different port) nor https:, so connect-src must name it
+// explicitly or every browser fetch to the API is silently CSP-blocked.
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   // Issue #407: Security headers for XSS prevention
@@ -25,7 +30,7 @@ const nextConfig: NextConfig = {
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: https:",
             "font-src 'self' https: data:",
-            "connect-src 'self' https:",
+            `connect-src 'self' https: ${apiUrl}`,
             "frame-ancestors 'self'",
           ].join("; "),
         },
