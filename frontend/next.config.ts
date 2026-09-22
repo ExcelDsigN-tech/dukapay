@@ -15,6 +15,11 @@ const withSerwist = withSerwistInit({
 // explicitly or every browser fetch to the API is silently CSP-blocked.
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
+// Next.js dev mode (webpack and Turbopack alike) executes hot-reloaded
+// module chunks via eval() — without 'unsafe-eval' the dev bundle can't run
+// at all, so nothing hydrates. Production builds don't need it.
+const isDev = process.env.NODE_ENV !== "production";
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   // Issue #407: Security headers for XSS prevention
@@ -26,7 +31,7 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           value: [
             "default-src 'self'",
-            "script-src 'self'",
+            `script-src 'self'${isDev ? " 'unsafe-eval'" : ""}`,
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: https:",
             "font-src 'self' https: data:",
