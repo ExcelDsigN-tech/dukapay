@@ -47,13 +47,16 @@ git log --oneline -50 -- {REPO_PATH}
 ```
 [{COMPONENT}] {DESCRIPTION}
 
-Description: {DESCRIPTION}
-Impact: {IMPACT}
-Suggested Fix: {SUGGESTED_FIX}
-Points: {POINTS}
-Type: {TYPE}
+**Description**: {DESCRIPTION}
 
-Definition of Done
+**Impact**: {IMPACT}
+
+**Suggested Fix**: {SUGGESTED_FIX}
+
+**Points**: {POINTS}
+**Type**: {TYPE}
+
+**Definition of Done**
 - [ ] {CHECKLIST_ITEM_1}
 - [ ] {CHECKLIST_ITEM_2}
 - [ ] {CHECKLIST_ITEM_3}
@@ -159,7 +162,7 @@ No deviation from the template.
 
 `[backend] Lender role has no distinct Row-Level Security policy family`
 
-Description: `backend/src/auth/rbac.ts` defines 5 roles: `admin`, `agent`,
+**Description:** `backend/src/auth/rbac.ts` defines 5 roles: `admin`, `agent`,
 `borrower`, `auditor`, `lender`. The RLS migration
 (`backend/migrations/1808000000000_enable-rls.cjs`) only builds policy
 families for 4 of them: `borrower` (own rows), `agent` (own + assigned
@@ -169,24 +172,36 @@ style policy — it's unclear whether lender requests fall through
 agent-shaped policies, borrower-shaped policies, or are default-denied by
 Postgres RLS (deny-by-default when no policy matches).
 
-Impact: If a lender-scoped request reaches a table with RLS enabled and no
+**Impact**: If a lender-scoped request reaches a table with RLS enabled and no
 matching policy, Postgres silently returns zero rows rather than erroring —
 this could look like "the pool has no data" instead of a clear
 access-control message, and could equally mask an unintended over- or
 under-grant.
 
-Suggested Fix: Trace what actually happens today for a lender-authenticated
+**Suggested Fix**: Trace what actually happens today for a lender-authenticated
 request against an RLS-protected table (test it directly, don't assume). If
 `lender` is meant to be a read-only alias of `agent` (per the comment in
 `rbac.ts`), add an explicit RLS policy rather than relying on incidental
 behavior. Add a test case alongside the existing `tenantAccessRbac.test.ts`
 suite covering the lender role specifically.
 
-Points: 150
-Type: security
+**Points**: 150
+**Type**: security
 
-Definition of Done
+**Definition of Done**
 - [ ] Actual current behavior for lender-role RLS access confirmed and documented
 - [ ] Explicit RLS policy added for lender (or the role formally deprecated in favor of agent)
 - [ ] Test coverage added for lender-role row access
 - [ ] All necessary CI checks passed
+
+---
+
+📋 Before working on this issue, please read our [Contributing Guidelines]({CONTRIBUTING_URL}) — it covers branching, commits, PR standards, testing, and style guides.
+
+🎯 To claim this issue: comment below before starting work. First contributor comment gets it for the current Drip Wave cycle. If it's not merged by cycle end, it reopens for the next cycle.
+
+Join our Telegram community to connect with other contributors, ask questions, and stay updated:
+
+💬 Telegram: https://t.me/+eRqhka27TVo0NzM8
+
+All official decisions, reviews, and coordination happen right here on GitHub. The Telegram group is a space for informal discussion and peer support.
