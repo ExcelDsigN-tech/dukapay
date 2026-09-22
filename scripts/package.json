@@ -29,7 +29,7 @@
     "pg": "^8.18.0"
   },
   "overrides": {
-    "axios": "1.13.5",
+    "axios": "1.20.0",
     "toml": "4.3.0"
   },
   "allowScripts": {

@@ -7,7 +7,13 @@ title = "DukaPay gitleaks config"
   # Allowlist rules that are known false positives in this repo.
   description = "Global allowlist"
 
-  # Test files may contain example secrets
+  # Test files may contain example secrets. Docs, README, and .env.example
+  # files are expected to contain placeholder credentials (your_jwt_secret,
+  # sample/dummy/xxx/changeme, etc.) so they're exempted wholesale rather
+  # than pattern-matched — a [[rules]] block with these regexes would
+  # *flag* every doc mentioning "example" or "test" as a leak instead of
+  # allowing it (see issue caught in commit 0178aed's weekly gitleaks scan:
+  # ~4,835 false positives from this exact mistake).
   paths = [
     '''test/''',
     '''__tests__/''',
@@ -15,22 +21,7 @@ title = "DukaPay gitleaks config"
     '''\.spec\.ts$''',
     '''\.test\.js$''',
     '''\.spec\.js$''',
-  ]
-
-[[rules]]
-  id = "dsa-key-in-env-docs"
-  description = "Allow example keys in documentation and .env.example files"
-  regex = '''(?i)(example|placeholder|your_|sample|dummy|fake|test|xxx|changeme)'''
-  paths = [
     '''\.env\.example$''',
     '''docs/''',
     '''README''',
-  ]
-
-[[rules]]
-  id = "jwt-secret-example"
-  description = "Allow placeholder JWT secrets in env example files"
-  regex = '''JWT_SECRET\s*=\s*['\"]?your[_-]jwt[_-]secret'''
-  paths = [
-    '''\.env\.example$''',
   ]
