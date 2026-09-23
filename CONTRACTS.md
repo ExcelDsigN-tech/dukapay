@@ -13,6 +13,9 @@ their responsibilities, and the invariants that must hold at all times.
 | `lending_pool` | Pool deposits, withdrawals, yield |
 | `remittance_nft` | Remittance NFT issuance & credit scores |
 | `multisig_governance` | Multi-signature governance |
+| `audit_anchor` | Tamper-evident Merkle-anchored audit epochs |
+| `oracle` | Price feeds for collateral valuation |
+| `circuit_breaker` | Emergency kill-switch: global / contract / function pause with 72h auto-expiry and 3-of-5 governance override (wired into `lending_pool`, `loan_manager`, `agent_vault` via `set_circuit_breaker` / `is_blocked`) |
 | `money` | Shared monetary policy/constants |
 
 ---

@@ -25,6 +25,31 @@ const REQUIRED_ENV_VARS = [
 ];
 
 /**
+ * Compliance flags that must be explicitly enabled outside development.
+ * Both default to `false` (dev default) — staging/production deploys must
+ * set them to `"true"`. Called from {@link validateEnvVars} when
+ * `NODE_ENV=production`, and mirrored by `scripts/check-prod-flags.mjs` in CI.
+ */
+export function validateProductionComplianceFlags(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+  const off = ['KYC_ENFORCEMENT_ENABLED', 'AUDIT_ANCHOR_ENABLED'].filter(
+    (key) => process.env[key] !== 'true',
+  );
+  if (off.length > 0) {
+    console.error(
+      `\n\x1b[1;31mFATAL ERROR: Production compliance flags not enabled\x1b[0m\n` +
+        `These must be "true" in production: \x1b[1m${off.join(', ')}\x1b[0m\n` +
+        `See docs/ENVIRONMENT.md launch posture.\n`,
+    );
+    logger.error('Production compliance flags not enabled', {
+      off,
+      node_env: process.env.NODE_ENV,
+    });
+    process.exit(1);
+  }
+}
+
+/**
  * Validates that all critical environment variables are set and non-empty.
  * Logs a clear error message and halts the process if any requirements are unmet.
  */
@@ -56,4 +81,6 @@ export function validateEnvVars(): void {
   }
 
   logger.info('Environment variables validated successfully.');
+
+  validateProductionComplianceFlags();
 }

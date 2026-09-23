@@ -338,6 +338,8 @@ jobs:
           node-version: 20
       - name: Check env docs are in sync
         run: node scripts/check-env-docs.mjs
+      - name: Check prod-flag launch posture (KYC + audit-anchor)
+        run: node scripts/check-prod-flags.mjs
 
   error-code-mapping-check:
     runs-on: ubuntu-latest

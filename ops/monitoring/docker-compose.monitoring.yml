@@ -75,6 +75,28 @@ services:
       - monitoring
     restart: unless-stopped
 
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: dukapay-postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=${POSTGRES_EXPORTER_DSN:-postgresql://postgres:postgres@db:5432/dukapay?sslmode=disable}
+    ports:
+      - "9187:9187"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: dukapay-redis-exporter
+    environment:
+      - REDIS_ADDR=${REDIS_EXPORTER_ADDR:-redis://redis:6379}
+    ports:
+      - "9121:9121"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
 volumes:
   prometheus-data:
   grafana-data:
