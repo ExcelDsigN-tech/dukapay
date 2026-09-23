@@ -125,6 +125,112 @@ interface RegisterWebhookInput {
 interface PreparedWebhookPayload {
   body: string;
   payload: Record<string, unknown>;
+  timestamp: string;
+  nonce: string;
+}
+
+// Maximum acceptable age (in seconds) of a webhook timestamp for replay
+// protection.  Consumers should compare the header timestamp against
+// `Date.now()` and reject requests older than this window.
+export const WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS = 300;
+
+// Maximum acceptable age (in seconds) of a nonce that we've already seen.
+// Combined with the timestamp tolerance this bounds the window during which
+// a replay attack could succeed.
+export const WEBHOOK_NONCE_RETENTION_SECONDS = 600;
+
+function generateNonce(): string {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+// Compute the HMAC-SHA256 signature for a webhook delivery.
+//
+// The signed payload is the concatenation of:
+//   `<timestamp>.<nonce>.<body_hex>`
+//
+// The body is hex-encoded so that the signed string is always ASCII and
+// unambiguous (prevents ambiguity from newlines / control characters in
+// the body).
+export function computeWebhookSignature(
+  secret: string,
+  timestamp: string,
+  nonce: string,
+  body: string,
+): string {
+  const bodyHex = Buffer.from(body, 'utf8').toString('hex');
+  const signedPayload = `${timestamp}.${nonce}.${bodyHex}`;
+  return crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
+}
+
+// Verify a webhook signature.  Returns `true` when the provided signature
+// matches the expected value computed from *any* of the candidate secrets
+// (this supports seamless key rotation where a previous secret is still
+// accepted for a limited window after a new secret is provisioned).
+//
+// Consumers should additionally check the timestamp header against
+// `WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS` and deduplicate nonces.
+export function verifyWebhookSignature(
+  signature: string | undefined,
+  candidateSecrets: string[],
+  timestamp: string | undefined,
+  nonce: string | undefined,
+  body: string,
+): boolean {
+  if (!signature || !timestamp || !nonce) {
+    return false;
+  }
+
+  // Strip an optional "sha256=" prefix (GitHub/Stripe convention) so the
+  // function accepts both raw hex and prefixed formats.
+  const cleanSignature = signature.replace(/^sha256=/i, '');
+
+  for (const secret of candidateSecrets) {
+    if (!secret) {
+      continue;
+    }
+    const expected = computeWebhookSignature(secret, timestamp, nonce, body);
+    if (crypto.timingSafeEqual(Buffer.from(cleanSignature, 'hex'), Buffer.from(expected, 'hex'))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Parse the `x-dukapay-timestamp` header and return the Unix epoch seconds
+// as a number, or `undefined` when the header is absent / invalid.
+export function parseWebhookTimestamp(
+  header: string | undefined,
+): number | undefined {
+  if (header === undefined) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(header, 10);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    return undefined;
+  }
+  return parsed;
+}
+
+// Build the list of candidate secrets used for signature verification.
+//
+// The *primary* secret comes from `WEBHOOK_SECRET`.  Any additional
+// secrets listed in `WEBHOOK_ROTATION_SECRETS` (comma-separated) are
+// appended so that consumers who are in the middle of a key rotation can
+// still verify deliveries signed with a previous secret.
+export function getWebhookCandidateSecrets(): string[] {
+  const primary = process.env.WEBHOOK_SECRET?.trim();
+  const rotationRaw = process.env.WEBHOOK_ROTATION_SECRETS?.trim() ?? '';
+  const rotation = rotationRaw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  const secrets = primary ? [primary, ...rotation] : rotation;
+  return secrets.length > 0 ? secrets : [''];
 }
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
@@ -192,6 +298,8 @@ function summarizeOversizedPayloadMinimal(
 
 function prepareWebhookPayload(payload: Record<string, unknown>): PreparedWebhookPayload {
   const body = JSON.stringify(payload);
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const nonce = generateNonce();
   const payloadBytes = Buffer.byteLength(body);
   const maxPayloadBytes = getWebhookMaxPayloadBytes();
   const eventId = typeof payload.eventId === 'string' ? payload.eventId : undefined;
@@ -222,6 +330,8 @@ function prepareWebhookPayload(payload: Record<string, unknown>): PreparedWebhoo
     return {
       body: summarizedBody,
       payload: summarizedPayload,
+      timestamp,
+      nonce,
     };
   }
 
@@ -237,6 +347,8 @@ function prepareWebhookPayload(payload: Record<string, unknown>): PreparedWebhoo
   return {
     body,
     payload,
+    timestamp,
+    nonce,
   };
 }
 
@@ -244,6 +356,8 @@ async function postWebhook(
   callbackUrl: string,
   body: string,
   signature: string | undefined,
+  timestamp: string,
+  nonce: string,
 ): Promise<Response> {
   const timeoutMs = getWebhookRequestTimeoutMs();
   const controller = new AbortController();
@@ -255,9 +369,13 @@ async function postWebhook(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        'x-dukapay-timestamp': timestamp,
+        'x-dukapay-nonce': nonce,
         // X-DukaPay-Signature uses the GitHub/Stripe-style "sha256=<hex>"
         // format so subscribers can verify payload integrity (see
         // docs/wiki/webhook-signatures.md for the verification recipe).
+        // The signature covers the signed payload:
+        //   "<timestamp>.<nonce>.<body_hex>"
         ...(signature && { 'x-dukapay-signature': `sha256=${signature}` }),
       },
       body,
@@ -360,13 +478,19 @@ export class WebhookService {
     const body = preparedPayload.body;
 
     const signature = secret
-      ? crypto.createHmac('sha256', secret).update(body).digest('hex')
+      ? computeWebhookSignature(secret, preparedPayload.timestamp, preparedPayload.nonce, body)
       : undefined;
 
     let response: Response | null = null;
 
     try {
-      response = await postWebhook(callbackUrl, body, signature);
+      response = await postWebhook(
+        callbackUrl,
+        body,
+        signature,
+        preparedPayload.timestamp,
+        preparedPayload.nonce,
+      );
 
       const successful = response.ok;
       const newAttemptCount = attemptCount + 1;
@@ -568,11 +692,11 @@ export class WebhookService {
     const body = payload.body;
 
     const signature = secret
-      ? crypto.createHmac('sha256', secret).update(body).digest('hex')
+      ? computeWebhookSignature(secret, payload.timestamp, payload.nonce, body)
       : undefined;
 
     try {
-      const response = await postWebhook(callbackUrl, body, signature);
+      const response = await postWebhook(callbackUrl, body, signature, payload.timestamp, payload.nonce);
 
       const successful = response.ok;
 
