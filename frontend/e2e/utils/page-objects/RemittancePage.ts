@@ -11,9 +11,10 @@ export class RemittancePage extends BasePage {
 
   /**
    * Navigate to send remittance page
+   * Real route is /en/send-remittance (not /en/remittances/send)
    */
   async navigateToSendRemittance(): Promise<void> {
-    await this.goto("/en/remittances/send");
+    await this.goto("/en/send-remittance");
   }
 
   /**

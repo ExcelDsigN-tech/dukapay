@@ -26,5 +26,9 @@ BUG_HUNT_ANSWER_KEY.md
 data
 skills-lock.json
 
+# Production secrets — never commit the filled production env (template is .env.production.example)
+backend/.env.production
+frontend/.env.production
+
 # soroban test snapshots
 contracts/*/test_snapshots/

@@ -129,7 +129,7 @@ test.describe("Cash-in/Cash-out Flow", () => {
   });
 
   test("Exchange rate calculation", async ({ page }) => {
-    await page.goto("/en/remittances/send");
+    await page.goto("/en/send-remittance");
 
     // Fill amount
     await page.fill('input[name="amount"]', "100");
@@ -144,7 +144,7 @@ test.describe("Cash-in/Cash-out Flow", () => {
   });
 
   test("Remittance with insufficient balance", async ({ page }) => {
-    await page.goto("/en/remittances/send");
+    await page.goto("/en/send-remittance");
 
     // Try to send more than balance
     await page.fill('input[name="recipientAddress"]', "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb");

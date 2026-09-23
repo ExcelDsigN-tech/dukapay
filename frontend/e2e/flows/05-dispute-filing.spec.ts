@@ -87,7 +87,7 @@ test.describe("Dispute Filing Flow", () => {
   });
 
   test("File dispute with evidence documents", async ({ page }) => {
-    await page.goto(`/en/loans/${loanId}/dispute`);
+    await page.goto(`/en/loans/${loanId}`);
 
     // Select dispute reason
     await disputePage.selectDisputeReason("payment_not_reflected");
@@ -246,7 +246,7 @@ test.describe("Dispute Filing Flow", () => {
       });
     });
 
-    await page.goto(`/en/agent/disputes/${disputeId}`);
+    await page.goto(`/en/admin/disputes/${disputeId}`);
 
     // Review and resolve
     await page.fill('textarea[name="resolution"]', "Terms corrected, interest rate adjusted");
@@ -399,7 +399,7 @@ test.describe("Dispute Filing Flow", () => {
       });
     });
 
-    await page.goto("/en/disputes?status=pending");
+    await page.goto("/en/admin/disputes");
 
     // Verify filtered disputes
     await expect(page.locator("text=disp_1")).toBeVisible();

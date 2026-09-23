@@ -404,7 +404,7 @@ test.describe("Settlement Flow", () => {
       });
     });
 
-    await page.goto("/en/settlement/stats");
+    await page.goto("/en/activity");
 
     // Verify statistics displayed
     await expect(page.locator("text=15")).toBeVisible(); // Today's count

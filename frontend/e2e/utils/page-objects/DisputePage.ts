@@ -13,7 +13,8 @@ export class DisputePage extends BasePage {
    * Navigate to dispute filing page
    */
   async navigateToFileDispute(loanId: number): Promise<void> {
-    await this.goto(`/en/loans/${loanId}/dispute`);
+    // Real loan detail route is /en/loans/${loanId}; dedicated /dispute sub-route does not exist.
+    await this.goto(`/en/loans/${loanId}`);
   }
 
   /**
@@ -70,7 +71,7 @@ export class DisputePage extends BasePage {
    * View dispute details
    */
   async viewDisputeDetails(disputeId: string): Promise<void> {
-    await this.goto(`/en/disputes/${disputeId}`);
+    await this.goto(`/en/admin/disputes/${disputeId}`);
   }
 
   /**

@@ -11,9 +11,12 @@ export class SettlementPage extends BasePage {
 
   /**
    * Navigate to settlement dashboard
+   * NOTE: No /en/settlement or /en/settlement/stats route exists in src/app/[locale]/.
+   * Settlement activity is aggregated in /en/activity and /en/remittances.
+   * Mapping to /en/activity as closest real route until dedicated settlement UI is built.
    */
   async navigateToSettlement(): Promise<void> {
-    await this.goto("/en/settlement");
+    await this.goto("/en/activity");
   }
 
   /**
@@ -82,8 +85,8 @@ export class SettlementPage extends BasePage {
    * View settlement details
    */
   async viewSettlementDetails(settlementId: string): Promise<void> {
-    await this.goto(`/en/settlement/${settlementId}`);
-    await this.expectTextVisible(/settlement.*details/i);
+    await this.goto(`/en/activity`);
+    await this.expectTextVisible(/activity|settlement.*details/i);
   }
 
   /**

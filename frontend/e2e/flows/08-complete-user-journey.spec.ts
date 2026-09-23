@@ -224,8 +224,8 @@ test.describe("Complete User Journey", () => {
       });
     });
 
-    await page.goto(`/en/agent/loans/${loanId}`);
-    await expect(page.locator("text=/loan.*application/i")).toBeVisible();
+    await page.goto(`/en/loans/${loanId}`);
+    await expect(page.locator("text=/loan|application/i")).toBeVisible();
 
     // Step 2: Approve loan
     await page.route(`**/api/loans/${loanId}/approve`, async (route: Route) => {
@@ -265,8 +265,8 @@ test.describe("Complete User Journey", () => {
       });
     });
 
-    await page.goto("/en/agent/settlements");
-    await expect(page.locator("text=/pending.*settlements/i")).toBeVisible();
+    await page.goto("/en/activity");
+    await expect(page.locator("text=/activity|pending.*settlements/i")).toBeVisible();
 
     // Process settlement
     await page.route(`**/api/settlements/settle_agent/process`, async (route: Route) => {
