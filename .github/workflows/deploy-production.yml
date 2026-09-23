@@ -1,11 +1,11 @@
 name: Deploy Production (Mainnet)
 
-# Mainnet deployment — requires explicit production posture per #565.
-# This workflow STRUCTURALLY guarantees the KYC/audit-anchor decision is enforced at deploy time,
-# not just documented. The `production-guard` job fails the deploy if the agreed posture mismatches.
-#
-# Depends on: #565 (decision), #561/#562 correctness gaps + external audit (see deployed-contracts.md).
-# This is real-money deployment, not a testnet redeploy.
+# Mainnet deployment scaffolding — pending #565 decision.
+# This workflow will structurally guarantee the KYC/audit-anchor posture at deploy time
+# once #565 is decided, but #565 is still open and asks for a maintainer/product call.
+# Until #565 is closed, this workflow is scaffolding and must not be treated as the
+# decided production posture. Coordinate with the #565 / #570 assignees before continuing.
+# Blocked by #561/#562 correctness gaps + external audit (see docs/deployed-contracts.md).
 
 on:
   workflow_dispatch:
@@ -14,14 +14,8 @@ on:
         description: 'Type "deploy-mainnet" to confirm you are deploying real contracts to Stellar mainnet'
         required: true
         type: string
-  push:
-    branches: [main]
-    paths:
-      - 'backend/.env.production'
-      - 'backend/.env.production.example'
-      - 'scripts/verify-production-env.mjs'
-      - 'scripts/deploy-config.json'
-      - 'scripts/contract-registry.json'
+  # No push trigger — mainnet deploys are manual only via workflow_dispatch.
+  # Push-to-main would auto-build production images on every merge, which is not intended for real-money deploys.
 
 permissions:
   contents: read
@@ -42,7 +36,7 @@ jobs:
             exit 1
           fi
 
-  # ── 1. Production posture guard — FAILS deploy if KYC/audit/AML don't match agreed mainnet posture ──
+  # ── 1. Production posture guard — scaffolding pending #565 ────────────────
   production-guard:
     needs: [confirm]
     if: always() && (needs.confirm.result == 'success' || needs.confirm.result == 'skipped')
@@ -54,11 +48,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Verify production KYC/AUDIT/AML posture (per #565)
+      - name: Verify production KYC/AUDIT/AML posture (scaffold, pending #565)
         env:
-          # These MUST be explicitly set in the `production` environment (not relying on code defaults).
-          # The guard fails if they don't match the agreed mainnet posture — see
-          # backend/.env.production.example and docs/ENVIRONMENT.md#production-mainnet-posture
+          # These must be explicitly set in the `production` environment (not relying on code defaults).
+          # Until #565 is decided, the guard is scaffolding — values below are placeholders requiring
+          # compliance sign-off. The guard fails if they are blank or structurally invalid.
           KYC_ENFORCEMENT_ENABLED: ${{ secrets.KYC_ENFORCEMENT_ENABLED }}
           AUDIT_ANCHOR_ENABLED: ${{ secrets.AUDIT_ANCHOR_ENABLED }}
           AUDIT_ANCHOR_CONTRACT_ID: ${{ secrets.AUDIT_ANCHOR_CONTRACT_ID }}
@@ -73,7 +67,7 @@ jobs:
           COMPLYADVANTAGE_SEARCH_PROFILE: ${{ vars.COMPLYADVANTAGE_SEARCH_PROFILE }}
           SAR_FILING_API_URL: ${{ vars.SAR_FILING_API_URL }}
         run: |
-          echo "🔒 Production posture guard: verifying KYC_ENFORCEMENT_ENABLED and AUDIT_ANCHOR_ENABLED match agreed mainnet posture..."
+          echo "🔒 Production posture guard (scaffold, pending #565): verifying KYC/AUDIT/AML are explicitly set..."
           echo "KYC_ENFORCEMENT_ENABLED=${KYC_ENFORCEMENT_ENABLED:-<unset>}"
           echo "AUDIT_ANCHOR_ENABLED=${AUDIT_ANCHOR_ENABLED:-<unset>}"
           echo "AML_REPORTING_THRESHOLD=${AML_REPORTING_THRESHOLD:-<unset>}"
@@ -81,7 +75,7 @@ jobs:
           echo "AML_HIGH_RISK_COUNTRIES=${AML_HIGH_RISK_COUNTRIES:-<unset>}"
           node scripts/verify-production-env.mjs
 
-      - name: Verify production env template is valid
+      - name: Verify production env template is structurally valid
         run: node scripts/verify-production-env.mjs --env-file backend/.env.production.example
 
       - name: Verify mainnet deploy config exists and is scaffolded
@@ -107,10 +101,14 @@ jobs:
             exit 1
           fi
           COUNT=$(jq '.networks.mainnet.contracts | length' scripts/contract-registry.json)
-          echo "Mainnet contracts recorded: $COUNT (expected 0 before deploy, 9 after)"
-          # Before deploy, 0 or placeholders is OK; after deploy, 9 with real C... IDs. This guard just checks block exists.
+          echo "Mainnet contracts recorded: $COUNT (expected 0 before deploy, 7 after; 6 contracts + token via deploy.ts)"
+          # Before deploy, placeholders are OK; after deploy, 7 with real C... IDs.
 
   # ── 2. Build and push production images (tagged production-*) ─────────────
+  # NOTE: Images are built here for verification and Trivy scan. Actual production
+  # deploy to the host is currently held until #565 is decided and #561/#562 + audit
+  # land. See docs/deployed-contracts.md. When unblocked, add a deploy job that
+  # copies compose files and health-checks, similar to deploy-staging.yml.
   build-and-push:
     needs: [production-guard]
     runs-on: ubuntu-latest
@@ -188,7 +186,7 @@ jobs:
           sarif_file: 'trivy-prod.sarif'
           category: trivy-production-backend
 
-  # ── 3. Verify contracts on mainnet (post-deploy checks would run here) ───
+  # ── 3. Verify contracts on mainnet ──
   verify-mainnet:
     needs: [build-and-push, production-guard]
     runs-on: ubuntu-latest
@@ -203,7 +201,7 @@ jobs:
       - run: npm ci
         working-directory: scripts
       - name: Run verify-contracts against mainnet registry
-        run: npx ts-node verify-contracts.ts --network mainnet --format text || true
+        run: npx tsx ./verify-contracts.ts --network mainnet --format text
         working-directory: scripts
         env:
           STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}

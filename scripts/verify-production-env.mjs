@@ -1,24 +1,25 @@
 #!/usr/bin/env node
 /**
  * verify-production-env.mjs
- * Deploy-time guard for mainnet production posture (issue follow-up to #565).
+ * Scaffold for mainnet production posture guard (pending #565 decision).
  * Fails the deploy if KYC_ENFORCEMENT_ENABLED / AUDIT_ANCHOR_ENABLED / AML thresholds
- * don't match the agreed production posture defined in docs/ENVIRONMENT.md#production-mainnet-posture
- * and backend/.env.production.example.
+ * don't match the posture once #565 is decided and AML values are compliance-signed-off.
+ * See docs/ENVIRONMENT.md#production-mainnet-posture and backend/.env.production.example.
+ * NOTE: #565 is still open — this guard is scaffolding, not a decided posture.
  *
  * Usage:
  *   KYC_ENFORCEMENT_ENABLED=true AUDIT_ANCHOR_ENABLED=true ... node scripts/verify-production-env.mjs
  *   node scripts/verify-production-env.mjs --env-file backend/.env.production
  *   node scripts/verify-production-env.mjs --env-file backend/.env.production.example  # checks template itself
  *
- * Expects for PRODUCTION (mainnet):
+ * Expects for PRODUCTION (mainnet) — placeholders pending #565 / compliance sign-off:
  *   KYC_ENFORCEMENT_ENABLED=true
  *   AUDIT_ANCHOR_ENABLED=true
  *   AUDIT_ANCHOR_CONTRACT_ID is a valid Stellar contract (C...)
  *   AUDIT_ANCHOR_SOURCE_SECRET is set (S... not empty, not placeholder)
- *   AML_REPORTING_THRESHOLD is numeric >= 1000 (reviewed value, not blank)
- *   AML_DAILY_TX_LIMIT is numeric 1..100 (not blank)
- *   AML_HIGH_RISK_COUNTRIES is non-empty comma-separated ISO 3166-1 alpha-2 list (not blank)
+ *   AML_REPORTING_THRESHOLD is numeric >= 1000 (not blank; requires compliance sign-off)
+ *   AML_DAILY_TX_LIMIT is numeric 1..100 (not blank; requires compliance sign-off)
+ *   AML_HIGH_RISK_COUNTRIES is non-empty comma-separated ISO 3166-1 alpha-2 list (not blank; requires compliance sign-off)
  *   STELLAR_NETWORK=mainnet and passphrase matches Public Global Stellar Network
  *   COMPLYADVANTAGE_API_KEY is set when KYC is enabled
  *
@@ -54,14 +55,25 @@ function parseEnvFile(path) {
   return env;
 }
 
+const args = process.argv.slice(2);
+function flag(name) {
+  const i = args.indexOf(name);
+  return i !== -1 ? args[i + 1] : undefined;
+}
+
+const envFileArg = flag("--env-file");
+
 function isPlaceholder(v) {
   if (!v) return true;
   const s = String(v).trim();
   if (s === "") return true;
   // __SET_VIA_SECRETS_MANAGER__ is intentional for .env.production.example — it signals
-  // that the live secret is injected via secrets manager. Don't treat it as "blank" for
-  // template validation; live CI will have a real value. Only treat truly empty/placeholder as fail.
-  if (s.includes("__SET_VIA_SECRETS_MANAGER__")) return false;
+  // that the live secret is injected via secrets manager. Only treat it as non-placeholder
+  // when explicitly validating the .example template file; in live production it must be a real value.
+  if (s.includes("__SET_VIA_SECRETS_MANAGER__")) {
+    if (envFileArg && envFileArg.includes(".example")) return false;
+    return true;
+  }
   if (/^(not yet recorded|your-|change-me|dummy)/i.test(s)) return true;
   if (/^__SET/i.test(s)) return true;
   return false;
@@ -76,13 +88,6 @@ function isValidSecret(v) {
   return typeof v === "string" && v.startsWith("S") && v.length === 56;
 }
 
-const args = process.argv.slice(2);
-function flag(name) {
-  const i = args.indexOf(name);
-  return i !== -1 ? args[i + 1] : undefined;
-}
-
-const envFileArg = flag("--env-file");
 let fileEnv = {};
 if (envFileArg) {
   const abs = envFileArg.startsWith("/") ? envFileArg : join(root, envFileArg);
@@ -131,7 +136,7 @@ function requireNumeric(key, min, max, message) {
 function requireHighRiskCountries(message) {
   const val = env["AML_HIGH_RISK_COUNTRIES"];
   if (isPlaceholder(val)) {
-    errors.push(`AML_HIGH_RISK_COUNTRIES must be set to reviewed FATF list (got: ${JSON.stringify(val)}) — ${message}`);
+    errors.push(`AML_HIGH_RISK_COUNTRIES must be set to a list requiring compliance sign-off (got: ${JSON.stringify(val)}) — ${message}`);
     return;
   }
   const codes = val.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
@@ -144,19 +149,20 @@ function requireHighRiskCountries(message) {
   }
 }
 
-// ── Production mainnet posture checks ────────────────────────────────────────
-console.log("\n🔒 Verifying production mainnet posture (per #565)...\n");
+// ── Production mainnet posture checks (scaffold, pending #565) ───────────────
+console.log("\n🔒 Verifying production mainnet posture (scaffold, pending #565)...\n");
+console.log("NOTE: #565 is still open — this guard is scaffolding. Values are placeholders requiring compliance sign-off.\n");
 
 // 1. KYC enforcement
 requireTrue(
   "KYC_ENFORCEMENT_ENABLED",
-  "Per #565 decision 2026-03-15: mainnet launches with KYC/AML enforcement ON. Set explicitly in prod env/secrets, do not rely on code default false."
+  "Pending #565 — production posture not yet decided. Guard expects 'true' for mainnet; set explicitly in prod env/secrets (not relying on code default false). Coordinate with #565 assignee."
 );
 
 // 2. Audit anchoring
 requireTrue(
   "AUDIT_ANCHOR_ENABLED",
-  "Per #565 decision 2026-03-15: mainnet launches with audit anchoring ON (hourly tamper-evident anchoring to audit_anchor contract)."
+  "Pending #565 — production posture not yet decided. Guard expects 'true' for mainnet."
 );
 if (env["AUDIT_ANCHOR_ENABLED"] === "true") {
   const cid = env["AUDIT_ANCHOR_CONTRACT_ID"];
@@ -178,10 +184,10 @@ if (env["AUDIT_ANCHOR_ENABLED"] === "true") {
   }
 }
 
-// 3. AML thresholds — reviewed for KE/NG/GH launch 2026-03-15
-requireNumeric("AML_REPORTING_THRESHOLD", 1000, 1000000, "Transaction amount threshold for SAR filing — reviewed for KE/NG/GH; 10000 USD eq is production value. Must not be blank/default.");
-requireNumeric("AML_DAILY_TX_LIMIT", 1, 100, "Max daily tx count before velocity alert — reviewed p95 agent 8/day; prod value is 10.");
-requireHighRiskCountries("Comma-separated ISO 3166-1 alpha-2 maintained by compliance — reviewed Feb 2025 FATF list for launch jurisdictions.");
+// 3. AML thresholds — placeholders requiring compliance sign-off
+requireNumeric("AML_REPORTING_THRESHOLD", 1000, 1000000, "Placeholder threshold; requires compliance sign-off for launch jurisdictions. Must not be blank/default.");
+requireNumeric("AML_DAILY_TX_LIMIT", 1, 100, "Placeholder velocity limit; requires compliance sign-off. Must not be blank/default.");
+requireHighRiskCountries("Placeholder list; requires compliance sign-off. Must be non-empty comma-separated ISO 3166-1 alpha-2; previously included UA (not FATF-listed) and omitted KE/NG (grey list early 2025).");
 
 // 4. Stellar network must be mainnet
 const stellarNetwork = env["STELLAR_NETWORK"];
@@ -193,8 +199,18 @@ if (passphrase !== "Public Global Stellar Network ; September 2015") {
   errors.push(`STELLAR_NETWORK_PASSPHRASE must be "Public Global Stellar Network ; September 2015" for mainnet (got: ${JSON.stringify(passphrase)})`);
 }
 const rpcUrl = env["STELLAR_RPC_URL"];
-if (rpcUrl && !rpcUrl.includes("soroban-rpc.stellar.org") && !rpcUrl.includes("mainnet")) {
-  warnings.push(`STELLAR_RPC_URL is ${rpcUrl} — expected mainnet RPC https://soroban-rpc.stellar.org for production`);
+if (rpcUrl) {
+  // CodeQL js/incomplete-url-substring-sanitization — validate via URL hostname, not substring.
+  let hostname = "";
+  try {
+    hostname = new URL(rpcUrl).hostname;
+  } catch {
+    warnings.push(`STELLAR_RPC_URL is not a valid URL: ${rpcUrl}`);
+    hostname = "";
+  }
+  if (hostname && hostname !== "soroban-rpc.stellar.org" && !hostname.endsWith(".stellar.org")) {
+    warnings.push(`STELLAR_RPC_URL hostname is ${hostname} — expected soroban-rpc.stellar.org for production`);
+  }
 }
 
 // 5. ComplyAdvantage must be configured when KYC is on
@@ -219,9 +235,9 @@ if (errors.length) {
   console.error("❌ Production posture guard FAILED — deploy must be blocked:\n");
   for (const e of errors) console.error(`   ✗ ${e}`);
   console.error("\nFix: set explicitly in production env/secrets per backend/.env.production.example and docs/ENVIRONMENT.md#production-mainnet-posture.");
-  console.error("This guard runs in .github/workflows/deploy-production.yml and fails the deploy if posture mismatches.\n");
+  console.error("This guard is scaffolding pending #565; coordinate with the #565/#570 assignee before continuing.\n");
   process.exit(1);
 }
 
-console.log("✅ Production posture guard PASSED — KYC_ENFORCEMENT_ENABLED=true, AUDIT_ANCHOR_ENABLED=true, AML thresholds reviewed and set.\n");
+console.log("✅ Production posture guard PASSED — scaffolding values present (pending #565 decision and compliance sign-off).\n");
 process.exit(0);

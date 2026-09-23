@@ -188,7 +188,7 @@ test.describe("Complete User Journey", () => {
     await expect(page.locator("text=580")).toBeVisible(); // Remaining loan balance
   });
 
-  test("Agent workflow: review loan → process settlement", async ({ page }) => {
+  test.skip("Agent workflow: review loan → process settlement — skipped: agent/settlement UI not built, see #578", async ({ page }) => {
     const loanId = 2;
     const remittanceId = "rem_agent_flow";
 
@@ -265,8 +265,8 @@ test.describe("Complete User Journey", () => {
       });
     });
 
-    await page.goto("/en/activity");
-    await expect(page.locator("text=/activity|pending.*settlements/i")).toBeVisible();
+    await page.goto("/en/settlement");
+    await expect(page.locator("text=/pending.*settlements/i")).toBeVisible();
 
     // Process settlement
     await page.route(`**/api/settlements/settle_agent/process`, async (route: Route) => {

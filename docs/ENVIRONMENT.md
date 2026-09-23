@@ -115,36 +115,39 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `TWILIO_AUTH_TOKEN` | — | ✓ | ✓ | — | Twilio auth token | `backend/src/services/smsService.ts` |
 | `TWILIO_PHONE_NUMBER` | — | ✓ | ✓ | — | Twilio sender phone number | `backend/src/services/smsService.ts` |
 
-### Production Mainnet Posture (per #565 — structurally enforced)
+### Production Mainnet Posture (pending #565 — scaffold, not yet enforceable as decided posture)
 
-**Decision (2026-03-15, compliance + product): mainnet launches with BOTH `KYC_ENFORCEMENT_ENABLED=true` and `AUDIT_ANCHOR_ENABLED=true`.** Staging retains `false` for test accounts; production **must** be `true` or the deploy is blocked. The posture is not just documented — it is **structurally guaranteed at deploy time** by `scripts/verify-production-env.mjs` and the `production-guard` job in `.github/workflows/deploy-production.yml`.
+> **Status: #565 is still open** and asks for a maintainer/product call on `KYC_ENFORCEMENT_ENABLED` / `AUDIT_ANCHOR_ENABLED` per environment. This section and `backend/.env.production.example` are **scaffolding** that will be updated once #565 is decided; they do not claim the decision has been made. `scripts/verify-production-env.mjs` and `.github/workflows/deploy-production.yml` will enforce the decided posture at deploy time, but until #565 is closed the guard's expectations should be considered **placeholders pending sign-off**. Coordinate with the #565 / #570 assignees before continuing.
 
-| Variable | Production Required Value | Rationale / Review | Enforcement |
-|---|---|---|---|
-| `KYC_ENFORCEMENT_ENABLED` | `true` | CBK/CBN/BoG require verified identity before funds movement (FATF R.10). Decision per #565. | `verify-production-env.mjs` fails deploy if not `true`; value is explicitly set in `backend/.env.production` / secrets (not relying on code default `false`). |
-| `AUDIT_ANCHOR_ENABLED` | `true` | Hourly tamper-evident anchoring to `audit_anchor` contract provides regulatory audit trail for mainnet. | Same guard; requires `AUDIT_ANCHOR_CONTRACT_ID` (valid `C...`) and `AUDIT_ANCHOR_SOURCE_SECRET` (`S...`) to be set. |
-| `AML_REPORTING_THRESHOLD` | `10000` | USD-equivalent threshold reviewed 2026-03-15 for KE (≈KES 1,300,000), NG (≈NGN 15,000,000), GH (≈GHS 150,000) per CBK PG/AML 2023 & FATF R.10. | Guard checks numeric `>=1000`, not blank. Explicitly set in `backend/.env.production.example` and `vars.AML_REPORTING_THRESHOLD`. |
-| `AML_DAILY_TX_LIMIT` | `10` | Velocity limit reviewed against agent float turnover (p95 8/day); 10 flags structuring/velocity abuse. | Guard checks `1..100`, not blank. |
-| `AML_HIGH_RISK_COUNTRIES` | `AF,BY,CF,CD,CU,ER,GN,HT,IR,KP,LB,LY,MM,NI,RU,SO,SS,SD,SY,UA,VE,YE,ZW` | FATF grey/black list + EU high-risk third countries, reviewed Feb 2025 (FATF Public Statement + EU 2024/254) for KE/NG/GH launch. Maintained quarterly by compliance. | Guard checks non-empty, `>=5` ISO 3166-1 alpha-2 codes. |
-| `STELLAR_NETWORK` / `STELLAR_NETWORK_PASSPHRASE` / `STELLAR_RPC_URL` | `mainnet` / `Public Global Stellar Network ; September 2015` / `https://soroban-rpc.stellar.org` | Mainnet network constants; guard fails if `testnet` values reach production. | Guard checks exact match. |
-| `COMPLYADVANTAGE_API_KEY` + `COMPLYADVANTAGE_SEARCH_PROFILE` | real key + `dukapay_production_ofac_pep_adverse` (OFAC, UN, EU, PEP, adverse-media) | Required when KYC enforcement is on. | Guard requires both set when `KYC_ENFORCEMENT_ENABLED=true`. |
+Until #565 is decided, do not treat the values below as reviewed facts. They are placeholders that require explicit production env/secrets (not code defaults) and compliance sign-off.
 
-**How it is enforced**
+| Variable | Scaffolding Value (pending #565 / compliance sign-off) | Notes |
+|---|---|---|
+| `KYC_ENFORCEMENT_ENABLED` | `true` (placeholder) | Intended to be `true` for mainnet, but #565 is still open — maintainer/product must confirm per-environment posture. Guard will fail deploy if not `true` once decided; staging may remain `false` for test accounts. Value must be explicitly set in `backend/.env.production` / `production` secrets, not relying on code default `false`. |
+| `AUDIT_ANCHOR_ENABLED` | `true` (placeholder) | Same — pending #565. Guard requires `AUDIT_ANCHOR_CONTRACT_ID` (`C...`) and `AUDIT_ANCHOR_SOURCE_SECRET` (`S...`) when enabled. |
+| `AML_REPORTING_THRESHOLD` | `10000` (placeholder) | Placeholder amount; requires compliance sign-off for launch jurisdictions. Guard checks numeric `>=1000`, not blank. |
+| `AML_DAILY_TX_LIMIT` | `10` (placeholder) | Placeholder velocity limit; requires compliance sign-off. Guard checks `1..100`, not blank. |
+| `AML_HIGH_RISK_COUNTRIES` | `AF,BY,CF,CD,CU,ER,GN,HT,IR,KE,KP,LB,LY,MM,NG,NI,RU,SO,SS,SD,SY,VE,YE,ZW` (placeholder) | **Not reviewed** — placeholder list only. Previously included `UA` (not FATF-listed) and omitted `KE`/`NG` (on FATF grey list as of early 2025). Requires compliance sign-off before mainnet; see `backend/.env.production.example` and `complianceService.ts` which reads this value directly. |
+| `STELLAR_NETWORK` / `STELLAR_NETWORK_PASSPHRASE` / `STELLAR_RPC_URL` | `mainnet` / `Public Global Stellar Network ; September 2015` / `https://soroban-rpc.stellar.org` | Mainnet network constants; guard checks exact match. |
+| `COMPLYADVANTAGE_API_KEY` + `COMPLYADVANTAGE_SEARCH_PROFILE` | real key + search profile via secrets | Required when KYC enforcement is on; guard requires both set when `KYC_ENFORCEMENT_ENABLED=true`. |
 
-1. **Explicit production config** — `backend/.env.production.example` (template, committed) and `backend/.env.production` (live, gitignored + secrets manager) set the production values explicitly; they are **not** left to the code fallback (`false` / blank). Also set in GitHub `production` environment `vars`/`secrets`.
+**How it is intended to be enforced (once #565 is decided)**
+
+1. **Explicit production config** — `backend/.env.production.example` (template, committed) and `backend/.env.production` (live, gitignored + secrets manager) will set the decided values explicitly; they are **not** left to the code fallback (`false` / blank). Also set in GitHub `production` environment `vars`/`secrets`.
 
 2. **Deploy-time guard** — `scripts/verify-production-env.mjs` validates the posture. It is run:
    - locally: `node scripts/verify-production-env.mjs --env-file backend/.env.production`
    - in CI: `.github/workflows/deploy-production.yml` `production-guard` job (with `KYC_ENFORCEMENT_ENABLED`, `AUDIT_ANCHOR_ENABLED`, `AML_*`, etc. injected from `secrets`/`vars`). The job **fails the deploy** (non-zero exit) on mismatch, preventing an unintentional `false`/blank from ever reaching mainnet.
 
-3. **AML thresholds are real, reviewed values** — not left blank/default. See table above for launch jurisdictions and review dates; high-risk list is sourced from FATF/EU and re-reviewed quarterly. Placeholders like `__SET_VIA_SECRETS_MANAGER__` are only allowed in the `.example` template for secrets — live `production` secrets must hold real values.
+3. **AML thresholds require compliance sign-off** — they must not be left blank/default. Placeholders like `__SET_VIA_SECRETS_MANAGER__` are only allowed in the `.example` template for secrets — live `production` secrets must hold real values reviewed by compliance.
 
 **Reference**
 
-- Template: `backend/.env.production.example`
-- Guard: `scripts/verify-production-env.mjs`
-- Workflow: `.github/workflows/deploy-production.yml` (new production deploy workflow for this milestone; `production-guard` is the first job and blocks `build-and-push`/`deploy` on failure)
+- Template: `backend/.env.production.example` (scaffold, pending #565)
+- Guard: `scripts/verify-production-env.mjs` (scaffold, pending #565)
+- Workflow: `.github/workflows/deploy-production.yml` (manual `workflow_dispatch` only; blocked until #565)
 - Previous staging deploy: `.github/workflows/deploy-staging.yml`
+- Decision issue: #565 (must be closed before posture is treated as fact)
 
 ---
 

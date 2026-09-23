@@ -10,14 +10,12 @@ export class AgentPage extends BasePage {
   }
 
   /**
-   * Navigate to agent dashboard
-   * NOTE: No /en/agent directory exists in src/app/[locale]/.
-   * Agent dashboard is not yet a dedicated UI route; mapping to /en/activity
-   * (which aggregates loan/remittance activity) as the closest real route.
-   * If product restores a dedicated agent route, update this accordingly.
+   * Navigate to agent dashboard — currently no /en/agent directory exists in
+   * src/app/[locale]/. See tracking issue #578: agent dashboard UI not yet built;
+   * tests using this are skipped until product confirms intended route.
    */
   async navigateToAgentDashboard(): Promise<void> {
-    await this.goto("/en/activity");
+    await this.goto("/en/agent");
   }
 
   /**

@@ -79,12 +79,12 @@ No contracts deployed yet.
 
 ## Mainnet (`Public Global Stellar Network ; September 2015`)
 
-> **Status (mainnet launch — blocked until #561/#562 + external audit land):** registry is **scaffolded but no contracts have ever touched Stellar mainnet**. The deploy config (`scripts/deploy-config.json` `mainnet` block) and registry (`scripts/contract-registry.json` `networks.mainnet`) are now structurally prepared so the deploy and verification tooling works — `scripts/deploy.ts -- mainnet` can be run once the correctness gaps and audit are cleared. This is real-money deployment, not a testnet redeploy.
+> **Status (mainnet launch — blocked until #561/#562 + external audit land, and pending #565 decision):** registry is **scaffolded but no contracts have ever touched Stellar mainnet**. The deploy config (`scripts/deploy-config.json` `mainnet` block) and registry (`scripts/contract-registry.json` `networks.mainnet`) are now structurally prepared so the deploy and verification tooling works — `scripts/deploy.ts -- mainnet` can be run once the correctness gaps and audit are cleared and #565 is decided. This is real-money deployment, not a testnet redeploy.
 
 RPC: `https://soroban-rpc.stellar.org`  
 Explorer: `https://stellar.expert/explorer/public`  
-Deploy config: `scripts/deploy-config.json` (`mainnet`: `networkPassphrase`, `rpcUrl`, `admin` placeholder, `token` placeholder, `contracts.*.wasm` for all 9 workspace contracts)  
-Registry: `scripts/contract-registry.json` (`networks.mainnet` — 9 entries scaffolded with `not yet recorded` placeholders, matching `testnet` shape plus `audit_anchor` and `oracle`)
+Deploy config: `scripts/deploy-config.json` (`mainnet`: `networkPassphrase`, `rpcUrl`, `admin` placeholder, `token` placeholder, `contracts.*.wasm` for the 6 contracts that `scripts/deploy.ts` currently handles — `remittance_nft`, `lending_pool`, `loan_manager`, `multisig_governance`, `agent_registry`, `agent_vault`; workspace members `audit_anchor` and `oracle` are not yet wired in `deploy.ts` and `ORACLE_CONTRACT_ID` is not yet read)  
+Registry: `scripts/contract-registry.json` (`networks.mainnet` — 7 entries scaffolded with `not yet recorded` placeholders, matching `testnet` shape: 6 contracts + `token`)
 
 | Contract | Address (`C…`) | Deploy Date | Deployer | Deploy Tx Hash | ABI Version | Upgrade Authority | Timelock |
 |---|---|---|---|---|---|---|---|
@@ -95,17 +95,17 @@ Registry: `scripts/contract-registry.json` (`networks.mainnet` — 9 entries sca
 | `token` (USDC-like pool token) | _not yet recorded_ | — | — | — | — | — | — |
 | `agent_registry` | _not yet recorded_ | — | — | — | — | — | — |
 | `agent_vault` | _not yet recorded_ | — | — | — | — | — | — |
-| `audit_anchor` | _not yet recorded_ | — | — | — | — | — | — |
-| `oracle` | _not yet recorded_ | — | — | — | — | — | — |
 
 ### How mainnet deploy will be executed (when unblocked)
 
 ```bash
-# 1. Build wasms for all 9 contracts
+# 1. Build wasms for contracts
 cargo build --target wasm32-unknown-unknown --release --manifest-path contracts/Cargo.toml
 
 # 2. Deploy to mainnet (admin key via secrets manager — never commit the S... secret)
-SECRET_KEY=S... npm run deploy -- mainnet   # runs scripts/deploy.ts -- mainnet for all contracts
+#    Note: scripts/deploy.ts currently hard-codes 6 contracts (nft/pool/manager/governance/registry/vault);
+#    it does not yet read audit_anchor/oracle from the config, so those would need separate handling.
+SECRET_KEY=S... npm run deploy -- mainnet   # runs scripts/deploy.ts -- mainnet for the 6 supported contracts
 
 # 3. Record each printed contract ID, deploy tx hash, deploy date, deployer, ABI version,
 #    upgrade authority and timelock in scripts/contract-registry.json (mainnet block)
@@ -138,8 +138,7 @@ Same as testnet (see table above), but sourced from **production** secrets:
 | `token` | `POOL_TOKEN_ADDRESS` | `production` env `POOL_TOKEN_ADDRESS` |
 | `agent_registry` | `AGENT_REGISTRY_CONTRACT_ID` | `production` env |
 | `agent_vault` | `AGENT_VAULT_CONTRACT_ID` | `production` env |
-| `audit_anchor` | `AUDIT_ANCHOR_CONTRACT_ID` | `production` env (also `AUDIT_ANCHOR_ENABLED=true` per #565) |
-| `oracle` | `ORACLE_CONTRACT_ID` | `production` env |
+| `audit_anchor` | `AUDIT_ANCHOR_CONTRACT_ID` | `production` env (pending #565; not deployed via `deploy.ts` — separate handling) |
 
 Frontend remains API-driven (no direct contract env reads).
 
@@ -147,7 +146,7 @@ Frontend remains API-driven (no direct contract env reads).
 
 - `scripts/verify-contracts.ts --network mainnet` checks address format, env consistency, on-chain existence (best-effort RPC probe), and metadata completeness.
 - Before any mainnet contract is populated, verification reports `SKIPPED` (placeholders) — not a failure — so CI stays green until real deployment.
-- After deployment, the same check must pass clean (`OK`) for **every** mainnet entry, including `audit_anchor`/`oracle`, and every contract's admin must be verified as `multisig_governance` (see `CONTRACTS.md` upgrade governance).
+- After deployment, the same check must pass clean (`OK`) for **every** mainnet entry that is populated, and every deployed contract's admin must be verified as `multisig_governance` (see `CONTRACTS.md` upgrade governance). `audit_anchor` and `oracle` are not yet handled by `deploy.ts`; if they are required for mainnet they need separate deployment and `ORACLE_CONTRACT_ID` wiring.
 
 ---
 

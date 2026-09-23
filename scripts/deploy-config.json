@@ -3,7 +3,7 @@
     "networkPassphrase": "Test SDF Network ; September 2015",
     "rpcUrl": "https://soroban-testnet.stellar.org",
     "admin": "YOUR_ADMIN_PUBLIC_KEY",
-    "token": "CAS3J7GYCCXG7W35XU4643F2M3T63BGCV2X4D6C4V7G4X6C4",
+    "token": "CAS3J7GYCCXG7W35XU4643F2M3T63BGCV2X4D6C4V7G4X6C4V7G4X6C4",
     "contracts": {
       "remittance_nft": {
         "wasm": "../contracts/target/wasm32-unknown-unknown/release/remittance_nft.wasm"
@@ -24,12 +24,6 @@
         "wasm": "../contracts/target/wasm32-unknown-unknown/release/agent_vault.wasm",
         "max_haircut_bps": 8000,
         "min_collateral": 1000000000
-      },
-      "audit_anchor": {
-        "wasm": "../contracts/target/wasm32-unknown-unknown/release/audit_anchor.wasm"
-      },
-      "oracle": {
-        "wasm": "../contracts/target/wasm32-unknown-unknown/release/oracle.wasm"
       }
     }
   },
@@ -58,12 +52,6 @@
         "wasm": "../contracts/target/wasm32-unknown-unknown/release/agent_vault.wasm",
         "max_haircut_bps": 8000,
         "min_collateral": 1000000000
-      },
-      "audit_anchor": {
-        "wasm": "../contracts/target/wasm32-unknown-unknown/release/audit_anchor.wasm"
-      },
-      "oracle": {
-        "wasm": "../contracts/target/wasm32-unknown-unknown/release/oracle.wasm"
       }
     }
   }

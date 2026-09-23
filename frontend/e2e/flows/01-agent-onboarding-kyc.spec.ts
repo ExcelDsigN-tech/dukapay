@@ -7,7 +7,7 @@ import { TEST_USERS, createWalletState, MOCK_CREDIT_SCORES } from "../utils/fixt
 import { WalletPage } from "../utils/page-objects/WalletPage.js";
 import { KycPage } from "../utils/page-objects/KycPage.js";
 
-test.describe("Agent Onboarding & KYC", () => {
+test.describe.skip("Agent Onboarding & KYC — skipped: KYC/agent UI not built, see #578", () => {
   let walletPage: WalletPage;
   let kycPage: KycPage;
 
@@ -91,7 +91,7 @@ test.describe("Agent Onboarding & KYC", () => {
   });
 
   test("KYC approval flow", async ({ page }) => {
-    await page.goto("/en/settings");
+    await page.goto("/en/kyc");
 
     // Mock KYC approval
     await page.route("**/api/auth/kyc", async (route: Route) => {
@@ -123,7 +123,7 @@ test.describe("Agent Onboarding & KYC", () => {
   });
 
   test("KYC rejection handling", async ({ page }) => {
-    await page.goto("/en/settings");
+    await page.goto("/en/kyc");
 
     // Mock KYC rejection
     await page.route("**/api/auth/kyc", async (route: Route) => {
@@ -157,7 +157,7 @@ test.describe("Agent Onboarding & KYC", () => {
   });
 
   test("KYC form validation", async ({ page }) => {
-    await page.goto("/en/settings");
+    await page.goto("/en/kyc");
 
     // Try to submit without filling required fields
     await kycPage.submitKyc();

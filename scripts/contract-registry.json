@@ -173,28 +173,6 @@
           "timelock": null,
           "envVar": "AGENT_VAULT_CONTRACT_ID",
           "initParams": ["owner", "operator", "token", "max_haircut_bps", "min_collateral"]
-        },
-        "audit_anchor": {
-          "address": "not yet recorded",
-          "deployDate": null,
-          "deployer": "not yet recorded",
-          "deployTxHash": null,
-          "abiVersion": null,
-          "upgradeAuthority": "not yet recorded",
-          "timelock": null,
-          "envVar": "AUDIT_ANCHOR_CONTRACT_ID",
-          "initParams": ["admin"]
-        },
-        "oracle": {
-          "address": "not yet recorded",
-          "deployDate": null,
-          "deployer": "not yet recorded",
-          "deployTxHash": null,
-          "abiVersion": null,
-          "upgradeAuthority": "not yet recorded",
-          "timelock": null,
-          "envVar": "ORACLE_CONTRACT_ID",
-          "initParams": ["admin"]
         }
       }
     }

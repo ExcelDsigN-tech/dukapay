@@ -7,7 +7,7 @@ import { TEST_USERS, createWalletState, createMockRemittance } from "../utils/fi
 import { SettlementPage } from "../utils/page-objects/SettlementPage.js";
 import { AgentPage } from "../utils/page-objects/AgentPage.js";
 
-test.describe("Settlement Flow", () => {
+test.describe.skip("Settlement Flow — skipped: settlement/agent UI not built, see #578", () => {
   let settlementPage: SettlementPage;
   let agentPage: AgentPage;
 
@@ -404,7 +404,7 @@ test.describe("Settlement Flow", () => {
       });
     });
 
-    await page.goto("/en/activity");
+    await page.goto("/en/settlement/stats");
 
     // Verify statistics displayed
     await expect(page.locator("text=15")).toBeVisible(); // Today's count

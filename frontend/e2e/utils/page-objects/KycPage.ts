@@ -10,14 +10,12 @@ export class KycPage extends BasePage {
   }
 
   /**
-   * Navigate to KYC page
-   * NOTE: Dedicated /en/kyc route does not exist in src/app/[locale]/ (no kyc directory).
-   * KYC status is surfaced in /en/settings (Security section) and via POST /auth/kyc.
-   * Mapping to /en/settings as the closest real route until a dedicated KYC page is built.
-   * If product restores a dedicated KYC route, update this to that path.
+   * Navigate to KYC page — currently no /en/kyc route exists in src/app/[locale]/.
+   * See tracking issue #578: KYC UI not yet built; tests using this page are skipped
+   * until product confirms whether the route was removed/renamed or was never built.
    */
   async navigateToKyc(): Promise<void> {
-    await this.goto("/en/settings");
+    await this.goto("/en/kyc");
   }
 
   /**
