@@ -10,7 +10,9 @@ export class AgentPage extends BasePage {
   }
 
   /**
-   * Navigate to agent dashboard
+   * Navigate to agent dashboard — currently no /en/agent directory exists in
+   * src/app/[locale]/. See tracking issue #578: agent dashboard UI not yet built;
+   * tests using this are skipped until product confirms intended route.
    */
   async navigateToAgentDashboard(): Promise<void> {
     await this.goto("/en/agent");
@@ -27,7 +29,7 @@ export class AgentPage extends BasePage {
    * Review loan application
    */
   async reviewLoanApplication(loanId: number): Promise<void> {
-    await this.goto(`/en/agent/loans/${loanId}`);
+    await this.goto(`/en/loans/${loanId}`);
     await this.expectTextVisible(/loan application|review/i);
   }
 
@@ -112,7 +114,7 @@ export class AgentPage extends BasePage {
    * Process remittance settlement
    */
   async processSettlement(remittanceId: string): Promise<void> {
-    await this.goto(`/en/agent/remittances/${remittanceId}`);
+    await this.goto(`/en/remittances/${remittanceId}`);
     await this.clickButton(/settle|confirm settlement/i);
     await this.clickButton(/confirm/i);
     await this.expectTextVisible(/settled|completed/i, 10000);

@@ -10,7 +10,9 @@ export class SettlementPage extends BasePage {
   }
 
   /**
-   * Navigate to settlement dashboard
+   * Navigate to settlement dashboard — currently no /en/settlement route exists
+   * in src/app/[locale]/. See tracking issue #578: settlement UI not yet built;
+   * tests using this are skipped until product confirms intended route.
    */
   async navigateToSettlement(): Promise<void> {
     await this.goto("/en/settlement");
