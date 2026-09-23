@@ -143,12 +143,13 @@ app.get('/version', (_req: Request, res: Response) => {
     gitSha: process.env.GIT_SHA ?? 'unknown',
     builtAt: process.env.BUILD_TIME ?? 'unknown',
     nodeVersion: process.version,
-    contracts: {
-      loanManager: process.env.LOAN_MANAGER_CONTRACT_ID ?? 'unknown',
-      lendingPool: process.env.LENDING_POOL_CONTRACT_ID ?? 'unknown',
-      remittanceNft: process.env.REMITTANCE_NFT_CONTRACT_ID ?? 'unknown',
-      multisigGovernance: process.env.MULTISIG_GOVERNANCE_CONTRACT_ID ?? 'unknown',
-    },
+      contracts: {
+        loanManager: process.env.LOAN_MANAGER_CONTRACT_ID ?? 'unknown',
+        lendingPool: process.env.LENDING_POOL_CONTRACT_ID ?? 'unknown',
+        remittanceNft: process.env.REMITTANCE_NFT_CONTRACT_ID ?? 'unknown',
+        multisigGovernance: process.env.MULTISIG_GOVERNANCE_CONTRACT_ID ?? 'unknown',
+        settlementNetter: process.env.SETTLEMENT_NETTER_CONTRACT_ID ?? 'unknown',
+      },
   });
 });
 
