@@ -251,7 +251,6 @@ export const contestDefault = asyncHandler(
   },
 );
 
-
 type BorrowerLoan = {
   loanId: number;
   principal: number;

@@ -34,7 +34,10 @@ import {
   startCrossContractReconciler,
   stopCrossContractReconciler,
 } from './services/crossContractReconciler.js';
-import { startAgentDashboardPublisher, stopAgentDashboardPublisher } from './services/agentDashboardUpdates.js';
+import {
+  startAgentDashboardPublisher,
+  stopAgentDashboardPublisher,
+} from './services/agentDashboardUpdates.js';
 import { sorobanService } from './services/sorobanService.js';
 import { validateLoanConfigOnStartup } from './config/loanConfig.js';
 import { startLoanDueCheckCron, stopLoanDueCheckCron } from './cron/loanCheckCron.js';

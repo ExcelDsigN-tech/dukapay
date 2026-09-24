@@ -739,7 +739,11 @@ const KYC_ADMINS: UserRole[] = ['admin', 'super_admin', 'support'];
  * cached separately.
  */
 function cacheServiceMiddleware(cacheKeyPrefix: string, ttlSeconds: number) {
-  return async (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
+  return async (
+    req: import('express').Request,
+    res: import('express').Response,
+    next: import('express').NextFunction,
+  ) => {
     const cacheKey = `${cacheKeyPrefix}:${JSON.stringify(req.query)}`;
     try {
       const cached = await cacheService.get<string>(cacheKey);
@@ -773,7 +777,7 @@ function cacheServiceMiddleware(cacheKeyPrefix: string, ttlSeconds: number) {
  *     parameters:
  *       - in: query
  *         name: limit
- *         schema: { type: integer, default: 50, max: 200 }
+ *         schema: { type: integer, default: 50, maximum: 200 }
  *       - in: query
  *         name: offset
  *         schema: { type: integer, default: 0 }
@@ -815,12 +819,7 @@ router.get(
  *       200: { description: User details }
  *       404: { description: User not found }
  */
-router.get(
-  '/users/:publicKey',
-  requireJwtAuth,
-  requireRoles(...ALL_ADMINS),
-  getUser,
-);
+router.get('/users/:publicKey', requireJwtAuth, requireRoles(...ALL_ADMINS), getUser);
 
 /**
  * @swagger
