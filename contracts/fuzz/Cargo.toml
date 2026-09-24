@@ -63,8 +63,11 @@ doc = false
 bench = false
 
 [[bin]]
-name = "settlement_netter_fuzz"
-path = "fuzz_targets/settlement_netter_fuzz.rs"
+name = "invariants_fuzz"
+path = "fuzz_targets/invariants_fuzz.rs"
 test = false
 doc = false
 bench = false
+
+[dependencies.agent_vault]
+path = "../agent_vault"

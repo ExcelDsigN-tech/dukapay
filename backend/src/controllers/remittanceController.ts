@@ -25,9 +25,6 @@ export const createRemittance = asyncHandler(async (req: Request, res: Response)
   }
 
   logger.withContext().info('Creating remittance', {
-    sender: senderAddress,
-    recipient: recipientAddress,
-    amount,
     currency: fromCurrency,
   });
 

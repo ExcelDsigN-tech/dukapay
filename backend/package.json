@@ -16,9 +16,11 @@
     "format:check": "prettier --check .",
     "migrate": "npm run migrate:up",
     "migrate:create": "node-pg-migrate create",
-    "migrate:up": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down",
-    "_migrations_note": "Single source of truth: backend/migrations/*.js (node-pg-migrate). Do NOT add .sql files to src/db/ — they are not executed by any script.",
+    "migrate:up": "node-pg-migrate up --use-glob --migrations-dir 'migrations/*.cjs'",
+    "migrate:down": "node-pg-migrate down --use-glob --migrations-dir 'migrations/*.cjs'",
+    "openapi:generate": "tsx scripts/generateOpenApi.ts",
+    "openapi:validate": "tsx scripts/validateOpenApi.ts",
+    "_migrations_note": "Single source of truth: backend/migrations/*.cjs (node-pg-migrate). Do NOT add .sql files to src/db/ — they are not executed by any script.",
     "seed": "npm run seed:dev",
     "seed:dev": "tsx src/seed/index.ts",
     "seed:reset": "tsx src/seed/index.ts --reset"
@@ -69,11 +71,14 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.5",
+    "fast-check": "^4.9.0",
     "jest": "^30.4.2",
     "jest-util": "^29.7.0",
     "nodemon": "^3.1.11",
+    "openapi-types": "^12.1.3",
     "prettier": "^3.8.1",
     "supertest": "^7.2.2",
+    "swagger-parser": "^10.0.3",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
@@ -81,6 +86,7 @@
   },
   "eslintConfig": {},
   "overrides": {
-    "axios": "1.13.5"
+    "axios": "1.20.0",
+    "toml": "4.3.0"
   }
 }

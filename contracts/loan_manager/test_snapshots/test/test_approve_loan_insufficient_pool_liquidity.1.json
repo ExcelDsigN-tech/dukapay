@@ -738,6 +738,16 @@
                         "key": {
                           "vec": [
                             {
+                              "symbol": "CircuitBreaker"
+                            }
+                          ]
+                        },
+                        "val": "void"
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
                               "symbol": "Paused"
                             }
                           ]
@@ -1080,6 +1090,16 @@
                             }
                           ]
                         }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "CircuitBreaker"
+                            }
+                          ]
+                        },
+                        "val": "void"
                       },
                       {
                         "key": {

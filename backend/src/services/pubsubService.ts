@@ -12,7 +12,9 @@ class PubSubService {
     try {
       if (!this.pubClient) {
         this.pubClient = createClient({ url: REDIS_URL });
-        this.pubClient.on('error', (err) => logger.withContext().error('Redis pub client error', err));
+        this.pubClient.on('error', (err) =>
+          logger.withContext().error('Redis pub client error', err),
+        );
         await this.pubClient.connect();
       }
       await this.pubClient.publish(CHANNEL, JSON.stringify(event));
@@ -25,7 +27,9 @@ class PubSubService {
     try {
       if (!this.subClient) {
         this.subClient = createClient({ url: REDIS_URL });
-        this.subClient.on('error', (err) => logger.withContext().error('Redis sub client error', err));
+        this.subClient.on('error', (err) =>
+          logger.withContext().error('Redis sub client error', err),
+        );
         await this.subClient.connect();
       }
 

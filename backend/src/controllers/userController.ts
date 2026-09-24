@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { query } from '../db/connection.js';
 import { AppError } from '../errors/AppError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 import type { UpdateUserProfileInput } from '../schemas/userSchemas.js';
 
 interface UserProfileRow {
@@ -96,7 +97,7 @@ export const updateUserProfile = asyncHandler(async (req: Request, res: Response
 
   if (input.displayName !== undefined) {
     updates.push(`display_name = $${paramIndex++}`);
-    values.push(input.displayName);
+    values.push(input.displayName ? sanitizeHtml(input.displayName) : input.displayName);
   }
 
   if (input.email !== undefined) {

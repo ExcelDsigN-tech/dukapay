@@ -347,4 +347,72 @@ describe('authService unit tests', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('JWT Refresh Token Rotation & Replay Detection', () => {
+    it('should generate 15-minute access token and 7-day refresh token on login', async () => {
+      const keypair = Keypair.random();
+      const pair = await authService.generateTokenPair(keypair.publicKey(), 'test-fp');
+
+      expect(pair.expiresIn).toBe(15 * 60);
+
+      const decodedAccess = authService.decodeJwtToken(pair.accessToken);
+      expect(decodedAccess).toBeDefined();
+      expect(decodedAccess?.tokenType).toBe('access');
+      expect(decodedAccess!.exp - decodedAccess!.iat).toBe(15 * 60);
+
+      const decodedRefresh = authService.decodeJwtToken(pair.refreshToken);
+      expect(decodedRefresh).toBeDefined();
+      expect(decodedRefresh?.tokenType).toBe('refresh');
+      expect(decodedRefresh?.familyId).toBe(pair.familyId);
+      expect(decodedRefresh!.exp - decodedRefresh!.iat).toBe(7 * 24 * 60 * 60);
+    });
+
+    it('should rotate refresh token and issue new token pair', async () => {
+      const keypair = Keypair.random();
+      const initialPair = await authService.generateTokenPair(keypair.publicKey(), 'test-fp');
+
+      const rotatedPair = await authService.rotateRefreshToken(initialPair.refreshToken, 'test-fp');
+      expect(rotatedPair.accessToken).toBeDefined();
+      expect(rotatedPair.refreshToken).toBeDefined();
+      expect(rotatedPair.refreshToken).not.toBe(initialPair.refreshToken);
+      expect(rotatedPair.familyId).toBe(initialPair.familyId);
+    });
+
+    it('should detect token replay and revoke entire token family', async () => {
+      const keypair = Keypair.random();
+      const initialPair = await authService.generateTokenPair(keypair.publicKey(), 'test-fp');
+
+      // 1st use -> succeeds
+      const rotatedPair1 = await authService.rotateRefreshToken(
+        initialPair.refreshToken,
+        'test-fp',
+      );
+      expect(rotatedPair1.accessToken).toBeDefined();
+
+      // 2nd use of the SAME initial token -> REPLAY ATTACK!
+      await expect(
+        authService.rotateRefreshToken(initialPair.refreshToken, 'test-fp'),
+      ).rejects.toThrow(/Refresh token replay detected/);
+
+      // Now the family is revoked! Attempting to use the new token should also be rejected!
+      await expect(
+        authService.rotateRefreshToken(rotatedPair1.refreshToken, 'test-fp'),
+      ).rejects.toThrow(/revoked/i);
+    });
+
+    it('should support /api/v1/auth/refresh endpoint', async () => {
+      const keypair = Keypair.random();
+      const initialPair = await authService.generateTokenPair(keypair.publicKey());
+
+      const response = await request(app)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: initialPair.refreshToken })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.token).toBeDefined();
+      expect(response.body.data.refreshToken).toBeDefined();
+      expect(response.body.data.refreshToken).not.toBe(initialPair.refreshToken);
+    });
+  });
 });

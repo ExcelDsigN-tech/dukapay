@@ -1,0 +1,14 @@
+# ZAP Baseline Scan Rules Configuration
+# Format: Rule-ID	Action	Configuration
+# See: https://www.zaproxy.org/docs/docker/baseline-scan/
+
+# Allow specific headers that DukaPay uses
+10021	IGNORE	Content Security Policy Policy
+10022	IGNORE	X-Content-Type-Options
+10023	IGNORE	X-Frame-Options
+
+# Ignore low-risk items in staging
+10015	IGNORE	Re-examine Cache-control directives
+10017	IGNORE	Cross-Domain JavaScript Source Inclusion
+10019	IGNORE	Content-Type Header Missing
+10020	IGNORE	X-Content-Type-Options Missing

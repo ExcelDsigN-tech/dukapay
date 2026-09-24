@@ -1,0 +1,8 @@
+# Changes to these paths auto-request review from the listed owners.
+# Contracts, money handling, and CI/deploy workflows move or protect funds.
+
+/contracts/                 @ExcelDsigN-tech
+/money-policy.json          @ExcelDsigN-tech
+/backend/src/money/         @ExcelDsigN-tech
+/.github/workflows/         @ExcelDsigN-tech
+/.github/CODEOWNERS         @ExcelDsigN-tech

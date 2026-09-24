@@ -41,7 +41,19 @@ jest.unstable_mockModule('../services/rateLimitService.js', () => ({
         currentCount: 0,
       }),
   },
+  RateLimitTier: {
+    PUBLIC: 'public',
+    AUTHENTICATED: 'authenticated',
+    PREMIUM: 'premium',
+    INTERNAL: 'internal',
+  },
+  EXPENSIVE_OPERATION_LIMITS: {
+    SCORE_UPDATE: { maxRequests: 100, windowSeconds: 60 },
+    INDEXER_POLL: { maxRequests: 50, windowSeconds: 60 },
+    BATCH_PROCESS: { maxRequests: 20, windowSeconds: 60 },
+  },
   SCORE_UPDATE_RATE_LIMIT: { maxRequests: 100, windowSeconds: 60 },
+  TIER_LIMITS: {},
 }));
 
 // Dynamic imports to ensure mocks are applied

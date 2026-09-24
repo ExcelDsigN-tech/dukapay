@@ -40,6 +40,7 @@ import { startLoanDueCheckCron, stopLoanDueCheckCron } from './cron/loanCheckCro
 // Imported the score decay scheduler initialization wrapper
 import { startScoreDecayScheduler } from './cron/scoreDecayJob.js';
 import { initializePauseState } from './middleware/pauseGuard.js';
+import { startAuditAnchorJob, stopAuditAnchorJob } from './cron/auditAnchorJob.js';
 
 const port = process.env.PORT || 3001;
 
@@ -96,6 +97,7 @@ const server = app.listen(port, () => {
 
   // Start loan due check cron
   startLoanDueCheckCron();
+  startAuditAnchorJob();
 
   // Initialize Redis subscriber to receive events from other instances
   pubsubService.initSubscriber((payload) => {
@@ -128,6 +130,7 @@ const shutdown = async (signal: 'SIGTERM' | 'SIGINT') => {
     }
 
     stopLoanDueCheckCron();
+    stopAuditAnchorJob();
     await stopIndexer();
     stopDefaultCheckerScheduler();
     stopWebhookRetryProcessor();

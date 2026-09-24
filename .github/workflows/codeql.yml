@@ -31,10 +31,10 @@ jobs:
           - rust
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
@@ -42,11 +42,11 @@ jobs:
       # JS/TS needs no compilation; autobuild is a no-op safeguard.
       - name: Autobuild JS/TS
         if: matrix.language == 'javascript-typescript'
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
 
       - name: Install Rust toolchain
         if: matrix.language == 'rust'
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@stable # not SHA-pinned: rolling channel branch (stable/beta/nightly track new Rust releases); pinning would freeze the toolchain version
         with:
           targets: wasm32-unknown-unknown
 
@@ -56,6 +56,6 @@ jobs:
         run: cargo build --workspace --target wasm32-unknown-unknown
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
           category: "/language:${{ matrix.language }}"
