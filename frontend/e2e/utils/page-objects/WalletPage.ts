@@ -28,10 +28,11 @@ export class WalletPage extends BasePage {
 
   /**
    * Verify wallet is connected
+   * Matches app truncation: slice(0,6) + "..." + slice(-4) used in Header.tsx, wallet/page.tsx, remittances/page.tsx, piiMask.ts
    */
   async verifyConnected(address: string): Promise<void> {
-    const shortAddress = address.slice(0, 8);
-    await expect(this.page.locator(`text=${shortAddress}`)).toBeVisible();
+    const truncated = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    await expect(this.page.locator(`text=${truncated}`)).toBeVisible();
   }
 
   /**

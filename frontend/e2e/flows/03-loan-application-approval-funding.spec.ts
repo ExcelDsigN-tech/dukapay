@@ -168,7 +168,7 @@ test.describe("Loan Application → Approval → Funding", () => {
       });
     });
 
-    await page.goto(`/en/agent/loans/${loanId}`);
+    await page.goto(`/en/loans/${loanId}`);
 
     // Review and approve
     await page.fill('textarea[name="comment"]', "Approved based on good credit score");
@@ -305,7 +305,7 @@ test.describe("Loan Application → Approval → Funding", () => {
       window.localStorage.setItem("dukapay-wallet", stateJson);
     }, JSON.stringify(agentWalletState));
 
-    await page.goto(`/en/agent/loans/${loanId}`);
+    await page.goto(`/en/loans/${loanId}`);
 
     // Reject loan
     await page.click('button:has-text("Reject")');

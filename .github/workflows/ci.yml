@@ -298,7 +298,11 @@ jobs:
   e2e:
     needs: [supply-chain-audit, frontend]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'frontend/')
+    # Run e2e on push and on pull requests that touch frontend; the previous
+    # `contains(github.event.pull_request.changed_files, 'frontend/')` used a
+    # non-existent field and caused the job to be skipped on PRs (see review feedback).
+    # Until a proper paths-filter is added, run on all pull requests.
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
