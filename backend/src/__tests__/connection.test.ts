@@ -63,4 +63,31 @@ describe('Database connection pool', () => {
     const { closePool } = await import('../db/connection.js');
     await closePool();
   });
+
+  it('configures statement_timeout on the pool from DB_STATEMENT_TIMEOUT_MS env var', async () => {
+    process.env.DB_STATEMENT_TIMEOUT_MS = '25000';
+
+    jest.resetModules();
+    const { pool, closePool } = await import('../db/connection.js');
+    expect((pool.options as any).statement_timeout).toBe(25000);
+    await closePool();
+  });
+
+  it('applies statement_timeout to acquired connections', async () => {
+    await withDb(async () => {
+      process.env.DB_STATEMENT_TIMEOUT_MS = '25000';
+
+      jest.resetModules();
+      const { getClient, closePool } = await import('../db/connection.js');
+
+      const client = await getClient();
+      try {
+        const res = await client.query('SHOW statement_timeout');
+        expect(res.rows[0].statement_timeout).toMatch(/^25(s|000ms)$/);
+      } finally {
+        client.release();
+        await closePool();
+      }
+    });
+  });
 });

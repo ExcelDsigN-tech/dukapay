@@ -10,17 +10,14 @@ their columns, indexes, and relationships.
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | `serial` | `PRIMARY KEY` | |
-| `user_id` | `varchar(255)` | `NOT NULL, UNIQUE` | Historical name; renamed `borrower` in ensure-core-tables migration |
-| `current_score` | `integer` | `NOT NULL, DEFAULT 500` | Historical name; renamed `score` in ensure-core-tables migration. Clamped 300-850 |
+| `borrower` | `varchar(255)` | `NOT NULL, UNIQUE` | Historical name `user_id`; renamed in ensure-core-tables migration |
+| `score` | `integer` | `NOT NULL, DEFAULT 500` | Historical name `current_score`; renamed in ensure-core-tables migration. Clamped 300-850 |
 | `created_at` | `timestamp` | `DEFAULT CURRENT_TIMESTAMP` | Added by migration 1774000000004 |
 | `updated_at` | `timestamp` | `DEFAULT CURRENT_TIMESTAMP` | |
 
-**Indexes**: unique on `user_id`.
+**Indexes**: unique on `borrower`.
 
-**Notes**: The column names differ across environments depending on which migrations
-have run. The `ensure-core-tables` migration (1789000000000) renames `user_id -> borrower`
-and `current_score -> score` if the old names still exist. Code that queries this table
-at runtime uses the CURRENT column names (see `scoresService.ts`).
+**Notes**: The column names are normalized by the `ensure-core-tables` migration (1789000000000), which renames `user_id -> borrower` and `current_score -> score` if the old names still exist. All runtime queries across the backend (controllers, services, indexers, privacy DSAR, seed) use the current column names (`borrower`, `score`).
 
 ---
 

@@ -98,7 +98,7 @@ export class PrivacyService {
       notificationsResult,
     ] = await Promise.all([
       query('SELECT * FROM user_profiles WHERE public_key = $1', [publicKey]),
-      query('SELECT * FROM scores WHERE user_id = $1', [publicKey]),
+      query('SELECT * FROM scores WHERE borrower = $1', [publicKey]),
       query(
         `SELECT * FROM contract_events WHERE address = $1 ORDER BY ledger_closed_at DESC LIMIT 1000`,
         [publicKey],
@@ -169,7 +169,7 @@ export class PrivacyService {
       );
 
       // 4. Delete scores (credit scores are personal data)
-      await client.query('DELETE FROM scores WHERE user_id = $1', [publicKey]);
+      await client.query('DELETE FROM scores WHERE borrower = $1', [publicKey]);
 
       // 5. Delete audit logs referencing this user as actor
       // Financial audit records are held under the seven-year statutory

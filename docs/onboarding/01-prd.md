@@ -73,6 +73,13 @@ A third, thinner persona exists in the code but isn't described in any product d
 
 ## Success Metrics
 
-**Not found in any repo doc.** No PRD, README, or docs/ file states target signup numbers, loan volume, retention, or default-rate thresholds.
+Defined in **[`docs/SUCCESS_METRICS.md`](../SUCCESS_METRICS.md)** (issue #567).
 
-> ⚠️ Gap: success metrics need to come from a human stakeholder — this cannot be reverse-engineered from code. Candidates worth defining: agent activation rate, loan default rate, average Reliability Score growth, remittance volume, solvency-invariant violations (should always be zero).
+Key categories:
+- **Solvency invariant** — `Σ float ≤ Σ collateral × haircut` (0 violations, always)
+- **Acquisition** — new borrower signups/week, agent activation rate (target ≥ 70 % within 14 days)
+- **Risk** — loan default rate (≤ 5 % trailing 90 days), 30-day delinquency (≤ 10 %)
+- **Compliance** — DSAR resolution ≤ 30 calendar days, 0 open disputes > 7 days
+- **System health** — API p99 ≤ 500 ms, indexer lag ≤ 60 s, 0 unhandled rejections
+
+Quantitative targets marked TBD in that file require sign-off from a product owner/stakeholder.
