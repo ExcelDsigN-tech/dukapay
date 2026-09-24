@@ -92,7 +92,7 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `WEBHOOK_REQUEST_TIMEOUT_MS` | ✓ | ✓ | ✓ | `30000` | Outgoing webhook request timeout | `backend/src/services/webhookService.ts` |
 | `INDEXER_FINALITY_DEPTH` | ✓ | ✓ | ✓ | `5` | Number of confirmed ledgers before an event is considered final | `backend/src/config/indexer.ts` |
 | `INDEXER_LAG_ALERT_THRESHOLD` | ✓ | ✓ | ✓ | `100` | Ledger lag threshold that triggers an alert | `backend/src/config/indexer.ts` |
-| `KYC_ENFORCEMENT_ENABLED` | — | ✓ | ✓ | `false` | Enable KYC/AML enforcement on borrower onboarding | `backend/src/middleware/kycEnforcement.ts` |
+| `KYC_ENFORCEMENT_ENABLED` | — | ✓ | ✓ | `false` | Enable KYC/AML enforcement on borrower onboarding. **Intended default: `false` in dev only; must be `true` in staging and production — hard boot requirement** (enforced by `validateProductionComplianceFlags` + CI `check-prod-flags`). | `backend/src/services/complianceService.ts` |
 | `COMPLYADVANTAGE_API_KEY` | — | ✓ | ✓ | — | ComplyAdvantage API key for AML screening | `backend/src/services/complyAdvantageService.ts` |
 | `COMPLYADVANTAGE_API_URL` | — | ✓ | ✓ | `https://api.complyadvantage.com` | ComplyAdvantage API base URL | `backend/src/services/complyAdvantageService.ts` |
 | `COMPLYADVANTAGE_SEARCH_PROFILE` | — | ✓ | ✓ | — | ComplyAdvantage search profile configured for OFAC, UN, EU, PEP and adverse-media sources | `backend/src/services/complyAdvantageService.ts` |
@@ -101,9 +101,9 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `AML_HIGH_RISK_COUNTRIES` | — | ✓ | ✓ | — | Comma-separated ISO 3166-1 alpha-2 codes maintained by compliance | `backend/src/services/amlService.ts` |
 | `SAR_FILING_API_URL` | — | ✓ | ✓ | — | Regulator/provider filing gateway; reports remain pending when unset | `backend/src/services/amlService.ts` |
 | `SAR_FILING_API_TOKEN` | — | ✓ | ✓ | — | API token for SAR filing gateway | `backend/src/services/amlService.ts` |
-| `AUDIT_ANCHOR_ENABLED` | — | ✓ | ✓ | `false` | Enable hourly tamper-evident audit anchoring | `backend/src/services/auditAnchorService.ts` |
-| `AUDIT_ANCHOR_CONTRACT_ID` | — | ✓ | ✓ | — | Deployed audit anchor contract address | `backend/src/services/auditAnchorService.ts` |
-| `AUDIT_ANCHOR_SOURCE_SECRET` | — | ✓ | ✓ | — | Stellar secret key for the audit anchor source account | `backend/src/services/auditAnchorService.ts` |
+| `AUDIT_ANCHOR_ENABLED` | — | ✓ | ✓ | `false` | Enable hourly tamper-evident audit anchoring. **Recommended (not blocking): `false` in dev; `true` recommended in staging/production. Warns when off in production; when on, `AUDIT_ANCHOR_CONTRACT_ID` + `AUDIT_ANCHOR_SOURCE_SECRET` are required** (enforced by `validateProductionComplianceFlags` + CI `check-prod-flags`). | `backend/src/services/auditMerkleService.ts`, `backend/src/cron/auditAnchorJob.ts` |
+| `AUDIT_ANCHOR_CONTRACT_ID` | — | ✓ | ✓ | — | Deployed audit anchor contract address | `backend/src/services/auditMerkleService.ts` |
+| `AUDIT_ANCHOR_SOURCE_SECRET` | — | ✓ | ✓ | — | Stellar secret key for the audit anchor source account | `backend/src/services/auditMerkleService.ts` |
 | `SENTRY_DSN` | — | ✓ | ✓ | — | Sentry DSN for backend error tracking | `backend/src/app.ts` |
 | `NOTIFICATION_RETENTION_DAYS` | ✓ | ✓ | ✓ | `90` | Days to keep unread notifications | `backend/src/services/notificationService.ts` |
 | `READ_NOTIFICATION_RETENTION_DAYS` | ✓ | ✓ | ✓ | `30` | Days to keep read notifications | `backend/src/services/notificationService.ts` |

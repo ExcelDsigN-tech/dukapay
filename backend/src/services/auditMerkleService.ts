@@ -132,7 +132,11 @@ async function createEpoch(client: PoolClient, start: Date, end: Date): Promise<
 async function anchorEpoch(epoch: Record<string, unknown>): Promise<void> {
   const contractId = process.env.AUDIT_ANCHOR_CONTRACT_ID;
   const secret = process.env.AUDIT_ANCHOR_SOURCE_SECRET;
-  if (!contractId || !secret) return;
+  if (!contractId || !secret) {
+    throw new Error(
+      'AUDIT_ANCHOR_ENABLED is "true" but AUDIT_ANCHOR_CONTRACT_ID / AUDIT_ANCHOR_SOURCE_SECRET is missing — refusing to silently skip anchoring',
+    );
+  }
   const signer = Keypair.fromSecret(secret);
   const server = createSorobanRpcServer();
   if (epoch.stellar_tx_hash) {
@@ -202,6 +206,11 @@ export const auditMerkleService = {
       const end = new Date(start.getTime() + 60 * 60 * 1000);
       await withTransaction((client) => createEpoch(client, start, end));
     }
+
+    // Sealing is always safe; anchoring requires explicit opt-in + config.
+    // Without this guard, disabled anchoring would either silently no-op
+    // (old early-return) or now mark epochs failed on every run.
+    if (process.env.AUDIT_ANCHOR_ENABLED !== 'true') return;
 
     const pending = await query(
       `SELECT id, epoch_start, merkle_root, leaf_count, stellar_tx_hash FROM audit_epochs
