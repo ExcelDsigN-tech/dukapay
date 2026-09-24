@@ -42,7 +42,7 @@ afterAll(() => {
 describe('notification digest batching', () => {
   it('batches repayment notifications with digest mode off', async () => {
     mockQuery.mockResolvedValue({
-      rows: [{ digest_frequency: 'off' }],
+      rows: [{ user_id: userId, digest_frequency: 'off' }],
     });
 
     const notifications = [
@@ -60,7 +60,7 @@ describe('notification digest batching', () => {
 
   it('batches repayment notifications with daily digest mode', async () => {
     mockQuery.mockResolvedValue({
-      rows: [{ digest_frequency: 'daily' }],
+      rows: [{ user_id: userId, digest_frequency: 'daily' }],
     });
 
     const notifications = [
@@ -77,7 +77,7 @@ describe('notification digest batching', () => {
 
   it('batches repayment notifications with weekly digest mode', async () => {
     mockQuery.mockResolvedValue({
-      rows: [{ digest_frequency: 'weekly' }],
+      rows: [{ user_id: userId, digest_frequency: 'weekly' }],
     });
 
     const notifications = [
@@ -97,10 +97,12 @@ describe('notification digest batching', () => {
     const user1 = 'GUSER1111111111111111111111111111111111111111111111111111';
     const user2 = 'GUSER2222222222222222222222222222222222222222222222222222';
 
-    mockQuery
-      .mockResolvedValueOnce({ rows: [{ digest_frequency: 'daily' }] })
-      .mockResolvedValueOnce({ rows: [{ digest_frequency: 'weekly' }] })
-      .mockResolvedValueOnce({ rows: [{ digest_frequency: 'daily' }] });
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        { user_id: user1, digest_frequency: 'daily' },
+        { user_id: user2, digest_frequency: 'weekly' },
+      ],
+    });
 
     const notifications = [
       { userId: user1, message: 'Loan 1 due', loanId: 1 },

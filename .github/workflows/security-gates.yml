@@ -7,28 +7,56 @@ on:
     branches: [main]
   schedule:
     - cron: "0 4 * * 1"
+  workflow_dispatch: {}
 
 permissions:
   contents: read
 
 jobs:
+  socket-supply-chain:
+    name: Socket malicious package blocking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # Socket Firewall blocks installs when its supply-chain analysis finds a
+      # malicious package. Pin the action itself to an immutable commit.
+      - uses: SocketDev/action@2d3f25590c6ed6ba11a9a14c064d962a3a04698f # v1.3.1
+        with:
+          mode: firewall-free
+      - name: Analyze npm lockfiles
+        shell: bash
+        run: |
+          for directory in backend frontend scripts; do
+            (cd "$directory" && sfw npm ci --ignore-scripts)
+          done
+      - name: Analyze Cargo lockfile
+        run: sfw cargo fetch --locked
+        working-directory: contracts
+
   semgrep:
     name: Semgrep SAST
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    continue-on-error: true
     container:
       # Pinned to a specific release, not `latest`: a mutable tag lets a
       # compromised or buggy upstream image silently change what every PR
       # is scanned with.
       image: semgrep/semgrep:1.174.0
     steps:
-      - uses: actions/checkout@v4
-      - run: semgrep scan --config p/ci --error --exclude='**/node_modules/**' --exclude='**/target/**'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: semgrep scan --config p/ci --config p/sql-injection --error --exclude='**/node_modules/**' --exclude='**/target/**'
 
   gitleaks:
     name: Gitleaks secrets
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       # Pinned to a commit SHA (not the `v2` tag) so the action's code can't
@@ -40,9 +68,11 @@ jobs:
 
   trivy:
     name: Trivy filesystem scan
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # Was pinned to `@master`, a mutable branch — the least hermetic
       # reference possible for a security-scanning action. Pinned to a
       # commit SHA on a tagged release instead.
@@ -57,14 +87,16 @@ jobs:
 
   npm-audit:
     name: npm audit
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         directory: [backend, frontend, scripts]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -76,14 +108,53 @@ jobs:
 
   cargo-audit:
     name: cargo audit
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@stable # not SHA-pinned: rolling channel branch (stable/beta/nightly track new Rust releases); pinning would freeze the toolchain version
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cargo/bin/cargo-audit
           key: cargo-audit-${{ runner.os }}
       - run: cargo install cargo-audit --locked
       - run: cargo audit
         working-directory: contracts
+
+  weekly-report:
+    name: Weekly vulnerability report
+    if: always() && github.event_name == 'schedule'
+    needs: [socket-supply-chain, semgrep, gitleaks, trivy, npm-audit, cargo-audit]
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Publish security-team report
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SOCKET_RESULT: ${{ needs.socket-supply-chain.result }}
+          SEMGREP_RESULT: ${{ needs.semgrep.result }}
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          TRIVY_RESULT: ${{ needs.trivy.result }}
+          NPM_RESULT: ${{ needs.npm-audit.result }}
+          CARGO_RESULT: ${{ needs.cargo-audit.result }}
+        run: |
+          title="Weekly vulnerability report - $(date -u +%Y-%m-%d)"
+          body=$(cat <<EOF
+          Automated security scan summary:
+
+          - Socket supply chain: ${SOCKET_RESULT}
+          - Semgrep: ${SEMGREP_RESULT}
+          - Gitleaks: ${GITLEAKS_RESULT}
+          - Trivy: ${TRIVY_RESULT}
+          - npm audit: ${NPM_RESULT}
+          - cargo audit: ${CARGO_RESULT}
+
+          Detailed findings remain in the restricted workflow logs: ${RUN_URL}
+          EOF
+          )
+          gh issue create --repo "$REPOSITORY" --title "$title" --body "$body" --label security

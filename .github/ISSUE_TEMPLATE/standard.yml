@@ -1,0 +1,73 @@
+name: Standard Issue
+description: Report a bug, request a feature, or ask a question
+title: "[Component]: "
+labels: []
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of DukaPay does this relate to?
+      options:
+        - "[backend] API routes, services, middleware, database logic"
+        - "[contracts] Soroban/Rust smart contracts, money policy"
+        - "[frontend] Next.js/React UI, i18n, client-side flows"
+        - "[sdk] TypeScript SDK package (sdk/)"
+        - "[indexer] Event indexer tooling (indexer/, indexer services)"
+        - "[scripts] Deploy, tooling, and load-test scripts (scripts/)"
+        - "[docs] Documentation, wiki, API docs, Swagger/OpenAPI alignment"
+        - "[ci] CI/CD workflows, badges, supply-chain checks"
+        - "[infra] Docker, environment/config drift, deployment infrastructure"
+        - "[security] Secrets, PII crypto, signing, compliance, sanctions screening"
+        - "[tests] Test suites, parity tests, E2E coverage, load-test baselines"
+        - "[ops] Operations tooling, monitoring, admin dashboards"
+        - "[product] Cross-cutting product flows spanning multiple components"
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      description: A clear, concise summary (the component prefix will be added automatically)
+      placeholder: e.g., Complete es/tl i18n translations
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Provide context, background, and any relevant details
+      placeholder: |
+        Find missing English/Spanish/Tagalog strings in frontend/src and complete the message catalogs (next-intl). Flag any hardcoded UI strings (grep for literal text in components) and move them into catalogs. Verify with the language switcher on key pages.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: definitionOfDone
+    attributes:
+      label: Definition of Done
+      description: Checklist of acceptance criteria (one per line, will render as checkboxes)
+      placeholder: |
+        No hardcoded UI strings remain in frontend/src (grep scan clean)
+        en/es/tl message catalogs complete and consistent
+        Language switcher verified on key pages for all three locales
+        Lint + typecheck pass
+      render: markdown
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        📋 **Before working on this issue, please read our [Contributing Guidelines] — it covers branching, commits, PR standards, testing, and style guides.**
+
+        **Join our Telegram community** to connect with other contributors, ask questions, and stay updated:
+
+        💬 **Telegram:** https://t.me/+eRqhka27TVo0NzM8
+
+        All official decisions, reviews, and coordination happen right here on GitHub. The Telegram group is a space for informal discussion and peer support.

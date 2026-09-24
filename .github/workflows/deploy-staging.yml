@@ -15,16 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set lowercase owner
         run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
       - name: Set up QEMU
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -42,7 +42,7 @@ jobs:
           done
 
       - name: Build and push backend
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./backend
           push: true
@@ -55,7 +55,7 @@ jobs:
             BUILD_TIME=${{ github.event.head_commit.timestamp }}
 
       - name: Build and push frontend
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./frontend
           push: true
@@ -75,7 +75,7 @@ jobs:
             NEXT_PUBLIC_NFT_CONTRACT_ID=${{ vars.NEXT_PUBLIC_NFT_CONTRACT_ID }}
 
       - name: Run Trivy vulnerability scanner (HIGH - warn)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: 'ghcr.io/${{ env.OWNER_LC }}/dukapay-backend:staging-${{ github.sha }}'
           format: 'table'
@@ -84,7 +84,7 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Run Trivy vulnerability scanner (CRITICAL - fail)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: 'ghcr.io/${{ env.OWNER_LC }}/dukapay-backend:staging-${{ github.sha }}'
           format: 'sarif'
@@ -100,14 +100,14 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
           category: trivy-backend
 
       - name: Run Trivy vulnerability scanner for frontend (HIGH - warn)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: 'ghcr.io/${{ env.OWNER_LC }}/dukapay-frontend:staging-${{ github.sha }}'
           format: 'table'
@@ -116,7 +116,7 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Run Trivy vulnerability scanner for frontend (CRITICAL - fail)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: 'ghcr.io/${{ env.OWNER_LC }}/dukapay-frontend:staging-${{ github.sha }}'
           format: 'sarif'
@@ -127,7 +127,7 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Upload frontend Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         if: always() && hashFiles('frontend-trivy-results.sarif') != ''
         with:
           sarif_file: 'frontend-trivy-results.sarif'
@@ -167,7 +167,7 @@ jobs:
     environment: staging
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set lowercase owner
         run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
@@ -184,7 +184,7 @@ jobs:
           envsubst < docker-compose.staging.yml > deploy/docker-compose.staging.rollback.yml
 
       - name: Copy compose files to server
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
@@ -194,7 +194,7 @@ jobs:
           target: "~/dukapay"
 
       - name: Deploy on server and run migrations + healthcheck
-        uses: appleboy/ssh-action@v0.1.7
+        uses: appleboy/ssh-action@d91a1af6f57cd4478ceee14d7705601dafabaa19 # v0.1.7
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}

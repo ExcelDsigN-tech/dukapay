@@ -1,0 +1,65 @@
+name: Question / Support
+description: Ask a question or get help with DukaPay
+title: "[question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Welcome!** Before you begin, please review our [Contributing Guidelines](../../CONTRIBUTING.md).
+
+        💬 Connect with other contributors on [Telegram](https://t.me/+eRqhka27TVo0NzM8) — great for quick questions and informal discussion.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What type of question?
+      options:
+        - "Getting started / Setup help"
+        - "Architecture / Design question"
+        - "API usage / Integration help"
+        - "Smart contract interaction"
+        - "Deployment / Infrastructure"
+        - "Testing / CI/CD"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: Be as specific as possible
+      placeholder: |
+        **What are you trying to achieve?**
+        ...
+
+        **What have you tried so far?**
+        ...
+
+        **What happened / What's blocking you?**
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (if relevant)
+      placeholder: |
+        - OS: ...
+        - Node/Rust version: ...
+        - Network: [testnet/mainnet/local]
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and discussions for answers
+          required: true
+        - label: I have read the [Contributing Guidelines](../../CONTRIBUTING.md) and relevant docs
+          required: true

@@ -115,6 +115,10 @@ jest.unstable_mockModule('../utils/requestContext.js', () => ({
   runWithRequestContext: async (_requestId: string, callback: () => Promise<unknown>) => callback(),
 }));
 
+jest.unstable_mockModule('../services/pubsubService.js', () => ({
+  pubsubService: { publish: jest.fn<() => Promise<void>>().mockResolvedValue(undefined) },
+}));
+
 const { EventIndexer } = await import('../services/eventIndexer.js');
 
 function makeAddress() {
@@ -645,24 +649,34 @@ describe('EventIndexer', () => {
 
   it('initializes missing indexer state and persists the last indexed ledger during polling', async () => {
     const stateWrites: number[] = [];
+    let stateExists = false;
+    let lastLedgerWritten = 0;
 
     mockQuery.mockImplementation(async (sql: string, params: unknown[] = []) => {
-      if (sql.includes('SELECT last_ledger')) {
-        return { rows: [], rowCount: 0 };
+      if (sql.includes('SELECT last_ledger') || sql.includes('COALESCE(last_finalized_ledger')) {
+        return {
+          rows: stateExists ? [{ last_ledger: lastLedgerWritten }] : [],
+          rowCount: stateExists ? 1 : 0,
+        };
       }
 
       if (sql.includes('INSERT INTO indexer_state')) {
         if (sql.includes('$1, $2')) {
+          // updateLastIndexedLedger fallback: VALUES ($1, $2, $2)
           stateWrites.push(Number(params[1] ?? 0));
         } else {
-          const match = sql.match(/VALUES\s*\(\$1,\s*(\d+)\)/);
-          stateWrites.push(match ? Number(match[1] ?? 0) : Number(params[0] ?? 0));
+          // getLastIndexedLedger initial insert: VALUES ($1, 0, 0) — extract the hardcoded 0
+          const match = sql.match(/VALUES\s*\(\s*\$\d+\s*,\s*(\d+)/);
+          stateWrites.push(match ? Number(match[1]) : 0);
         }
+        stateExists = true;
+        lastLedgerWritten = stateWrites[stateWrites.length - 1] ?? 0;
         return { rows: [], rowCount: 1 };
       }
 
       if (sql.includes('UPDATE indexer_state')) {
         stateWrites.push(Number(params[0]));
+        lastLedgerWritten = Number(params[0]);
         return { rows: [], rowCount: 1 };
       }
 
@@ -830,5 +844,99 @@ describe('EventIndexer', () => {
     expect(insertedLoanEvents).toHaveLength(adminEventTypes.length);
     expect(insertedLoanEvents.map((params) => params[1])).toEqual(adminEventTypes);
     expect(insertedAuditRows).toHaveLength(adminEventTypes.length);
+  });
+
+  it('indexes only ledgers behind the configured finality depth', async () => {
+    let requestedEndLedger = 0;
+    let persistedLedger = 0;
+    mockQuery.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      if (sql.includes('SELECT COALESCE(last_finalized_ledger')) {
+        return { rows: [{ last_ledger: 0 }], rowCount: 1 };
+      }
+      if (sql.includes("status = 'verified'")) return { rows: [], rowCount: 0 };
+      if (sql.includes("status = 'suspect'")) return { rows: [], rowCount: 0 };
+      if (sql.includes('UPDATE indexer_state')) {
+        persistedLedger = Number(params[0]);
+        return { rows: [], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+
+    const indexer = new EventIndexer({
+      rpcUrl: 'https://rpc.test',
+      contractId: 'CINDEXERTEST',
+      finalityDepth: 5,
+    });
+    (indexer as unknown as { running: boolean }).running = true;
+    (indexer as unknown as { rpc: { getLatestLedger: unknown; getEvents: unknown } }).rpc = {
+      getLatestLedger: async () => ({ sequence: 20 }),
+      getEvents: async (request: { endLedger: number }) => {
+        requestedEndLedger = request.endLedger;
+        return { events: [] };
+      },
+    };
+
+    await (indexer as unknown as { pollOnce: () => Promise<void> }).pollOnce();
+
+    expect(requestedEndLedger).toBe(15);
+    expect(persistedLedger).toBe(15);
+  });
+
+  it('detects a changed checkpoint digest and transactionally rolls it back', async () => {
+    const oldEvent = makeRawEvent({ id: 'old-event', ledger: 10, type: 'LoanRequested' });
+    const newEvent = makeRawEvent({ id: 'replacement-event', ledger: 10, type: 'LoanRequested' });
+    const indexer = new EventIndexer({
+      rpcUrl: 'https://rpc.test',
+      contractId: 'CINDEXERTEST',
+    });
+    const internal = indexer as unknown as {
+      digestEvents: (events: (typeof oldEvent)[]) => string;
+      detectAndRollbackReorg: () => Promise<boolean>;
+      rpc: { getEvents: unknown };
+    };
+    const oldDigest = internal.digestEvents([oldEvent]);
+
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('SELECT range_start, range_end, range_digest')) {
+        return {
+          rows: [{ range_start: 10, range_end: 10, range_digest: oldDigest }],
+          rowCount: 1,
+        };
+      }
+      if (sql.includes('SELECT event_type, address')) return { rows: [], rowCount: 0 };
+      return { rows: [], rowCount: 1 };
+    });
+    internal.rpc = { getEvents: async () => ({ events: [newEvent] }) };
+
+    await expect(internal.detectAndRollbackReorg()).resolves.toBe(true);
+    expect(
+      mockQuery.mock.calls.some(([sql]) =>
+        String(sql).includes('DELETE FROM contract_events WHERE contract_id'),
+      ),
+    ).toBe(true);
+    expect(mockQuery.mock.calls.some(([sql]) => String(sql).includes('UPDATE indexer_state'))).toBe(
+      true,
+    );
+  });
+
+  it('backfills and resolves suspect ledger ranges', async () => {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("status = 'suspect'") && sql.includes('SELECT range_start')) {
+        return { rows: [{ range_start: 21, range_end: 25 }], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+    const indexer = new EventIndexer({ rpcUrl: 'https://rpc.test', contractId: 'CINDEXERTEST' });
+    (indexer as unknown as { rpc: { getEvents: unknown } }).rpc = {
+      getEvents: async () => ({ events: [] }),
+    };
+
+    await expect(indexer.backfillMissingRanges(25)).resolves.toBe(5);
+    expect(
+      mockQuery.mock.calls.some(
+        ([sql]) =>
+          String(sql).includes("SET status = 'verified'") && String(sql).includes('range_digest'),
+      ),
+    ).toBe(true);
   });
 });

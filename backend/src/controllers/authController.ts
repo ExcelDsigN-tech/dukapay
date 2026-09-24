@@ -25,20 +25,40 @@ import {
   generateChallenge,
   verifySignature,
   verifyChallengeTimestamp,
-  generateJwtToken,
+  generateTokenPair,
+  rotateRefreshToken,
+  generateDeviceFingerprint,
   revokeToken,
+  revokeTokenFamily,
 } from '../services/authService.js';
 import logger from '../utils/logger.js';
+import { complianceService } from '../services/complianceService.js';
 
 const logAuthFailure = (req: Request, publicKey: string | undefined, reason: string): void => {
   logger.warn('Auth attempt failed', {
     ip: req.ip,
-    publicKey,
+    hasPublicKey: Boolean(publicKey),
     reason,
     path: req.path,
     method: req.method,
   });
 };
+
+export const submitKyc = asyncHandler(async (req: Request, res: Response) => {
+  const subjectId = req.user?.publicKey;
+  if (!subjectId) throw AppError.unauthorized('Authentication required');
+  const result = await complianceService.screenApplicant({
+    subjectId,
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    dateOfBirth: req.body.dateOfBirth,
+    countryCode: req.body.countryCode,
+  });
+  res.status(result.status === 'approved' ? 200 : 202).json({
+    success: true,
+    data: { status: result.status, providerReference: result.providerReference },
+  });
+});
 
 export const requestChallenge = (req: Request, res: Response): void => {
   const { publicKey } = req.body;
@@ -69,7 +89,7 @@ export const requestChallenge = (req: Request, res: Response): void => {
   });
 };
 
-export const login = (req: Request, res: Response): void => {
+export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { publicKey, message, signature } = req.body;
 
   if (!publicKey || typeof publicKey !== 'string') {
@@ -105,27 +125,88 @@ export const login = (req: Request, res: Response): void => {
     throw AppError.unauthorized('Invalid signature', ErrorCode.INVALID_SIGNATURE);
   }
 
-  const token = generateJwtToken(publicKey);
-  const cookieName = process.env.JWT_COOKIE_NAME ?? 'dukapay_jwt';
+  const fingerprint = generateDeviceFingerprint(req);
+  const pair = await generateTokenPair(publicKey, fingerprint);
 
-  // Set secure, HTTP-only cookie to avoid leaking tokens in URL query parameters
-  // for EventSource (SSE) connections.
-  res.cookie(cookieName, token, {
+  const cookieName = process.env.JWT_COOKIE_NAME ?? 'dukapay_jwt';
+  const refreshCookieName = process.env.REFRESH_COOKIE_NAME ?? 'dukapay_refresh';
+
+  res.cookie(cookieName, pair.accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+
+  res.cookie(refreshCookieName, pair.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api/v1/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.status(200).json({
     success: true,
     data: {
-      token,
+      token: pair.accessToken,
+      accessToken: pair.accessToken,
+      refreshToken: pair.refreshToken,
       publicKey,
+      expiresIn: pair.expiresIn,
     },
   });
-};
+});
+
+export const refresh = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const reqBody = req.body as { refreshToken?: string } | undefined;
+  const rawCookie = (req as unknown as { cookies?: Record<string, string> }).cookies;
+  const tokenFromHeader = req.headers['x-refresh-token'] as string | undefined;
+
+  const refreshToken =
+    reqBody?.refreshToken ??
+    rawCookie?.dukapay_refresh ??
+    rawCookie?.[process.env.REFRESH_COOKIE_NAME ?? 'dukapay_refresh'] ??
+    tokenFromHeader;
+
+  if (!refreshToken || typeof refreshToken !== 'string') {
+    throw AppError.badRequest('Refresh token is required', ErrorCode.MISSING_FIELD, 'refreshToken');
+  }
+
+  const fingerprint = generateDeviceFingerprint(req);
+  const pair = await rotateRefreshToken(refreshToken, fingerprint);
+
+  const cookieName = process.env.JWT_COOKIE_NAME ?? 'dukapay_jwt';
+  const refreshCookieName = process.env.REFRESH_COOKIE_NAME ?? 'dukapay_refresh';
+
+  res.cookie(cookieName, pair.accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 15 * 60 * 1000,
+  });
+
+  res.cookie(refreshCookieName, pair.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api/v1/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      token: pair.accessToken,
+      accessToken: pair.accessToken,
+      refreshToken: pair.refreshToken,
+      publicKey: pair.publicKey,
+      expiresIn: pair.expiresIn,
+    },
+  });
+});
 
 export async function listAuditLogs(
   req: Request,
@@ -168,8 +249,14 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     await revokeToken(req.user.jti, req.user.exp);
   }
 
+  if (req.user?.familyId) {
+    await revokeTokenFamily(req.user.familyId, 'user_logout');
+  }
+
   const cookieName = process.env.JWT_COOKIE_NAME ?? 'dukapay_jwt';
+  const refreshCookieName = process.env.REFRESH_COOKIE_NAME ?? 'dukapay_refresh';
   res.clearCookie(cookieName, { path: '/' });
+  res.clearCookie(refreshCookieName, { path: '/api/v1/auth' });
 
   res.status(200).json({
     success: true,

@@ -85,9 +85,25 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `INTERNAL_API_KEY` | ✓ | ✓ | ✓ | `change-me` | API key for internal endpoints | `backend/src/middleware/auth.ts` |
 | `ADMIN_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the `admin` role (`admin:all` scope). **Security-critical**: any wallet listed here receives full admin privileges. Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
 | `LENDER_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the `lender` role (`read:loans`, `read:pool` scopes). Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
+| `AGENT_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the `agent` role (own data + assigned borrowers). Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
+| `AUDITOR_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the read-only `auditor` role. Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
 | `EXPOSE_STACK_TRACES` | — | — | — | `false` | When `"true"`, include stack traces in error responses. **Never enable in production.** | `backend/src/middleware/errorHandler.ts` |
 | `JWT_COOKIE_NAME` | ✓ | ✓ | ✓ | `dukapay_jwt` | Name of the HTTP cookie used to transport the JWT token | `backend/src/middleware/jwtAuth.ts` |
 | `WEBHOOK_REQUEST_TIMEOUT_MS` | ✓ | ✓ | ✓ | `30000` | Outgoing webhook request timeout | `backend/src/services/webhookService.ts` |
+| `INDEXER_FINALITY_DEPTH` | ✓ | ✓ | ✓ | `5` | Number of confirmed ledgers before an event is considered final | `backend/src/config/indexer.ts` |
+| `INDEXER_LAG_ALERT_THRESHOLD` | ✓ | ✓ | ✓ | `100` | Ledger lag threshold that triggers an alert | `backend/src/config/indexer.ts` |
+| `KYC_ENFORCEMENT_ENABLED` | — | ✓ | ✓ | `false` | Enable KYC/AML enforcement on borrower onboarding | `backend/src/middleware/kycEnforcement.ts` |
+| `COMPLYADVANTAGE_API_KEY` | — | ✓ | ✓ | — | ComplyAdvantage API key for AML screening | `backend/src/services/complyAdvantageService.ts` |
+| `COMPLYADVANTAGE_API_URL` | — | ✓ | ✓ | `https://api.complyadvantage.com` | ComplyAdvantage API base URL | `backend/src/services/complyAdvantageService.ts` |
+| `COMPLYADVANTAGE_SEARCH_PROFILE` | — | ✓ | ✓ | — | ComplyAdvantage search profile configured for OFAC, UN, EU, PEP and adverse-media sources | `backend/src/services/complyAdvantageService.ts` |
+| `AML_REPORTING_THRESHOLD` | — | ✓ | ✓ | `10000` | Transaction amount threshold for SAR filing | `backend/src/services/amlService.ts` |
+| `AML_DAILY_TX_LIMIT` | — | ✓ | ✓ | `10` | Maximum daily transaction count before alerting | `backend/src/services/amlService.ts` |
+| `AML_HIGH_RISK_COUNTRIES` | — | ✓ | ✓ | — | Comma-separated ISO 3166-1 alpha-2 codes maintained by compliance | `backend/src/services/amlService.ts` |
+| `SAR_FILING_API_URL` | — | ✓ | ✓ | — | Regulator/provider filing gateway; reports remain pending when unset | `backend/src/services/amlService.ts` |
+| `SAR_FILING_API_TOKEN` | — | ✓ | ✓ | — | API token for SAR filing gateway | `backend/src/services/amlService.ts` |
+| `AUDIT_ANCHOR_ENABLED` | — | ✓ | ✓ | `false` | Enable hourly tamper-evident audit anchoring | `backend/src/services/auditAnchorService.ts` |
+| `AUDIT_ANCHOR_CONTRACT_ID` | — | ✓ | ✓ | — | Deployed audit anchor contract address | `backend/src/services/auditAnchorService.ts` |
+| `AUDIT_ANCHOR_SOURCE_SECRET` | — | ✓ | ✓ | — | Stellar secret key for the audit anchor source account | `backend/src/services/auditAnchorService.ts` |
 | `SENTRY_DSN` | — | ✓ | ✓ | — | Sentry DSN for backend error tracking | `backend/src/app.ts` |
 | `NOTIFICATION_RETENTION_DAYS` | ✓ | ✓ | ✓ | `90` | Days to keep unread notifications | `backend/src/services/notificationService.ts` |
 | `READ_NOTIFICATION_RETENTION_DAYS` | ✓ | ✓ | ✓ | `30` | Days to keep read notifications | `backend/src/services/notificationService.ts` |
@@ -98,6 +114,40 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `TWILIO_ACCOUNT_SID` | — | ✓ | ✓ | — | Twilio account SID for SMS | `backend/src/services/smsService.ts` |
 | `TWILIO_AUTH_TOKEN` | — | ✓ | ✓ | — | Twilio auth token | `backend/src/services/smsService.ts` |
 | `TWILIO_PHONE_NUMBER` | — | ✓ | ✓ | — | Twilio sender phone number | `backend/src/services/smsService.ts` |
+
+### Production Mainnet Posture (pending #565 — scaffold, not yet enforceable as decided posture)
+
+> **Status: #565 is still open** and asks for a maintainer/product call on `KYC_ENFORCEMENT_ENABLED` / `AUDIT_ANCHOR_ENABLED` per environment. This section and `backend/.env.production.example` are **scaffolding** that will be updated once #565 is decided; they do not claim the decision has been made. `scripts/verify-production-env.mjs` and `.github/workflows/deploy-production.yml` will enforce the decided posture at deploy time, but until #565 is closed the guard's expectations should be considered **placeholders pending sign-off**. Coordinate with the #565 / #570 assignees before continuing.
+
+Until #565 is decided, do not treat the values below as reviewed facts. They are placeholders that require explicit production env/secrets (not code defaults) and compliance sign-off.
+
+| Variable | Scaffolding Value (pending #565 / compliance sign-off) | Notes |
+|---|---|---|
+| `KYC_ENFORCEMENT_ENABLED` | `true` (placeholder) | Intended to be `true` for mainnet, but #565 is still open — maintainer/product must confirm per-environment posture. Guard will fail deploy if not `true` once decided; staging may remain `false` for test accounts. Value must be explicitly set in `backend/.env.production` / `production` secrets, not relying on code default `false`. |
+| `AUDIT_ANCHOR_ENABLED` | `true` (placeholder) | Same — pending #565. Guard requires `AUDIT_ANCHOR_CONTRACT_ID` (`C...`) and `AUDIT_ANCHOR_SOURCE_SECRET` (`S...`) when enabled. |
+| `AML_REPORTING_THRESHOLD` | `10000` (placeholder) | Placeholder amount; requires compliance sign-off for launch jurisdictions. Guard checks numeric `>=1000`, not blank. |
+| `AML_DAILY_TX_LIMIT` | `10` (placeholder) | Placeholder velocity limit; requires compliance sign-off. Guard checks `1..100`, not blank. |
+| `AML_HIGH_RISK_COUNTRIES` | `AF,BY,CF,CD,CU,ER,GN,HT,IR,KE,KP,LB,LY,MM,NG,NI,RU,SO,SS,SD,SY,VE,YE,ZW` (placeholder) | **Not reviewed** — placeholder list only. Previously included `UA` (not FATF-listed) and omitted `KE`/`NG` (on FATF grey list as of early 2025). Requires compliance sign-off before mainnet; see `backend/.env.production.example` and `complianceService.ts` which reads this value directly. |
+| `STELLAR_NETWORK` / `STELLAR_NETWORK_PASSPHRASE` / `STELLAR_RPC_URL` | `mainnet` / `Public Global Stellar Network ; September 2015` / `https://soroban-rpc.stellar.org` | Mainnet network constants; guard checks exact match. |
+| `COMPLYADVANTAGE_API_KEY` + `COMPLYADVANTAGE_SEARCH_PROFILE` | real key + search profile via secrets | Required when KYC enforcement is on; guard requires both set when `KYC_ENFORCEMENT_ENABLED=true`. |
+
+**How it is intended to be enforced (once #565 is decided)**
+
+1. **Explicit production config** — `backend/.env.production.example` (template, committed) and `backend/.env.production` (live, gitignored + secrets manager) will set the decided values explicitly; they are **not** left to the code fallback (`false` / blank). Also set in GitHub `production` environment `vars`/`secrets`.
+
+2. **Deploy-time guard** — `scripts/verify-production-env.mjs` validates the posture. It is run:
+   - locally: `node scripts/verify-production-env.mjs --env-file backend/.env.production`
+   - in CI: `.github/workflows/deploy-production.yml` `production-guard` job (with `KYC_ENFORCEMENT_ENABLED`, `AUDIT_ANCHOR_ENABLED`, `AML_*`, etc. injected from `secrets`/`vars`). The job **fails the deploy** (non-zero exit) on mismatch, preventing an unintentional `false`/blank from ever reaching mainnet.
+
+3. **AML thresholds require compliance sign-off** — they must not be left blank/default. Placeholders like `__SET_VIA_SECRETS_MANAGER__` are only allowed in the `.example` template for secrets — live `production` secrets must hold real values reviewed by compliance.
+
+**Reference**
+
+- Template: `backend/.env.production.example` (scaffold, pending #565)
+- Guard: `scripts/verify-production-env.mjs` (scaffold, pending #565)
+- Workflow: `.github/workflows/deploy-production.yml` (manual `workflow_dispatch` only; blocked until #565)
+- Previous staging deploy: `.github/workflows/deploy-staging.yml`
+- Decision issue: #565 (must be closed before posture is treated as fact)
 
 ---
 
