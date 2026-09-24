@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "agent_vault"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -463,6 +470,20 @@ name = "downcast-rs"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
+
+[[package]]
+name = "dukapay-fuzz"
+version = "0.0.0"
+dependencies = [
+ "agent_vault",
+ "arbitrary",
+ "lending_pool",
+ "libfuzzer-sys",
+ "loan_manager",
+ "multisig_governance",
+ "remittance_nft",
+ "soroban-sdk",
+]
 
 [[package]]
 name = "dyn-clone"
@@ -1034,19 +1055,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "dukapay-fuzz"
-version = "0.0.0"
-dependencies = [
- "arbitrary",
- "lending_pool",
- "libfuzzer-sys",
- "loan_manager",
- "multisig_governance",
- "remittance_nft",
- "soroban-sdk",
 ]
 
 [[package]]

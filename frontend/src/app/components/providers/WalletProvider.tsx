@@ -240,7 +240,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
     (async () => {
       try {
         // Unregister service workers
-        if (typeof navigator !== "undefined" && 'serviceWorker' in navigator) {
+        if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
           try {
             const regs = await navigator.serviceWorker.getRegistrations();
             await Promise.all(regs.map((r) => r.unregister()));
@@ -291,7 +291,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
         // IndexedDB: delete databases whose name includes wallet-related substrings
         try {
-          const idbAny = indexedDB as unknown as { databases?: () => Promise<Array<{ name?: string }>> };
+          const idbAny = indexedDB as unknown as {
+            databases?: () => Promise<Array<{ name?: string }>>;
+          };
           if (typeof idbAny.databases === "function") {
             const dbs = await idbAny.databases();
             await Promise.all(

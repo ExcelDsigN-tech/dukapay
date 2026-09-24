@@ -1,0 +1,27 @@
+# Gitleaks configuration (issue #408)
+# https://github.com/gitleaks/gitleaks
+
+title = "DukaPay gitleaks config"
+
+[allowlist]
+  # Allowlist rules that are known false positives in this repo.
+  description = "Global allowlist"
+
+  # Test files may contain example secrets. Docs, README, and .env.example
+  # files are expected to contain placeholder credentials (your_jwt_secret,
+  # sample/dummy/xxx/changeme, etc.) so they're exempted wholesale rather
+  # than pattern-matched — a [[rules]] block with these regexes would
+  # *flag* every doc mentioning "example" or "test" as a leak instead of
+  # allowing it (see issue caught in commit 0178aed's weekly gitleaks scan:
+  # ~4,835 false positives from this exact mistake).
+  paths = [
+    '''test/''',
+    '''__tests__/''',
+    '''\.test\.ts$''',
+    '''\.spec\.ts$''',
+    '''\.test\.js$''',
+    '''\.spec\.js$''',
+    '''\.env\.example$''',
+    '''docs/''',
+    '''README''',
+  ]

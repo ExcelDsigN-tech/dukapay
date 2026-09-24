@@ -10,6 +10,9 @@ jest.unstable_mockModule('../../services/authService.js', () => ({
 jest.unstable_mockModule('../../auth/rbac.js', () => ({
   resolveRoleForWallet: jest.fn(),
   resolveScopesForRole: jest.fn(),
+  isRoleAtLeast: jest.fn(),
+  ROLE_HIERARCHY: {},
+  USER_ROLES: ['admin', 'agent', 'borrower', 'auditor', 'lender'],
 }));
 
 const mockAppErrorUnauthorized = jest.fn();

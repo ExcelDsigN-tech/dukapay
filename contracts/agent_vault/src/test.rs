@@ -291,6 +291,20 @@ fn test_transfer_float_respects_recipient_bound() {
     assert_eq!(s.client.get_vault(&b).float, 400);
 }
 
+#[test]
+fn test_transfer_to_agent_atomic() {
+    let s = setup();
+    let a = agent(&s.env);
+    let b = agent(&s.env);
+    fund(&s, &a, 1_000);
+    fund(&s, &b, 1_000);
+    s.client.mint_float(&a, &500);
+    s.client.transfer_to_agent(&a, &b, &300);
+
+    assert_eq!(s.client.get_vault(&a).float, 200);
+    assert_eq!(s.client.get_vault(&b).float, 300);
+}
+
 // ── Settlement ───────────────────────────────────────────────────────────────
 
 #[test]
@@ -439,6 +453,63 @@ fn test_mint_float_requires_operator() {
     // Drop all auths: an unauthorised caller must not be able to mint.
     env.mock_auths(&[]);
     client.mint_float(&a, &100);
+}
+
+// ── Invariant checks ────────────────────────────────────────────────────────
+
+#[test]
+fn test_check_invariant_holds_for_solvent_vault() {
+    let s = setup();
+    let a = agent(&s.env);
+    fund(&s, &a, 1_000);
+    s.client.mint_float(&a, &500); // well within 80% bound
+
+    let (holds, float, max_allowed) = s.client.check_invariant(&a);
+    assert!(holds);
+    assert_eq!(float, 500);
+    assert_eq!(max_allowed, 800);
+}
+
+#[test]
+fn test_check_invariant_holds_for_empty_vault() {
+    let s = setup();
+    let a = agent(&s.env);
+    fund(&s, &a, 1_000);
+
+    let (holds, float, max_allowed) = s.client.check_invariant(&a);
+    assert!(holds);
+    assert_eq!(float, 0);
+    assert_eq!(max_allowed, 800);
+}
+
+#[test]
+fn test_check_invariant_holds_at_boundary() {
+    let s = setup();
+    let a = agent(&s.env);
+    fund(&s, &a, 1_000);
+    s.client.mint_float(&a, &800); // exactly at 80% bound
+
+    let (holds, float, max_allowed) = s.client.check_invariant(&a);
+    assert!(holds);
+    assert_eq!(float, 800);
+    assert_eq!(max_allowed, 800);
+}
+
+#[test]
+fn test_check_invariants_batch() {
+    let s = setup();
+    let a = agent(&s.env);
+    let b = agent(&s.env);
+    fund(&s, &a, 1_000);
+    fund(&s, &b, 500);
+    s.client.mint_float(&a, &500);
+    s.client.mint_float(&b, &400);
+
+    let agents: Vec<Address> = vec![&s.env, a.clone(), b.clone()];
+    let results = s.client.check_invariants(&agents);
+    assert_eq!(results.len(), 2);
+    assert!(results.get(0).unwrap().1); // a holds
+    assert!(results.get(1).unwrap().1); // b holds
 }
 
 // ── Property tests ───────────────────────────────────────────────────────────

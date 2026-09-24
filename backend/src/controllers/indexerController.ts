@@ -175,7 +175,10 @@ const decodeQuarantinedRawEvent = (row: QuarantineEventRow): SorobanRawEvent | n
 export const getIndexerStatus = async (_req: Request, res: Response) => {
   try {
     const result = await query(
-      'SELECT last_indexed_ledger, last_indexed_cursor, updated_at FROM indexer_state ORDER BY id DESC LIMIT 1',
+      `SELECT MIN(COALESCE(last_finalized_ledger, last_ledger)) AS last_indexed_ledger,
+              MAX(last_indexed_cursor) AS last_indexed_cursor,
+              MAX(updated_at) AS updated_at
+       FROM indexer_state`,
       [],
     );
 

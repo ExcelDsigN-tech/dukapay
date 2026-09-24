@@ -9,7 +9,8 @@ import {
   deleteWebhookSubscription,
 } from '../controllers/indexerController.js';
 import { requireApiKey } from '../middleware/auth.js';
-import { requireJwtAuth, requireScopes, requireWalletOwnership } from '../middleware/jwtAuth.js';
+import { requireJwtAuth, requireScopes } from '../middleware/jwtAuth.js';
+import { requireTenantAccess } from '../middleware/rbac.js';
 import { requireLoanBorrowerAccess } from '../middleware/loanAccess.js';
 import { strictRateLimiter } from '../middleware/rateLimiter.js';
 import { auditLog } from '../middleware/auditLog.js';
@@ -77,7 +78,7 @@ router.get(
   '/events/borrower/:borrower',
   requireJwtAuth,
   requireScopes('read:loans'),
-  requireWalletOwnership,
+  requireTenantAccess,
   getBorrowerEvents,
 );
 
