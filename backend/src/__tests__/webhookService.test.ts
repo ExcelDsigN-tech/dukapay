@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import crypto from 'node:crypto';
 
 type MockQueryResult = { rows: unknown[]; rowCount?: number };
 
@@ -13,7 +14,14 @@ jest.unstable_mockModule('../db/connection.js', () => ({
   closePool: jest.fn(),
 }));
 
-const { WebhookService, getRetryDelayMs } = await import('../services/webhookService.js');
+const {
+  WebhookService,
+  getRetryDelayMs,
+  computeWebhookSignature,
+  verifyWebhookSignature,
+  parseWebhookTimestamp,
+  getWebhookCandidateSecrets,
+} = await import('../services/webhookService.js');
 const { default: logger } = await import('../utils/logger.js');
 
 describe('WebhookService', () => {
@@ -191,23 +199,22 @@ describe('WebhookService', () => {
     );
   });
 
-  describe('HMAC signature', () => {
-    it('sets X-DukaPay-Signature with sha256= prefix for a known body+secret', async () => {
+  describe('HMAC signature (timestamp + nonce payload)', () => {
+    it('sets X-DukaPay-Signature over timestamp.nonce.body_hex', async () => {
       const secret = 'test-secret-key';
-      const crypto = await import('node:crypto');
 
-      // The webhook service signs the full JSON.stringify(payload) sent to the
-      // callback, not just {eventId, eventType}. Capture the body the service
-      // actually sends and assert the signature matches HMAC-SHA256 over it.
       const fetchMock =
         jest.fn<(_url: string, opts: RequestInit) => Promise<{ ok: boolean; status: number }>>();
       fetchMock.mockImplementation(async (_url: string, opts: RequestInit) => {
         const hdrs = opts.headers as Record<string, string>;
-        const expectedHex = crypto
-          .createHmac('sha256', secret)
-          .update(opts.body as string)
-          .digest('hex');
+        const ts = hdrs['x-dukapay-timestamp'];
+        const nonce = hdrs['x-dukapay-nonce'];
+        const bodyHex = Buffer.from(opts.body as string, 'utf8').toString('hex');
+        const signedPayload = `${ts}.${nonce}.${bodyHex}`;
+        const expectedHex = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
         expect(hdrs['x-dukapay-signature']).toBe(`sha256=${expectedHex}`);
+        expect(ts).toMatch(/^\d+$/);
+        expect(nonce).toMatch(/^[a-f0-9]{32}$/);
         return { ok: true, status: 200 };
       });
       global.fetch = fetchMock as unknown as typeof fetch;
@@ -235,7 +242,7 @@ describe('WebhookService', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it("header value starts with 'sha256=' and matches HMAC-SHA256 of the request body", async () => {
+    it("signature header starts with 'sha256=' and matches HMAC-SHA256 of signed payload", async () => {
       const secret = 'another-secret';
       const fetchMock = jest.fn<(...args: unknown[]) => Promise<{ ok: boolean; status: number }>>();
       fetchMock.mockResolvedValue({ ok: true, status: 200 });
@@ -265,13 +272,13 @@ describe('WebhookService', () => {
       const hdrs = callOpts.headers as Record<string, string>;
       const sigHeader = hdrs['x-dukapay-signature'];
 
-      // Must start with the algorithm prefix
       expect(sigHeader).toMatch(/^sha256=[a-f0-9]{64}$/);
 
-      // The hex part must equal HMAC-SHA256(secret, body)
-      const crypto = await import('node:crypto');
-      const sentBody = callOpts.body as string;
-      const expectedHex = crypto.createHmac('sha256', secret).update(sentBody).digest('hex');
+      const ts = hdrs['x-dukapay-timestamp'];
+      const nonce = hdrs['x-dukapay-nonce'];
+      const bodyHex = Buffer.from(callOpts.body as string, 'utf8').toString('hex');
+      const signedPayload = `${ts}.${nonce}.${bodyHex}`;
+      const expectedHex = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
       expect(sigHeader).toBe(`sha256=${expectedHex}`);
     });
 
@@ -303,6 +310,144 @@ describe('WebhookService', () => {
       const callOpts = fetchMock.mock.calls[0]![1] as RequestInit;
       const hdrs = callOpts.headers as Record<string, string>;
       expect(hdrs['x-dukapay-signature']).toBeUndefined();
+    });
+  });
+
+  describe('verifyWebhookSignature', () => {
+    const secret = 'my-subscription-secret';
+
+    it('verifies a correctly-signed payload (sha256= prefix)', () => {
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const nonce = crypto.randomBytes(16).toString('hex');
+      const body = JSON.stringify({ eventId: 'evt-1', data: 'hello' });
+      const bodyHex = Buffer.from(body, 'utf8').toString('hex');
+      const signedPayload = `${timestamp}.${nonce}.${bodyHex}`;
+      const sig =
+        'sha256=' + crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
+
+      expect(verifyWebhookSignature(sig, [secret], timestamp, nonce, body)).toBe(true);
+    });
+
+    it('verifies a payload without sha256= prefix', () => {
+      const timestamp = '1726800000';
+      const nonce = 'abcdef0123456789abcdef0123456789';
+      const body = '{"test":true}';
+      const bodyHex = Buffer.from(body, 'utf8').toString('hex');
+      const signedPayload = `${timestamp}.${nonce}.${bodyHex}`;
+      const sig = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
+
+      expect(verifyWebhookSignature(sig, [secret], timestamp, nonce, body)).toBe(true);
+    });
+
+    it('rejects a payload signed with a wrong secret', () => {
+      const timestamp = '1726800000';
+      const nonce = 'abcdef0123456789abcdef0123456789';
+      const body = '{"test":true}';
+      const bodyHex = Buffer.from(body, 'utf8').toString('hex');
+      const signedPayload = `${timestamp}.${nonce}.${bodyHex}`;
+      const sig =
+        'sha256=' + crypto.createHmac('sha256', 'wrong-secret').update(signedPayload).digest('hex');
+
+      expect(verifyWebhookSignature(sig, [secret], timestamp, nonce, body)).toBe(false);
+    });
+
+    it('rejects a payload with missing signature', () => {
+      expect(
+        verifyWebhookSignature(undefined, [secret], '1726800000', 'nonce', '{"a":1}'),
+      ).toBe(false);
+    });
+
+    it('rejects a payload with missing timestamp', () => {
+      const body = '{"test":true}';
+      const sig = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');
+
+      expect(verifyWebhookSignature(sig, [secret], undefined, 'nonce', body)).toBe(false);
+    });
+
+    it('rejects a payload with missing nonce', () => {
+      const body = '{"test":true}';
+      const sig = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');
+
+      expect(verifyWebhookSignature(sig, [secret], '1726800000', undefined, body)).toBe(false);
+    });
+
+    it('verifies with a rotation secret alongside the primary secret', () => {
+      const primarySecret = 'primary-secret';
+      const rotatedSecret = 'rotated-secret';
+      const timestamp = '1726800000';
+      const nonce = 'abcdef0123456789abcdef0123456789';
+      const body = '{"test":true}';
+      const bodyHex = Buffer.from(body, 'utf8').toString('hex');
+      const signedPayload = `${timestamp}.${nonce}.${bodyHex}`;
+      const sig =
+        'sha256=' + crypto.createHmac('sha256', rotatedSecret).update(signedPayload).digest('hex');
+
+      expect(verifyWebhookSignature(sig, [primarySecret, rotatedSecret], timestamp, nonce, body)).toBe(true);
+    });
+  });
+
+  describe('computeWebhookSignature', () => {
+    it('produces deterministic hex for the same inputs', () => {
+      const secret = 'sig-secret';
+      const timestamp = '1726800000';
+      const nonce = '1234567890abcdef1234567890abcdef';
+      const body = '{"key":"value"}';
+
+      const sig1 = computeWebhookSignature(secret, timestamp, nonce, body);
+      const sig2 = computeWebhookSignature(secret, timestamp, nonce, body);
+
+      expect(sig1).toBe(sig2);
+
+      const bodyHex = Buffer.from(body, 'utf8').toString('hex');
+      const signedPayload = `${timestamp}.${nonce}.${bodyHex}`;
+      const expected = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
+      expect(sig1).toBe(expected);
+    });
+  });
+
+  describe('parseWebhookTimestamp', () => {
+    it('parses a valid Unix timestamp string', () => {
+      expect(parseWebhookTimestamp('1726800000')).toBe(1726800000);
+    });
+
+    it('returns undefined for a non-numeric string', () => {
+      expect(parseWebhookTimestamp('not-a-number')).toBeUndefined();
+    });
+
+    it('returns undefined for undefined input', () => {
+      expect(parseWebhookTimestamp(undefined)).toBeUndefined();
+    });
+  });
+
+  describe('getWebhookCandidateSecrets', () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    it('returns [primary] when only WEBHOOK_SECRET is set', () => {
+      process.env.WEBHOOK_SECRET = 'primary';
+      delete process.env.WEBHOOK_ROTATION_SECRETS;
+      expect(getWebhookCandidateSecrets()).toEqual(['primary']);
+    });
+
+    it('returns [primary, ...rotation] when both are set', () => {
+      process.env.WEBHOOK_SECRET = 'primary';
+      process.env.WEBHOOK_ROTATION_SECRETS = 'rotated1,rotated2';
+      expect(getWebhookCandidateSecrets()).toEqual(['primary', 'rotated1', 'rotated2']);
+    });
+
+    it('returns rotation secrets when WEBHOOK_SECRET is empty', () => {
+      delete process.env.WEBHOOK_SECRET;
+      process.env.WEBHOOK_ROTATION_SECRETS = 'rotated1,rotated2';
+      expect(getWebhookCandidateSecrets()).toEqual(['rotated1', 'rotated2']);
+    });
+
+    it('returns [""] when neither is set', () => {
+      delete process.env.WEBHOOK_SECRET;
+      delete process.env.WEBHOOK_ROTATION_SECRETS;
+      expect(getWebhookCandidateSecrets()).toEqual(['']);
     });
   });
 
