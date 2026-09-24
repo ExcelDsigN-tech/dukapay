@@ -65,6 +65,21 @@ const parseWalletSet = (wallets: string | undefined): Set<string> => {
 };
 
 export const resolveRoleForWallet = (publicKey: string): UserRole => {
+  const superAdminWallets = parseWalletSet(process.env.SUPER_ADMIN_WALLETS);
+  if (superAdminWallets.has(publicKey)) {
+    return 'super_admin';
+  }
+
+  const opsWallets = parseWalletSet(process.env.OPS_WALLETS);
+  if (opsWallets.has(publicKey)) {
+    return 'ops';
+  }
+
+  const supportWallets = parseWalletSet(process.env.SUPPORT_WALLETS);
+  if (supportWallets.has(publicKey)) {
+    return 'support';
+  }
+
   const adminWallets = parseWalletSet(process.env.ADMIN_WALLETS);
   if (adminWallets.has(publicKey)) {
     return 'admin';
