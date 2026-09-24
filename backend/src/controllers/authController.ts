@@ -30,6 +30,7 @@ import {
   generateDeviceFingerprint,
   revokeToken,
   revokeTokenFamily,
+  invalidateAllFamilies,
 } from '../services/authService.js';
 import logger from '../utils/logger.js';
 import { complianceService } from '../services/complianceService.js';
@@ -263,3 +264,26 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     data: { message: 'Logged out' },
   });
 };
+
+export const logoutAllSessions = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user?.publicKey) {
+    throw AppError.unauthorized('Authentication required');
+  }
+
+  await invalidateAllFamilies(req.user.publicKey, 'user_logout_all');
+
+  const cookieName = process.env.JWT_COOKIE_NAME ?? 'dukapay_jwt';
+  const refreshCookieName = process.env.REFRESH_COOKIE_NAME ?? 'dukapay_refresh';
+  res.clearCookie(cookieName, { path: '/' });
+  res.clearCookie(refreshCookieName, { path: '/api/v1/auth' });
+
+  logger.withContext().info('User logged out from all sessions', {
+    publicKey: req.user.publicKey,
+    timestamp: new Date().toISOString(),
+  });
+
+  res.status(200).json({
+    success: true,
+    data: { message: 'Logged out from all sessions' },
+  });
+});

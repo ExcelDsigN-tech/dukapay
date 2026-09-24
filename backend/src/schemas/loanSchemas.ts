@@ -83,3 +83,14 @@ export const borrowerLoansQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
   cursor: z.string().optional(),
 });
+
+export const markLoanDefaultedSchema = z.object({
+  borrower: stellarAddressSchema,
+});
+
+export const contestDefaultSchema = z.object({
+  reason: z
+    .string()
+    .min(5, 'Reason must be at least 5 characters')
+    .max(500, 'Reason cannot exceed 500 characters'),
+});
