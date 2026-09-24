@@ -22,7 +22,7 @@ scrape_configs:
   - job_name: "dukapay-backend"
     metrics_path: "/metrics"
     static_configs:
-      - targets: ["backend:3000"]
+      - targets: ["backend:3001"]
     scrape_interval: 10s
 
   - job_name: "node-exporter"

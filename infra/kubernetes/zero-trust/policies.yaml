@@ -69,3 +69,28 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
+---
+# Referenced by ops/incident-response/runbooks.json (data-breach /
+# insider-threat) via `verify_database_access_policy`:
+# `kubectl -n dukapay get networkpolicy allow-db-access -o yaml`.
+# Read-only verification step — real access changes follow docs/runbooks/
+# manual steps, never the orchestrator. Allows backend pods to reach the
+# database pods on 5432; everything else remains default-deny.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-access
+  namespace: dukapay
+spec:
+  podSelector:
+    matchLabels:
+      app: db
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 5432

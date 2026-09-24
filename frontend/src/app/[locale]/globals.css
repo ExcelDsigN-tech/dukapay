@@ -31,6 +31,30 @@
   --foreground: #ededed;
 }
 
+/* ── Kingdom theme scope ─────────────────────────────────────────── */
+/* Decision: the neutral shell above stays as the app-wide chrome; the
+   Obsidian/neon palette below governs ONLY the gamified surfaces
+   (see docs/DESIGN.md Scope). Apply with <div class="kingdom">. */
+.kingdom {
+  --kingdom-bg: #0d0d12;
+  --kingdom-surface: #16161f;
+  --kingdom-primary: #7c3aed;
+  --kingdom-secondary: #0ecfcf;
+  --kingdom-success: #22c55e;
+  --kingdom-warning: #f59e0b;
+  --kingdom-danger: #ef4444;
+  --kingdom-text: #f1f5f9;
+  /* #64748B on #0D0D12 is 4.07:1 — large-text/decorative only, NOT body copy. */
+  --kingdom-text-muted: #64748b;
+  /* #9AA4B5 on #0D0D12 is 7.71:1 (AAA) — use for body copy on obsidian. */
+  --kingdom-text-muted-aa: #9aa4b5;
+  /* Raw #7C3AED as text on #0D0D12 is 3.40:1 (fails AA) — use this lighter
+     purple for text; reserve #7C3AED fills for white-text CTAs (5.70:1, AA). */
+  --kingdom-primary-text: #a78bfa;
+  background: var(--kingdom-bg);
+  color: var(--kingdom-text);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

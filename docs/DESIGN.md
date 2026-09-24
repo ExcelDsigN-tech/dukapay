@@ -48,6 +48,17 @@ Developed a cohesive visual language built around:
 
 ## Color Palette
 
+> **Scope decision (stay distinct):** the neutral shell in
+> `frontend/src/app/[locale]/globals.css` (`--background`/`--foreground`)
+> remains the app-wide chrome (dashboard, forms, settings). The palette below
+> governs ONLY the gamified surfaces: the `/kingdom` route
+> (`KingdomClient`, `KingdomProgressWidget`, `AchievementsPanel`,
+> `GamificationSettings`, `LevelUpModal`, `XPGainAnimation`), the quest/tier
+> modules described here, and the disconnected-wallet landing page
+> (`components/landing/LandingPage.tsx`). It is formalized as reusable tokens
+> under the `.kingdom` scope in `globals.css` — new code must use those
+> variables instead of ad hoc hex/Tailwind classes.
+
 | Role | Value |
 |---|---|
 | Background | `#0D0D12` (Obsidian) |
@@ -58,7 +69,21 @@ Developed a cohesive visual language built around:
 | Warning | `#F59E0B` |
 | Danger | `#EF4444` |
 | Text Primary | `#F1F5F9` |
-| Text Muted | `#64748B` |
+| Text Muted | `#64748B` (large text / decorative only — see contrast table) |
+| Text Muted (body-safe) | `#9AA4B5` (`--kingdom-text-muted-aa`) |
+| Primary Text on dark | `#A78BFA` (`--kingdom-primary-text`; raw `#7C3AED` as text fails AA) |
+
+### Contrast verification (WCAG 2.1, normal text AA ≥ 4.5:1)
+
+| Pair | Ratio | Verdict | Rule |
+|---|---|---|---|
+| `#F1F5F9` on `#0D0D12` | 17.69:1 | AAA pass | Default body text |
+| `#0ECFCF` on `#0D0D12` | 10.01:1 | AAA pass | Teal accents/links |
+| White on `#7C3AED` | 5.70:1 | AA pass | CTA buttons (white text on purple fill) |
+| `#22C55E` on `#0D0D12` | 8.51:1 | AAA pass | Success |
+| `#9AA4B5` on `#0D0D12` | 7.71:1 | AAA pass | Body copy where muted tone is wanted |
+| `#64748B` on `#0D0D12` | 4.07:1 | **Fail normal AA** (large-text only) | Never body copy; headings ≥18.66px bold / ≥24px only |
+| `#7C3AED` on `#0D0D12` | 3.40:1 | **Fail normal AA** (large-text only) | Never body text; use `#A78BFA` or white-on-purple instead |
 
 ---
 
