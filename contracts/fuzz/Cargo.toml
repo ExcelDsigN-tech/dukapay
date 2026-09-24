@@ -58,3 +58,13 @@ path = "fuzz_targets/multisig_governance_fuzz.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "invariants_fuzz"
+path = "fuzz_targets/invariants_fuzz.rs"
+test = false
+doc = false
+bench = false
+
+[dependencies.agent_vault]
+path = "../agent_vault"

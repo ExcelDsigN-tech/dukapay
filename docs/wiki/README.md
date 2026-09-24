@@ -4,6 +4,13 @@ This folder is a GitHub Wiki-style set of documents that live in the repo so the
 
 ## Contents
 
+### Architecture & Operations
+- [System Architecture](./architecture.md)
+- [Deployment Runbooks](./deployment.md)
+- [Troubleshooting](./troubleshooting.md)
+- [Contributor Onboarding](./onboarding.md)
+
+### Deep Dives
 - [Soroban Contract State Machine](./contract-state-machine.md)
 - [Indexer ↔ Database Sync Flow](./indexer-sync-flow.md)
 - [Frontend “Standard Library” Patterns](./frontend-patterns.md)

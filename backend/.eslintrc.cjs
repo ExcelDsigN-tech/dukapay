@@ -34,6 +34,16 @@ module.exports = {
       },
     },
     {
+      // scripts/*.ts are run by tsx and are intentionally outside the
+      // tsconfig.json `include` (which is src-only), so type-aware parsing
+      // cannot resolve them. Fall back to syntax-only parsing; the shared
+      // base rules (prettier, no-unused-vars, etc.) still apply.
+      files: ['scripts/**/*.ts'],
+      parserOptions: {
+        project: null,
+      },
+    },
+    {
       files: ['src/utils/demo*.ts'],
       rules: {
         'no-console': 'off',

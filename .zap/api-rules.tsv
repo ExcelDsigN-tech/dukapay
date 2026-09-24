@@ -1,0 +1,11 @@
+# ZAP API Scan Rules Configuration
+# Format: Rule-ID	Action	Configuration
+
+# API-specific rule configurations
+10021	IGNORE	Content Security Policy Policy
+10022	IGNORE	X-Content-Type-Options
+10023	IGNORE	X-Frame-Options
+
+# Allow expected API responses
+10054	IGNORE	Absence of Anti-CSRF Tokens
+40012	IGNORE	Cross-Site Request Forgery

@@ -1,12 +1,20 @@
 import { registerTestUser } from '../controllers/authController.js';
 import { Router } from 'express';
 import { z } from 'zod';
-import { requestChallenge, login, verify, logout } from '../controllers/authController.js';
+import {
+  requestChallenge,
+  login,
+  refresh,
+  verify,
+  logout,
+  submitKyc,
+} from '../controllers/authController.js';
 import {
   challengeRateLimiter,
   loginRateLimiter,
   ipLoginRateLimiter,
 } from '../middleware/rateLimiter.js';
+import { getCsrfTokenController } from '../middleware/csrf.js';
 import { requireJwtAuth } from '../middleware/jwtAuth.js';
 import { validateBody } from '../middleware/validation.js';
 
@@ -25,6 +33,17 @@ const loginSchema = z.object({
   publicKey: z.string().min(1, 'Public key is required'),
   message: z.string().min(1, 'Message is required'),
   signature: z.string().min(1, 'Signature is required'),
+});
+
+const kycSchema = z.object({
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().min(1).max(100),
+  dateOfBirth: z.string().date().optional(),
+  countryCode: z
+    .string()
+    .trim()
+    .length(2)
+    .transform((value) => value.toUpperCase()),
 });
 
 /**
@@ -86,6 +105,93 @@ router.post('/challenge', challengeRateLimiter, validateBody(challengeSchema), r
  *               $ref: '#/components/schemas/AuthLoginResponse'
  */
 router.post('/login', ipLoginRateLimiter, loginRateLimiter, validateBody(loginSchema), login);
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh access token using rotated refresh token
+ *     description: Rotates refresh token and returns new access token. Detects token reuse.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New access and refresh tokens issued
+ *       401:
+ *         description: Invalid or replayed refresh token
+ */
+router.post('/refresh', refresh);
+
+/**
+ * @swagger
+ * /auth/csrf:
+ *   get:
+ *     summary: Retrieve CSRF token
+ *     description: Sets the CSRF cookie with SameSite=Strict and returns the token in response data.
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: CSRF token returned
+ */
+router.get('/csrf', getCsrfTokenController);
+
+/**
+ * @swagger
+ * /auth/kyc:
+ *   post:
+ *     summary: Submit a KYC screening for the authenticated user
+ *     description: >
+ *       Submits the authenticated user's identity details to the configured
+ *       screening provider and returns the screening outcome (`approved`,
+ *       `review`, or `rejected`) with the provider reference.
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [firstName, lastName]
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 maxLength: 100
+ *               lastName:
+ *                 type: string
+ *                 maxLength: 100
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *               countryCode:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 2
+ *                 description: ISO 3166-1 alpha-2 country code
+ *     responses:
+ *       200:
+ *         description: KYC screening completed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/KycScreeningResponse'
+ *       400:
+ *         description: Validation error.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       503:
+ *         description: Screening provider unavailable.
+ */
+router.post('/kyc', requireJwtAuth, validateBody(kycSchema), submitKyc);
 
 /**
  * @swagger

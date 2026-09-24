@@ -152,4 +152,114 @@ backend/src/services/authService.ts — generateJwtToken, verifyJwtToken,
                                       generateChallenge, verifySignature
 backend/src/auth/rbac.ts            — ROLE_SCOPES, resolveRoleForWallet,
                                       resolveScopesForRole
+backend/src/middleware/rateLimit.ts — CSRF + tiered rate limiting
+backend/src/services/piiCrypto.ts   — field-level PII encryption at rest
+backend/src/services/piiRotation.ts — PII encryption-key rotation
 ```
+
+---
+
+## Encryption at rest (KEK/DEK)
+
+The backend uses a **KEK/DEK envelope scheme** for PII stored in Postgres:
+
+- **KEK (key encryption key):** `PII_ENCRYPTION_KEK`, a 32-byte Base64 key
+  supplied via environment/vault. Never stored in the database.
+- **DEK (data encryption key):** random 32-byte key generated per field row and
+  stored **envelope-encrypted** with the KEK alongside the ciphertext. Losing
+  the DEK invalidates only that field; rotating the DEK does not require
+  re-encrypting other rows.
+- **Cipher:** AES-256-GCM (128-bit tag, random 96-bit IV) via
+  `crypto.createCipheriv` in `piiCrypto.ts` (`encryptField` / `decryptField`),
+  with constants `AES_256_GCM_TAG_LENGTH = 16` and `IV_LENGTH = 12`.
+
+Write path: `encryptField(plaintext)` → `{ iv, tag, ciphertext }` stored as a
+single column. Database administrators without the KEK cannot recover
+plaintext. Application logs **never** contain raw PII fields (all errors are
+sanitized by `errorSanitizer` before logging, per issue #484).
+
+### Key rotation (PII_REVISION)
+
+`piiRotation.ts` implements `reEncryptPIIForAllUsers(state)`:
+
+1. Read an envelope for each affected table.
+2. Decrypt with the current KEK/DEK.
+3. Re-encrypt with a fresh KEK/DEK.
+4. Commit and update `PII_REVISION` (a monotonic counter tracked per record).
+
+Rotation is run as a maintenance script with a dual-KEK window: keep the old
+KEK active (for decryption) while records transition, and retire it once the
+revision sweep reports zero records below the new revision.
+
+`JWT_SECRET` rotation follows the same principle: JWTs are re-minted within 24h
+(`JWT_EXPIRES_IN`), so a rolling rotation is inherently safe — see
+`authService.rotateJwtSecret` equivalent flows in the auth middleware.
+
+---
+
+## Audit logging
+
+Audit events are emitted for all security-relevant actions and shipped to the
+audit store (backed by Postgres `audit_logs` + application logs → Sentry):
+
+| Event | Trigger | Retention |
+|---|---|---|
+| `auth.challenge.issued` | GET `/api/auth/challenge` | 90 days |
+| `auth.login.success` / `auth.login.failed` | POST `/api/auth/verify` | 90 days |
+| `jwt.refreshed` / `jwt.revoked` | JWT refresh / revocation | 90 days |
+| `csrf.token.rotated` | per-session CSRF rotation | 90 days |
+| `admin.action` | any `admin:*` API-key route | 1 year |
+| `webhook.delivered` / `webhook.failed` | outbound webhook dispatch | 90 days |
+| `pii.encrypted` / `pii.rotated` | encryption & rotation ops | 1 year |
+
+Audit record shape: `{ ts, actor (publicKey or apiKey-scope), action, scope,
+route, outcome, request_id }`. Records are append-only and immutable; retention
+is enforced by a scheduled purge (see `runbooks/`). The `request_id` links audit
+entries to normalized (PII-free) request logs so an incident can be
+reconstructed without exposing PII.
+
+---
+
+## Compliance mappings
+
+| Requirement | Where satisfied |
+|---|---|
+| OWASP ASVS V2 (auth) | Challenge–signature–JWT, short-lived tokens, scoped API keys |
+| OWASP ASVS V6 (PII) | Field-level AES-256-GCM encryption, masking in UI, `piiMask` |
+| GDPR Art. 25 (DPA) | `docs/DPA_TEMPLATE.md`, PII inventory above, retention 90d–1y |
+| PCI-DSS 3.4 (if storing card data) | N/A — DukaPay stores no card data; Stellar assets only |
+| SOC 2 CC7 (monitoring) | Audit logging, Sentry, query-latency + security metrics |
+| NIST SP 800-53 AC-2 (access) | RBAC scopes per route, role resolution, API-key scoping |
+
+---
+
+## Incident response playbook
+
+1. **Detect** — Sentry alerts, audit-log anomaly checks, DAST/CodeQL findings
+   (`.github/workflows/dast.yml`, `codeql.yml`), bug-bounty reports
+   (`docs/BUG_BOUNTY_PROGRAM.md`).
+2. **Verify** — reproduce and classify severity (SEV-1 PII/oracle/funds,
+   SEV-2 availability, SEV-3 low). Use `request_id` links from the audit log to
+   trace impact without exposing PII.
+3. **Contain** — rotate `JWT_SECRET`, `INTERNAL_API_KEY`, and `PII_ENCRYPTION_KEK`;
+   revoke impacted token families (`wiki/jwt-revocation.md`); pause failing
+   admin key.
+4. **Triage** — snapshot affected rows, run `reEncryptPIIForAllUsers` if key
+   exposure implied, blocklist signatures if wallet compromise.
+5. **Eradicate & recover** — apply patch behind the single-commit policy in
+   `SECURITY.md`, validate with e2e + contract fuzz where relevant.
+6. **Postmortem** — update `docs/SECURITY-MODEL.md`, threat model
+   (`.github/THREAT_MODEL.md`), and Red Team schedule
+   (`docs/RED_TEAM_SCHEDULE.md`); publish a summary to maintainers + Telegram.
+
+---
+
+## Cross-references
+
+- [SECURITY.md](../SECURITY.md) — responsible disclosure + hardening policy
+- `.github/THREAT_MODEL.md` — threat model
+- `docs/DPA_TEMPLATE.md` — data-processing agreement template
+- `docs/BUG_BOUNTY_PROGRAM.md` — bounty scope + rules
+- `wiki/jwt-revocation.md` — token revocation procedure
+- `docs/ENVIRONMENT.md` — env-var reference (`JWT_SECRET`, `INTERNAL_API_KEY`,
+  `PII_ENCRYPTION_KEK`, rate-limit and CSRF knobs)

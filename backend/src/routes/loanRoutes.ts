@@ -8,6 +8,7 @@ import {
   getLoanDetails,
   getLoanAmortizationSchedule,
   previewLoanAmortizationSchedule,
+  getLoanRepaymentPreview,
   requestLoan,
   repayLoan,
   depositCollateral,
@@ -18,7 +19,8 @@ import {
   submitTransaction,
 } from '../controllers/loanController.js';
 import { getLoanEvents } from '../controllers/indexerController.js';
-import { requireJwtAuth, requireScopes, requireWalletOwnership } from '../middleware/jwtAuth.js';
+import { requireJwtAuth, requireScopes } from '../middleware/jwtAuth.js';
+import { requireTenantAccess } from '../middleware/rbac.js';
 import { requireLoanBorrowerAccess, requireLoanOwner } from '../middleware/loanAccess.js';
 import { validate, validateBody, validateParams, validateQuery } from '../middleware/validation.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
@@ -51,6 +53,48 @@ if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
   router.post('/:loanId/mark-defaulted', requireJwtAuth, requireLoanOwner, markLoanDefaulted);
 }
 
+/**
+ * @swagger
+ * /loans/config:
+ *   get:
+ *     summary: Retrieve the active loan configuration
+ *     description: >
+ *       Returns the current underwriting configuration used when pricing and
+ *       approving loans: the minimum credit score required, maximum principal,
+ *       annual interest rate, and the credit score threshold. Read-only and
+ *       public.
+ *     tags: [Loans]
+ *     responses:
+ *       200:
+ *         description: Loan configuration retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, data]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   required: [minScore, maxAmount, interestRatePercent, creditScoreThreshold]
+ *                   properties:
+ *                     minScore:
+ *                       type: integer
+ *                       example: 300
+ *                     maxAmount:
+ *                       type: integer
+ *                       example: 50000
+ *                     interestRatePercent:
+ *                       type: number
+ *                       example: 12.5
+ *                     creditScoreThreshold:
+ *                       type: integer
+ *                       example: 600
+ *       500:
+ *         description: Internal server error.
+ */
 router.get('/config', getLoanConfigEndpoint);
 
 /**
@@ -102,6 +146,81 @@ router.get('/config', getLoanConfigEndpoint);
 
 router.post('/:loanId/build-cancel', requireJwtAuth, requireLoanOwner, buildCancelLoanTx);
 
+/**
+ * @swagger
+ * /loans/amortization-preview:
+ *   post:
+ *     summary: Preview a loan's amortization schedule
+ *     description: >
+ *       Computes the amortization schedule (principal/interest split and due
+ *       dates) for a prospective loan without persisting anything. Useful
+ *       before the borrower confirms a loan request.
+ *     tags: [Loans]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [amount, termDays]
+ *             properties:
+ *               amount:
+ *                 type: integer
+ *                 minimum: 1
+ *                 example: 10000
+ *               termDays:
+ *                 type: integer
+ *                 enum: [30, 60, 90]
+ *     responses:
+ *       200:
+ *         description: Amortization schedule preview generated.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, amortization]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 amortization:
+ *                   type: object
+ *                   required: [principal, interestRateBps, termLedgers, totalInterest, totalDue, schedule]
+ *                   properties:
+ *                     principal:
+ *                       type: number
+ *                     interestRateBps:
+ *                       type: integer
+ *                     termLedgers:
+ *                       type: integer
+ *                     totalInterest:
+ *                       type: number
+ *                     totalDue:
+ *                       type: number
+ *                     schedule:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         required: [date, principalPortion, interestPortion, totalDue, runningBalance]
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                           principalPortion:
+ *                             type: number
+ *                           interestPortion:
+ *                             type: number
+ *                           totalDue:
+ *                             type: number
+ *                           runningBalance:
+ *                             type: number
+ *       400:
+ *         description: Validation error.
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ */
 router.post(
   '/amortization-preview',
   requireJwtAuth,
@@ -220,7 +339,7 @@ router.get(
   '/borrower/:borrower',
   requireJwtAuth,
   requireScopes('read:loans'),
-  requireWalletOwnership,
+  requireTenantAccess,
   validate(borrowerParamSchema),
   validateQuery(borrowerLoansQuerySchema),
   getBorrowerLoans,
@@ -266,12 +385,159 @@ router.get(
   getLoanDetails,
 );
 
+/**
+ * @swagger
+ * /loans/{loanId}/amortization-schedule:
+ *   get:
+ *     summary: Get the amortization schedule for a loan
+ *     description: >
+ *       Returns the computed amortization schedule for an approved loan of the
+ *       authenticated borrower. Mirrors the shape produced by
+ *       `/loans/amortization-preview` and includes the loan id.
+ *     tags: [Loans]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: loanId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Loan ID
+ *     responses:
+ *       200:
+ *         description: Amortization schedule retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, loanId, amortization]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 loanId:
+ *                   type: string
+ *                 amortization:
+ *                   type: object
+ *                   required: [principal, interestRateBps, termLedgers, totalInterest, totalDue, schedule]
+ *                   properties:
+ *                     principal:
+ *                       type: number
+ *                     interestRateBps:
+ *                       type: integer
+ *                     termLedgers:
+ *                       type: integer
+ *                     totalInterest:
+ *                       type: number
+ *                     totalDue:
+ *                       type: number
+ *                     schedule:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         required: [date, principalPortion, interestPortion, totalDue, runningBalance]
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                           principalPortion:
+ *                             type: number
+ *                           interestPortion:
+ *                             type: number
+ *                           totalDue:
+ *                             type: number
+ *                           runningBalance:
+ *                             type: number
+ *       401:
+ *         description: Missing or invalid Bearer token.
+ *       403:
+ *         description: Loan belongs to a different borrower.
+ *       404:
+ *         description: Loan not found or not yet approved.
+ */
 router.get(
   '/:loanId/amortization-schedule',
   requireJwtAuth,
   requireScopes('read:loans'),
   requireLoanBorrowerAccess,
   getLoanAmortizationSchedule,
+);
+
+/**
+ * @swagger
+ * /loans/{loanId}/repayment-preview:
+ *   get:
+ *     summary: Get loan repayment preview
+ *     description: >
+ *       Returns exact repayment schedule before committing. Includes amortization
+ *       table with principal, interest, fees, remaining balance per period.
+ *     tags: [Loans]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: loanId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Repayment preview retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, loanId, preview]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 loanId:
+ *                   type: string
+ *                 preview:
+ *                   type: object
+ *                   required: [principal, interestRateBps, termLedgers, totalInterest, totalFees, totalDue, schedule]
+ *                   properties:
+ *                     principal:
+ *                       type: number
+ *                     interestRateBps:
+ *                       type: integer
+ *                     termLedgers:
+ *                       type: integer
+ *                     totalInterest:
+ *                       type: number
+ *                     totalFees:
+ *                       type: number
+ *                     totalDue:
+ *                       type: number
+ *                     schedule:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         required: [period, due_date, principal, interest, fees, total, remaining_balance]
+ *                         properties:
+ *                           period:
+ *                             type: integer
+ *                           due_date:
+ *                             type: string
+ *                             format: date-time
+ *                           principal:
+ *                             type: number
+ *                           interest:
+ *                             type: number
+ *                           fees:
+ *                             type: number
+ *                           total:
+ *                             type: number
+ *                           remaining_balance:
+ *                             type: number
+ */
+router.get(
+  '/:loanId/repayment-preview',
+  requireJwtAuth,
+  requireScopes('read:loans'),
+  requireLoanBorrowerAccess,
+  getLoanRepaymentPreview,
 );
 
 /**

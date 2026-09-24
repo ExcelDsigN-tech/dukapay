@@ -12,6 +12,7 @@
     "lint": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "audit:a11y": "next build && npx axe-playwright",
+    "perf:budget": "node scripts/check-bundle-size.mjs",
     "format": "prettier --write .",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -77,6 +78,8 @@
     ]
   },
   "overrides": {
-    "axios": "1.13.5"
+    "axios": "1.20.0",
+    "toml": "4.3.0",
+    "browserslist": "4.28.9"
   }
 }

@@ -401,3 +401,95 @@ export const getPoolSharePrice = asyncHandler(async (req: Request, res: Response
     cached: false,
   });
 });
+
+/**
+ * GET /api/pool/analytics
+ * Returns comprehensive protocol analytics. Cached for 300 seconds (5 mins).
+ */
+export const getAnalytics = asyncHandler(async (_req: Request, res: Response) => {
+  const cacheKey = 'pool:analytics';
+  const cached = await cacheService.get<Record<string, unknown>>(cacheKey);
+
+  if (cached) {
+    res.json({ success: true, analytics: cached, source: 'cache' });
+    return;
+  }
+
+  const [poolStats, loanVolume, agentCount] = await Promise.all([
+    query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN event_type = 'Deposit' THEN CAST(amount AS NUMERIC) ELSE 0 END), 0) AS total_deposits,
+        COALESCE(SUM(CASE WHEN event_type = 'Withdraw' THEN CAST(amount AS NUMERIC) ELSE 0 END), 0) AS total_withdrawals,
+        COALESCE(SUM(CASE WHEN event_type = 'YieldDistributed' THEN CAST(amount AS NUMERIC) ELSE 0 END), 0) AS total_yield
+      FROM contract_events
+    `),
+    query(`
+      SELECT 
+        COUNT(DISTINCT loan_id) AS total_loans_issued,
+        COALESCE(SUM(CAST(amount AS NUMERIC)), 0) AS total_volume
+      FROM contract_events
+      WHERE event_type = 'LoanApproved'
+    `),
+    query(`SELECT COUNT(*) AS active_agents FROM agent_vaults WHERE is_active = true`).catch(
+      () => ({ rows: [{ active_agents: 0 }] }),
+    ),
+  ]);
+
+  const analyticsData = {
+    totalDeposits: safeFloat(poolStats.rows[0]?.total_deposits),
+    totalWithdrawals: safeFloat(poolStats.rows[0]?.total_withdrawals),
+    totalYieldDistributed: safeFloat(poolStats.rows[0]?.total_yield),
+    totalLoansIssued: parseInt(loanVolume.rows[0]?.total_loans_issued || '0', 10),
+    totalVolume: safeFloat(loanVolume.rows[0]?.total_volume),
+    activeAgents: parseInt(agentCount.rows[0]?.active_agents || '0', 10),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await cacheService.set(cacheKey, analyticsData, 300); // 300s TTL
+
+  res.json({ success: true, analytics: analyticsData, source: 'database' });
+});
+
+/**
+ * GET /api/agent/dashboard/:agentAddress
+ * Returns agent float, active loans, and performance metrics. Cached for 30 seconds.
+ */
+export const getAgentDashboard = asyncHandler(async (req: Request, res: Response) => {
+  const { agentAddress } = req.params as { agentAddress: string };
+  const cacheKey = `agent:dashboard:${agentAddress}`;
+
+  const cached = await cacheService.get<Record<string, unknown>>(cacheKey);
+  if (cached) {
+    res.json({ success: true, dashboard: cached, source: 'cache' });
+    return;
+  }
+
+  const [vaultResult, loansResult] = await Promise.all([
+    query(
+      `SELECT float_balance, collateral_balance, is_active FROM agent_vaults WHERE agent_address = $1`,
+      [agentAddress],
+    ).catch(() => ({ rows: [] })),
+    query(
+      `SELECT COUNT(*) AS active_loans FROM loans WHERE agent_address = $1 AND status = 'active'`,
+      [agentAddress],
+    ).catch(() => ({ rows: [{ active_loans: 0 }] })),
+  ]);
+
+  const vault = vaultResult.rows[0] || {
+    float_balance: 0,
+    collateral_balance: 0,
+    is_active: false,
+  };
+  const dashboardData = {
+    agentAddress,
+    floatBalance: safeFloat(vault.float_balance),
+    collateralBalance: safeFloat(vault.collateral_balance),
+    isActive: Boolean(vault.is_active),
+    activeLoans: parseInt(loansResult.rows[0]?.active_loans || '0', 10),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await cacheService.set(cacheKey, dashboardData, 30); // 30s TTL
+
+  res.json({ success: true, dashboard: dashboardData, source: 'database' });
+});

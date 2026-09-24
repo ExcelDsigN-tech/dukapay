@@ -66,9 +66,9 @@ describe('cacheKeys helpers', () => {
       expect(deletedKeys).toContain(CacheKeys.scoreBreakdown(BORROWER));
     });
 
-    it('calls delete exactly 3 times', async () => {
+    it('calls delete exactly 5 times', async () => {
       await invalidateOnRepay(BORROWER, LOAN_ID);
-      expect(mockDelete).toHaveBeenCalledTimes(3);
+      expect(mockDelete).toHaveBeenCalledTimes(5);
     });
   });
 
@@ -81,35 +81,37 @@ describe('cacheKeys helpers', () => {
       expect(deletedKeys).toContain(CacheKeys.borrowerLoans(BORROWER));
     });
 
-    it('calls delete exactly 2 times', async () => {
+    it('calls delete exactly 3 times', async () => {
       await invalidateOnLoanRequest(BORROWER);
-      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(mockDelete).toHaveBeenCalledTimes(3);
     });
   });
 
   describe('invalidateOnDeposit', () => {
-    it('deletes pool stats', async () => {
+    it('deletes pool stats and analytics', async () => {
       await invalidateOnDeposit(DEPOSITOR);
 
       expect(mockDelete).toHaveBeenCalledWith(CacheKeys.poolStats());
+      expect(mockDelete).toHaveBeenCalledWith(CacheKeys.analytics());
     });
 
-    it('calls delete exactly once', async () => {
+    it('calls delete exactly twice', async () => {
       await invalidateOnDeposit(DEPOSITOR);
-      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockDelete).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('invalidateOnWithdraw', () => {
-    it('deletes pool stats', async () => {
+    it('deletes pool stats and analytics', async () => {
       await invalidateOnWithdraw(DEPOSITOR);
 
       expect(mockDelete).toHaveBeenCalledWith(CacheKeys.poolStats());
+      expect(mockDelete).toHaveBeenCalledWith(CacheKeys.analytics());
     });
 
-    it('calls delete exactly once', async () => {
+    it('calls delete exactly twice', async () => {
       await invalidateOnWithdraw(DEPOSITOR);
-      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockDelete).toHaveBeenCalledTimes(2);
     });
   });
 
