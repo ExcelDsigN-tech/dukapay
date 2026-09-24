@@ -1,10 +1,8 @@
 name: Deploy Production (Mainnet)
 
-# Mainnet deployment scaffolding — pending #565 decision.
-# This workflow will structurally guarantee the KYC/audit-anchor posture at deploy time
-# once #565 is decided, but #565 is still open and asks for a maintainer/product call.
-# Until #565 is closed, this workflow is scaffolding and must not be treated as the
-# decided production posture. Coordinate with the #565 / #570 assignees before continuing.
+# Mainnet deployment. The production-guard job enforces the #565 posture at deploy time:
+# KYC enforcement is required; audit anchoring is recommended (warns when off, fails
+# when on but misconfigured). See scripts/verify-production-env.mjs.
 # Blocked by #561/#562 correctness gaps + external audit (see docs/deployed-contracts.md).
 
 on:
@@ -36,7 +34,7 @@ jobs:
             exit 1
           fi
 
-  # ── 1. Production posture guard — scaffolding pending #565 ────────────────
+  # ── 1. Production posture guard (#565) ─────────────────────────────────────
   production-guard:
     needs: [confirm]
     if: always() && (needs.confirm.result == 'success' || needs.confirm.result == 'skipped')
@@ -48,11 +46,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Verify production KYC/AUDIT/AML posture (scaffold, pending #565)
+      - name: Verify production KYC/AUDIT/AML posture
         env:
           # These must be explicitly set in the `production` environment (not relying on code defaults).
-          # Until #565 is decided, the guard is scaffolding — values below are placeholders requiring
-          # compliance sign-off. The guard fails if they are blank or structurally invalid.
+          # AML values still require compliance sign-off. The guard fails if required values
+          # are blank or structurally invalid.
           KYC_ENFORCEMENT_ENABLED: ${{ secrets.KYC_ENFORCEMENT_ENABLED }}
           AUDIT_ANCHOR_ENABLED: ${{ secrets.AUDIT_ANCHOR_ENABLED }}
           AUDIT_ANCHOR_CONTRACT_ID: ${{ secrets.AUDIT_ANCHOR_CONTRACT_ID }}
@@ -67,7 +65,7 @@ jobs:
           COMPLYADVANTAGE_SEARCH_PROFILE: ${{ vars.COMPLYADVANTAGE_SEARCH_PROFILE }}
           SAR_FILING_API_URL: ${{ vars.SAR_FILING_API_URL }}
         run: |
-          echo "🔒 Production posture guard (scaffold, pending #565): verifying KYC/AUDIT/AML are explicitly set..."
+          echo "🔒 Production posture guard: verifying KYC/AUDIT/AML are explicitly set..."
           echo "KYC_ENFORCEMENT_ENABLED=${KYC_ENFORCEMENT_ENABLED:-<unset>}"
           echo "AUDIT_ANCHOR_ENABLED=${AUDIT_ANCHOR_ENABLED:-<unset>}"
           echo "AML_REPORTING_THRESHOLD=${AML_REPORTING_THRESHOLD:-<unset>}"
@@ -106,8 +104,7 @@ jobs:
 
   # ── 2. Build and push production images (tagged production-*) ─────────────
   # NOTE: Images are built here for verification and Trivy scan. Actual production
-  # deploy to the host is currently held until #565 is decided and #561/#562 + audit
-  # land. See docs/deployed-contracts.md. When unblocked, add a deploy job that
+  # deploy to the host is currently held until #561/#562 + audit land. See docs/deployed-contracts.md. When unblocked, add a deploy job that
   # copies compose files and health-checks, similar to deploy-staging.yml.
   build-and-push:
     needs: [production-guard]

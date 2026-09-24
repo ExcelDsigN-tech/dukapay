@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 /**
  * verify-production-env.mjs
- * Scaffold for mainnet production posture guard (pending #565 decision).
- * Fails the deploy if KYC_ENFORCEMENT_ENABLED / AUDIT_ANCHOR_ENABLED / AML thresholds
- * don't match the posture once #565 is decided and AML values are compliance-signed-off.
+ * Mainnet production posture guard (#565 decided).
+ * Fails the deploy if KYC_ENFORCEMENT_ENABLED is not "true", if audit anchoring is on
+ * but misconfigured, or if AML thresholds are blank/invalid. Audit anchoring being off
+ * only warns. Mirrors validateProductionComplianceFlags in backend/src/config/env.ts.
  * See docs/ENVIRONMENT.md#production-mainnet-posture and backend/.env.production.example.
- * NOTE: #565 is still open — this guard is scaffolding, not a decided posture.
  *
  * Usage:
  *   KYC_ENFORCEMENT_ENABLED=true AUDIT_ANCHOR_ENABLED=true ... node scripts/verify-production-env.mjs
  *   node scripts/verify-production-env.mjs --env-file backend/.env.production
  *   node scripts/verify-production-env.mjs --env-file backend/.env.production.example  # checks template itself
  *
- * Expects for PRODUCTION (mainnet) — placeholders pending #565 / compliance sign-off:
- *   KYC_ENFORCEMENT_ENABLED=true
- *   AUDIT_ANCHOR_ENABLED=true
- *   AUDIT_ANCHOR_CONTRACT_ID is a valid Stellar contract (C...)
- *   AUDIT_ANCHOR_SOURCE_SECRET is set (S... not empty, not placeholder)
+ * Expects for PRODUCTION (mainnet):
+ *   KYC_ENFORCEMENT_ENABLED=true (hard requirement)
+ *   AUDIT_ANCHOR_ENABLED=true recommended (warns when off); when on:
+ *     AUDIT_ANCHOR_CONTRACT_ID is a valid Stellar contract (C...)
+ *     AUDIT_ANCHOR_SOURCE_SECRET is set (S... not empty, not placeholder)
  *   AML_REPORTING_THRESHOLD is numeric >= 1000 (not blank; requires compliance sign-off)
  *   AML_DAILY_TX_LIMIT is numeric 1..100 (not blank; requires compliance sign-off)
  *   AML_HIGH_RISK_COUNTRIES is non-empty comma-separated ISO 3166-1 alpha-2 list (not blank; requires compliance sign-off)
@@ -149,22 +149,19 @@ function requireHighRiskCountries(message) {
   }
 }
 
-// ── Production mainnet posture checks (scaffold, pending #565) ───────────────
-console.log("\n🔒 Verifying production mainnet posture (scaffold, pending #565)...\n");
-console.log("NOTE: #565 is still open — this guard is scaffolding. Values are placeholders requiring compliance sign-off.\n");
+// ── Production mainnet posture checks (#565) ─────────────────────────────────
+console.log("\n🔒 Verifying production mainnet posture...\n");
 
-// 1. KYC enforcement
+// 1. KYC enforcement — hard requirement (#565)
 requireTrue(
   "KYC_ENFORCEMENT_ENABLED",
-  "Pending #565 — production posture not yet decided. Guard expects 'true' for mainnet; set explicitly in prod env/secrets (not relying on code default false). Coordinate with #565 assignee."
+  "Hard requirement for mainnet (#565); set explicitly in prod env/secrets (not relying on code default false)."
 );
 
-// 2. Audit anchoring
-requireTrue(
-  "AUDIT_ANCHOR_ENABLED",
-  "Pending #565 — production posture not yet decided. Guard expects 'true' for mainnet."
-);
-if (env["AUDIT_ANCHOR_ENABLED"] === "true") {
+// 2. Audit anchoring — recommended, not blocking (#565); required config when on
+if (env["AUDIT_ANCHOR_ENABLED"] !== "true") {
+  warnings.push(`AUDIT_ANCHOR_ENABLED is ${JSON.stringify(env["AUDIT_ANCHOR_ENABLED"])} — audit anchoring disabled (recommended: "true", not blocking per #565)`);
+} else {
   const cid = env["AUDIT_ANCHOR_CONTRACT_ID"];
   if (isPlaceholder(cid)) {
     errors.push(`AUDIT_ANCHOR_CONTRACT_ID must be set when AUDIT_ANCHOR_ENABLED=true (got: ${JSON.stringify(cid)}) — deploy audit_anchor to mainnet first`);

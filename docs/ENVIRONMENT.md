@@ -115,23 +115,23 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `TWILIO_AUTH_TOKEN` | — | ✓ | ✓ | — | Twilio auth token | `backend/src/services/smsService.ts` |
 | `TWILIO_PHONE_NUMBER` | — | ✓ | ✓ | — | Twilio sender phone number | `backend/src/services/smsService.ts` |
 
-### Production Mainnet Posture (pending #565 — scaffold, not yet enforceable as decided posture)
+### Production Mainnet Posture
 
-> **Status: #565 is still open** and asks for a maintainer/product call on `KYC_ENFORCEMENT_ENABLED` / `AUDIT_ANCHOR_ENABLED` per environment. This section and `backend/.env.production.example` are **scaffolding** that will be updated once #565 is decided; they do not claim the decision has been made. `scripts/verify-production-env.mjs` and `.github/workflows/deploy-production.yml` will enforce the decided posture at deploy time, but until #565 is closed the guard's expectations should be considered **placeholders pending sign-off**. Coordinate with the #565 / #570 assignees before continuing.
+> **#565 decision:** `KYC_ENFORCEMENT_ENABLED` is a hard requirement in production — backend boot (`validateProductionComplianceFlags`) and the deploy guard (`scripts/verify-production-env.mjs`) both fail when it is not `true`. `AUDIT_ANCHOR_ENABLED` is recommended but not blocking — both warn when it is off, and both fail when it is on without `AUDIT_ANCHOR_CONTRACT_ID` / `AUDIT_ANCHOR_SOURCE_SECRET`.
 
-Until #565 is decided, do not treat the values below as reviewed facts. They are placeholders that require explicit production env/secrets (not code defaults) and compliance sign-off.
+AML values below are still placeholders that require compliance sign-off. All values must be set explicitly in production env/secrets, not left to code defaults.
 
-| Variable | Scaffolding Value (pending #565 / compliance sign-off) | Notes |
+| Variable | Value | Notes |
 |---|---|---|
-| `KYC_ENFORCEMENT_ENABLED` | `true` (placeholder) | Intended to be `true` for mainnet, but #565 is still open — maintainer/product must confirm per-environment posture. Guard will fail deploy if not `true` once decided; staging may remain `false` for test accounts. Value must be explicitly set in `backend/.env.production` / `production` secrets, not relying on code default `false`. |
-| `AUDIT_ANCHOR_ENABLED` | `true` (placeholder) | Same — pending #565. Guard requires `AUDIT_ANCHOR_CONTRACT_ID` (`C...`) and `AUDIT_ANCHOR_SOURCE_SECRET` (`S...`) when enabled. |
+| `KYC_ENFORCEMENT_ENABLED` | `true` (required) | Hard requirement (#565). Deploy guard and backend boot fail if not `true`. Must be explicitly set in `backend/.env.production` / `production` secrets, not relying on code default `false`. |
+| `AUDIT_ANCHOR_ENABLED` | `true` (recommended) | Not blocking (#565): warns when off. When on, `AUDIT_ANCHOR_CONTRACT_ID` (`C...`) and `AUDIT_ANCHOR_SOURCE_SECRET` (`S...`) are required. |
 | `AML_REPORTING_THRESHOLD` | `10000` (placeholder) | Placeholder amount; requires compliance sign-off for launch jurisdictions. Guard checks numeric `>=1000`, not blank. |
 | `AML_DAILY_TX_LIMIT` | `10` (placeholder) | Placeholder velocity limit; requires compliance sign-off. Guard checks `1..100`, not blank. |
 | `AML_HIGH_RISK_COUNTRIES` | `AF,BY,CF,CD,CU,ER,GN,HT,IR,KE,KP,LB,LY,MM,NG,NI,RU,SO,SS,SD,SY,VE,YE,ZW` (placeholder) | **Not reviewed** — placeholder list only. Previously included `UA` (not FATF-listed) and omitted `KE`/`NG` (on FATF grey list as of early 2025). Requires compliance sign-off before mainnet; see `backend/.env.production.example` and `complianceService.ts` which reads this value directly. |
 | `STELLAR_NETWORK` / `STELLAR_NETWORK_PASSPHRASE` / `STELLAR_RPC_URL` | `mainnet` / `Public Global Stellar Network ; September 2015` / `https://soroban-rpc.stellar.org` | Mainnet network constants; guard checks exact match. |
 | `COMPLYADVANTAGE_API_KEY` + `COMPLYADVANTAGE_SEARCH_PROFILE` | real key + search profile via secrets | Required when KYC enforcement is on; guard requires both set when `KYC_ENFORCEMENT_ENABLED=true`. |
 
-**How it is intended to be enforced (once #565 is decided)**
+**How it is enforced**
 
 1. **Explicit production config** — `backend/.env.production.example` (template, committed) and `backend/.env.production` (live, gitignored + secrets manager) will set the decided values explicitly; they are **not** left to the code fallback (`false` / blank). Also set in GitHub `production` environment `vars`/`secrets`.
 
