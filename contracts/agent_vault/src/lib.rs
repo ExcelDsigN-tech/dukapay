@@ -291,11 +291,19 @@ impl AgentVault {
         let token = Self::token(&env)?;
         let params = Self::params(&env)?;
         let mut vault = Self::read_vault(&env, &agent);
-        if amount > vault.collateral {
-            Self::release_lock(&env);
-            return Err(VaultError::InsufficientCollateral);
-        }
-        let remaining = vault.collateral - amount;
+        // Checked arithmetic (issue #513): the debit is its own underflow
+        // guard — `checked_sub` returns `None` on underflow, and the remainder
+        // is additionally required to stay non-negative, because a vault
+        // balance below zero is never a valid state regardless of how the
+        // subtraction behaved. The reentrancy lock still has to be released on
+        // this path, which is why it cannot use a bare `.ok_or(...)?`.
+        let remaining = match vault.collateral.checked_sub(amount) {
+            Some(remaining) if remaining >= 0 => remaining,
+            _ => {
+                Self::release_lock(&env);
+                return Err(VaultError::InsufficientCollateral);
+            }
+        };
         if vault.float > 0 {
             if remaining < params.min_collateral {
                 Self::release_lock(&env);
@@ -346,10 +354,12 @@ impl AgentVault {
             return Err(VaultError::InvalidAmount);
         }
         let mut vault = Self::read_vault(&env, &agent);
-        if amount > vault.float {
-            return Err(VaultError::InsufficientFloat);
-        }
-        vault.float -= amount;
+        // Checked arithmetic (issue #513): underflow is rejected by the debit
+        // itself, and the stored float is never allowed to go negative.
+        vault.float = match vault.float.checked_sub(amount) {
+            Some(remaining) if remaining >= 0 => remaining,
+            _ => return Err(VaultError::InsufficientFloat),
+        };
         Self::write_vault(&env, &agent, &vault);
         events::float_burned(&env, &agent, amount, vault.float);
         Ok(())
@@ -381,9 +391,13 @@ impl AgentVault {
         }
         let mut from_vault = Self::read_vault(&env, &from);
         let mut to_vault = Self::read_vault(&env, &to);
-        if amount > from_vault.float {
-            return Err(VaultError::InsufficientFloat);
-        }
+        // Checked arithmetic (issue #513): the sender's debit is the underflow
+        // guard, and the sender's float is never allowed to go negative — so a
+        // rejected transfer cannot leave the pair half-applied.
+        let from_float = match from_vault.float.checked_sub(amount) {
+            Some(remaining) if remaining >= 0 => remaining,
+            _ => return Err(VaultError::InsufficientFloat),
+        };
         let to_float = to_vault
             .float
             .checked_add(amount)
@@ -391,7 +405,7 @@ impl AgentVault {
         if to_float > Self::max_float_of(to_vault.collateral, to_vault.haircut_bps) {
             return Err(VaultError::SolvencyViolated);
         }
-        from_vault.float -= amount;
+        from_vault.float = from_float;
         to_vault.float = to_float;
         Self::write_vault(&env, &from, &from_vault);
         Self::write_vault(&env, &to, &to_vault);

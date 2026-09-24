@@ -542,3 +542,78 @@ proptest! {
         prop_assert!(high >= low, "adding collateral shrank the float cap");
     }
 }
+
+// ── Issue #513: checked arithmetic on the three debits ────────────────────
+// Each of the three functions below previously guarded its debit with an
+// explicit `amount > balance` comparison and then subtracted unchecked. The
+// guard is now the arithmetic itself (`checked_sub`), so these tests pin the
+// rejected-underflow behaviour *and* that a rejection leaves no partial state
+// behind. `withdraw_collateral` additionally has to release its reentrancy
+// lock on that path: `acquire_lock` panics when the lock is still held, so the
+// follow-up call in the first test fails loudly if the release is dropped.
+
+#[test]
+fn test_withdraw_collateral_underflow_rejected_and_state_unchanged() {
+    let s = setup();
+    let a = agent(&s.env);
+    fund(&s, &a, 1_000);
+    s.client.mint_float(&a, &100);
+
+    assert_eq!(
+        s.client.try_withdraw_collateral(&a, &1_001),
+        Err(Ok(VaultError::InsufficientCollateral))
+    );
+
+    let vault: Vault = s.client.get_vault(&a);
+    assert_eq!(vault.collateral, 1_000);
+    assert_eq!(vault.float, 100);
+    assert_eq!(s.token_client.balance(&s.vault), 1_000);
+
+    // The rejected call must have released the reentrancy lock, otherwise
+    // this second withdrawal panics inside `acquire_lock`.
+    s.client.withdraw_collateral(&a, &500);
+    assert_eq!(s.client.get_vault(&a).collateral, 500);
+    assert_eq!(s.token_client.balance(&a), 500);
+}
+
+#[test]
+fn test_burn_float_underflow_rejected_and_state_unchanged() {
+    let s = setup();
+    let a = agent(&s.env);
+    fund(&s, &a, 1_000);
+    s.client.mint_float(&a, &500);
+
+    assert_eq!(
+        s.client.try_burn_float(&a, &501),
+        Err(Ok(VaultError::InsufficientFloat))
+    );
+    assert_eq!(s.client.get_vault(&a).float, 500);
+
+    // Burning exactly the remaining balance still works after the rejection.
+    s.client.burn_float(&a, &500);
+    assert_eq!(s.client.get_vault(&a).float, 0);
+}
+
+#[test]
+fn test_transfer_float_underflow_rejected_and_both_sides_unchanged() {
+    let s = setup();
+    let a = agent(&s.env);
+    let b = agent(&s.env);
+    fund(&s, &a, 1_000);
+    fund(&s, &b, 1_000);
+    s.client.mint_float(&a, &500);
+    s.client.mint_float(&b, &200);
+
+    assert_eq!(
+        s.client.try_transfer_float(&a, &b, &501),
+        Err(Ok(VaultError::InsufficientFloat))
+    );
+
+    assert_eq!(s.client.get_vault(&a).float, 500);
+    assert_eq!(s.client.get_vault(&b).float, 200);
+
+    // The rejected debit must not have been credited to the recipient.
+    s.client.transfer_float(&a, &b, &500);
+    assert_eq!(s.client.get_vault(&a).float, 0);
+    assert_eq!(s.client.get_vault(&b).float, 700);
+}
