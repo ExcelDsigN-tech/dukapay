@@ -46,7 +46,10 @@ export default function AdminSettlementPage() {
 
       <section className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800 space-y-4">
         <div>
-          <label htmlFor="loanIds" className="block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+          <label
+            htmlFor="loanIds"
+            className="block text-sm font-medium text-zinc-950 dark:text-zinc-50"
+          >
             {t("loanIdsLabel")}
           </label>
           <input

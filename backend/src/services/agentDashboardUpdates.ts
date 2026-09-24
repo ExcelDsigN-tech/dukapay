@@ -26,7 +26,9 @@ interface AgentDashboardSummary {
   timestamp: string;
 }
 
-async function fetchAgentDashboardSummary(agentPublicKey: string): Promise<AgentDashboardSummary | null> {
+async function fetchAgentDashboardSummary(
+  agentPublicKey: string,
+): Promise<AgentDashboardSummary | null> {
   try {
     const cacheKey = `agent:dashboard:${agentPublicKey}`;
     const cached = await cacheService.get<AgentDashboardSummary>(cacheKey);
@@ -87,7 +89,10 @@ async function fetchAgentDashboardSummary(agentPublicKey: string): Promise<Agent
         daily: Number(earningsRow.daily ?? 0),
         weekly: Number(earningsRow.weekly ?? 0),
         monthly: Number(earningsRow.monthly ?? 0),
-        total: Number(earningsRow.daily ?? 0) + Number(earningsRow.weekly ?? 0) + Number(earningsRow.monthly ?? 0),
+        total:
+          Number(earningsRow.daily ?? 0) +
+          Number(earningsRow.weekly ?? 0) +
+          Number(earningsRow.monthly ?? 0),
       },
       borrowerPortfolio: {
         totalLoans: Number(portfolioRow.total_loans ?? 0),
@@ -146,7 +151,10 @@ export function startAgentDashboardPublisher(): void {
   if (process.env.NODE_ENV === 'test') return;
 
   void publishAgentDashboardUpdates();
-  interval = setInterval(() => void publishAgentDashboardUpdates(), AGENT_DASHBOARD_PUBLISH_INTERVAL_MS);
+  interval = setInterval(
+    () => void publishAgentDashboardUpdates(),
+    AGENT_DASHBOARD_PUBLISH_INTERVAL_MS,
+  );
   interval.unref?.();
 
   logger.withContext().info('Agent dashboard publisher started', {

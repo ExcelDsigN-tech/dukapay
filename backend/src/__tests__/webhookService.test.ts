@@ -352,9 +352,9 @@ describe('WebhookService', () => {
     });
 
     it('rejects a payload with missing signature', () => {
-      expect(
-        verifyWebhookSignature(undefined, [secret], '1726800000', 'nonce', '{"a":1}'),
-      ).toBe(false);
+      expect(verifyWebhookSignature(undefined, [secret], '1726800000', 'nonce', '{"a":1}')).toBe(
+        false,
+      );
     });
 
     it('rejects a payload with missing timestamp', () => {
@@ -382,7 +382,9 @@ describe('WebhookService', () => {
       const sig =
         'sha256=' + crypto.createHmac('sha256', rotatedSecret).update(signedPayload).digest('hex');
 
-      expect(verifyWebhookSignature(sig, [primarySecret, rotatedSecret], timestamp, nonce, body)).toBe(true);
+      expect(
+        verifyWebhookSignature(sig, [primarySecret, rotatedSecret], timestamp, nonce, body),
+      ).toBe(true);
     });
   });
 

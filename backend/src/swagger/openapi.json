@@ -72,6 +72,115 @@
           "message"
         ]
       },
+      "AgentDashboard": {
+        "type": "object",
+        "properties": {
+          "agentPublicKey": {
+            "type": "string"
+          },
+          "floatUtilization": {
+            "type": "object",
+            "properties": {
+              "totalFloat": {
+                "type": "number"
+              },
+              "allocated": {
+                "type": "number"
+              },
+              "utilizationPct": {
+                "type": "number"
+              }
+            }
+          },
+          "earnings": {
+            "type": "object",
+            "properties": {
+              "daily": {
+                "type": "number"
+              },
+              "weekly": {
+                "type": "number"
+              },
+              "monthly": {
+                "type": "number"
+              },
+              "total": {
+                "type": "number"
+              }
+            }
+          },
+          "borrowerPortfolio": {
+            "type": "object",
+            "properties": {
+              "totalLoans": {
+                "type": "integer"
+              },
+              "activeLoans": {
+                "type": "integer"
+              },
+              "defaultedLoans": {
+                "type": "integer"
+              },
+              "totalOutstanding": {
+                "type": "number"
+              },
+              "byStatus": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "pendingSettlements": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "totalValue": {
+                "type": "number"
+              }
+            }
+          },
+          "collateralRatio": {
+            "type": "object",
+            "properties": {
+              "totalCollateral": {
+                "type": "number"
+              },
+              "totalDebt": {
+                "type": "number"
+              },
+              "ratio": {
+                "type": "number"
+              }
+            }
+          },
+          "recentTransactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "loanId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "timestamp": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        }
+      },
       "SimpleSuccessResponse": {
         "type": "object",
         "properties": {
@@ -2734,6 +2843,344 @@
         }
       }
     },
+    "/admin/users": {
+      "get": {
+        "summary": "List users (paginated, filterable)",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 200
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "suspended"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated user list"
+          }
+        }
+      }
+    },
+    "/admin/users/{publicKey}": {
+      "get": {
+        "summary": "Get a single user's details",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "publicKey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/admin/users/{publicKey}/status": {
+      "patch": {
+        "summary": "Suspend or activate a user",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "isSuspended"
+                ],
+                "properties": {
+                  "isSuspended": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/admin/users/{publicKey}/role": {
+      "patch": {
+        "summary": "Change a user's role",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "super_admin",
+                      "ops",
+                      "support",
+                      "borrower",
+                      "lender"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          }
+        }
+      }
+    },
+    "/admin/kyc/override": {
+      "post": {
+        "summary": "Override KYC verification status for a user",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "publicKey",
+                  "verified"
+                ],
+                "properties": {
+                  "publicKey": {
+                    "type": "string"
+                  },
+                  "verified": {
+                    "type": "boolean"
+                  },
+                  "level": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "KYC status overridden"
+          }
+        }
+      }
+    },
+    "/admin/system/health": {
+      "get": {
+        "summary": "Get system health status (DB, Redis, Stellar RPC, jobs)",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Health report"
+          }
+        }
+      }
+    },
+    "/admin/settlement/trigger": {
+      "post": {
+        "summary": "Manually trigger batch settlement run",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "loanIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "force": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settlement run completed"
+          }
+        }
+      }
+    },
+    "/admin/feature-flags": {
+      "get": {
+        "summary": "List all feature flags",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feature flags list"
+          }
+        }
+      }
+    },
+    "/admin/feature-flags/{key}": {
+      "put": {
+        "summary": "Update a feature flag's enabled state or value",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Flag updated"
+          },
+          "404": {
+            "description": "Flag not found"
+          }
+        }
+      }
+    },
     "/agents/my-assignments": {
       "get": {
         "summary": "List borrower wallets assigned to the authenticated agent",
@@ -2910,6 +3357,49 @@
           },
           "404": {
             "description": "Assignment not found."
+          }
+        }
+      }
+    },
+    "/agents/dashboard": {
+      "get": {
+        "summary": "Get agent dashboard metrics",
+        "tags": [
+          "Agent"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent dashboard data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDashboard"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/dashboard/cache": {
+      "delete": {
+        "summary": "Clear agent dashboard cache",
+        "tags": [
+          "Agent"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cache cleared"
           }
         }
       }
@@ -3257,6 +3747,28 @@
         "responses": {
           "200": {
             "description": "Logged out successfully"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer token"
+          }
+        }
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "summary": "Revoke all sessions for the authenticated user",
+        "description": "Invalidates all active token families for the current user. Use this after credential compromise to revoke all devices immediately.\n",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All sessions revoked successfully"
           },
           "401": {
             "description": "Missing or invalid Bearer token"
