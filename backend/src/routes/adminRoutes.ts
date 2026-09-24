@@ -773,7 +773,7 @@ function cacheServiceMiddleware(cacheKeyPrefix: string, ttlSeconds: number) {
  *     parameters:
  *       - in: query
  *         name: limit
- *         schema: { type: integer, default: 50, max: 200 }
+ *         schema: { type: integer, default: 50, maximum: 200 }
  *       - in: query
  *         name: offset
  *         schema: { type: integer, default: 0 }

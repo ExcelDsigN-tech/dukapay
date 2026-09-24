@@ -9,7 +9,7 @@ export default function AdminFeatureFlagsPage() {
   const t = useTranslations("AdminFeatureFlags");
   const role = useUserStore((state) => state.user?.role);
   const { data, isLoading, isError } = useFeatureFlags();
-  const { mutate: updateFlag } = useUpdateFeatureFlag();
+  const { mutateAsync: updateFlag } = useUpdateFeatureFlag();
 
   if (role && role !== "admin" && role !== "super_admin") {
     return (
@@ -22,7 +22,7 @@ export default function AdminFeatureFlagsPage() {
   }
 
   const handleToggle = async (flagKey: string, current: boolean) => {
-    await updateFlag.mutateAsync({ key: flagKey, enabled: !current });
+    await updateFlag({ key: flagKey, enabled: !current });
   };
 
   return (
@@ -41,27 +41,39 @@ export default function AdminFeatureFlagsPage() {
           <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">{t("flag")}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">{t("description")}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">{t("scope")}</th>
-                <th className="px-4 py-3 text-center text-xs font-medium uppercase text-zinc-500">{t("status")}</th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase text-zinc-500">{t("actions")}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("flag")}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("description")}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("scope")}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium uppercase text-zinc-500">
+                  {t("status")}
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase text-zinc-500">
+                  {t("actions")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {data?.flags.map((flag) => (
                 <tr key={flag.key}>
                   <td className="px-4 py-3">
-                    <code className="text-xs font-medium text-zinc-900 dark:text-zinc-100">{flag.key}</code>
+                    <code className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+                      {flag.key}
+                    </code>
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">{flag.name}</td>
+                  <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                    {flag.name}
+                  </td>
                   <td className="px-4 py-3 text-xs text-zinc-500">{flag.scope}</td>
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        flag.enabled
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                        flag.enabled ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                       }`}
                     >
                       {flag.enabled ? t("enabled") : t("disabled")}

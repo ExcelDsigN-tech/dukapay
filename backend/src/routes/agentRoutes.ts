@@ -9,6 +9,31 @@ const router = Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     AgentDashboard:
+ *       type: object
+ *       properties:
+ *         agentPublicKey:
+ *           type: string
+ *         floatUtilization:
+ *           type: object
+ *         earnings:
+ *           type: object
+ *         borrowerPortfolio:
+ *           type: object
+ *         pendingSettlements:
+ *           type: object
+ *         collateralRatio:
+ *           type: object
+ *         recentTransactions:
+ *           type: array
+ *           items:
+ *             type: object
+ */
+
+/**
+ * @swagger
  * /agents/dashboard:
  *   get:
  *     summary: Get agent dashboard metrics

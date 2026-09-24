@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { useUserStore } from "../../../stores/useUserStore";
+import { useTranslations, useLocale } from "next-intl";
+import { useUserStore } from "../../stores/useUserStore";
 
 export default function AdminDashboardPage() {
   const t = useTranslations("AdminDashboard");
   const role = useUserStore((state) => state.user?.role);
-  const locale = useUserStore((state) => state.user?.locale ?? "en");
+  const locale = useLocale();
 
   if (role && role !== "admin" && role !== "super_admin" && role !== "ops" && role !== "support") {
     return (
@@ -87,7 +87,9 @@ export default function AdminDashboardPage() {
             href={section.href}
             className="block rounded-xl border border-zinc-200 p-5 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50"
           >
-            <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">{t(section.titleKey)}</h2>
+            <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+              {t(section.titleKey)}
+            </h2>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{t(section.descKey)}</p>
           </Link>
         ))}

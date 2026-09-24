@@ -149,11 +149,7 @@ test("Remittance: View history", async ({ page }: { page: Page }) => {
 
 // ─── Flow 5: Settings & Logout ────────────────────────────────────────────────
 
-test("Account: Settings update → logout → redirect to login", async ({
-  page,
-}: {
-  page: Page;
-}) => {
+test("Account: Settings update → logout → redirect to login", async ({ page }: { page: Page }) => {
   await page.goto("/en/settings");
 
   // Profile update check (resolve strict mode by using heading)

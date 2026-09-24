@@ -108,6 +108,17 @@ export const queryKeys = {
   agent: {
     dashboard: () => ["agent", "dashboard"] as const,
   },
+  adminUsers: {
+    all: () => ["admin", "users"] as const,
+    list: (params: Record<string, unknown>) => ["admin", "users", params] as const,
+    detail: (userId: string) => ["admin", "users", userId] as const,
+  },
+  adminSystemHealth: {
+    all: () => ["admin", "system", "health"] as const,
+  },
+  adminFeatureFlags: {
+    all: () => ["admin", "featureFlags"] as const,
+  },
 } as const;
 
 // ─── Base fetch helper ────────────────────────────────────────────────────────
@@ -1975,13 +1986,15 @@ export interface KycOverrideResponse {
 
 /* ─── Admin Operations hooks ─────────────────────────────────────────── */
 
-export function useAdminUsers(params: {
-  limit?: number;
-  offset?: number;
-  role?: string;
-  status?: string;
-  search?: string;
-} = {}) {
+export function useAdminUsers(
+  params: {
+    limit?: number;
+    offset?: number;
+    role?: string;
+    status?: string;
+    search?: string;
+  } = {},
+) {
   const searchParams = new URLSearchParams();
   if (params.limit) searchParams.set("limit", String(params.limit));
   if (params.offset) searchParams.set("offset", String(params.offset));
@@ -2051,7 +2064,15 @@ export function useKycOverride() {
   const toast = useContractToast();
 
   return useMutation({
-    mutationFn: ({ publicKey, verified, level }: { publicKey: string; verified: boolean; level?: string }) =>
+    mutationFn: ({
+      publicKey,
+      verified,
+      level,
+    }: {
+      publicKey: string;
+      verified: boolean;
+      level?: string;
+    }) =>
       apiFetch<KycOverrideResponse>("/admin/kyc/override", {
         method: "POST",
         body: JSON.stringify({ publicKey, verified, level }),
@@ -2105,10 +2126,10 @@ export function useUpdateFeatureFlag() {
 
   return useMutation({
     mutationFn: ({ key, enabled, value }: { key: string; enabled?: boolean; value?: string }) =>
-      apiFetch<{ success: true; flag: FeatureFlag }>(
-        `/admin/feature-flags/${key}`,
-        { method: "PUT", body: JSON.stringify({ enabled, value }) },
-      ),
+      apiFetch<{ success: true; flag: FeatureFlag }>(`/admin/feature-flags/${key}`, {
+        method: "PUT",
+        body: JSON.stringify({ enabled, value }),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.adminFeatureFlags.all() });
       toast.success("Feature flag updated successfully");

@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useUserStore } from "../../../stores/useUserStore";
-import { useAdminSystemHealth } from "../../../hooks/useApi";
+import { useUserStore } from "../../../../stores/useUserStore";
+import { useAdminSystemHealth } from "../../../../hooks/useApi";
 
 export default function SystemHealthPage() {
   const t = useTranslations("AdminSystemHealth");
@@ -45,20 +45,22 @@ export default function SystemHealthPage() {
               >
                 {data?.status.toUpperCase() ?? "UNKNOWN"}
               </span>
-              <span className="text-xs text-zinc-500">{t("lastChecked")}: {data?.timestamp ?? "—"}</span>
+              <span className="text-xs text-zinc-500">
+                {t("lastChecked")}: {data?.timestamp ?? "—"}
+              </span>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              {data?.checks.map((check) => (
+              {data?.checks.map((check: any) => (
                 <div
                   key={check.name}
                   className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800"
                 >
                   <div>
-                    <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">{check.name}</p>
-                    {check.detail && (
-                      <p className="text-xs text-zinc-500">{check.detail}</p>
-                    )}
+                    <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                      {check.name}
+                    </p>
+                    {check.detail && <p className="text-xs text-zinc-500">{check.detail}</p>}
                   </div>
                   <span
                     className={`text-xs font-medium ${
@@ -78,12 +80,21 @@ export default function SystemHealthPage() {
 
           {data?.jobs && Object.keys(data.jobs).length > 0 && (
             <section className="rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800">
-              <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">{t("jobsTitle")}</h2>
+              <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+                {t("jobsTitle")}
+              </h2>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 {Object.entries(data.jobs).map(([name, metrics]) => {
-                  const m = metrics as { lastRunAt?: string | null; lastSuccessAt?: string | null; failuresTotal?: number };
+                  const m = metrics as {
+                    lastRunAt?: string | null;
+                    lastSuccessAt?: string | null;
+                    failuresTotal?: number;
+                  };
                   return (
-                    <div key={name} className="rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+                    <div
+                      key={name}
+                      className="rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800"
+                    >
                       <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">{name}</p>
                       <p className="text-xs text-zinc-500">
                         {t("lastRun")}: {m?.lastRunAt ?? "—"}

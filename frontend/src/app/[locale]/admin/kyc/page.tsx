@@ -9,7 +9,7 @@ export default function AdminKycPage() {
   const t = useTranslations("AdminKyc");
   const role = useUserStore((state) => state.user?.role);
   const { data, isLoading } = useAdminUsers({ limit: 100 });
-  const { mutate: overrideKyc, isPending } = useKycOverride();
+  const { mutateAsync: overrideKyc, isPending } = useKycOverride();
 
   if (role && role !== "admin" && role !== "super_admin" && role !== "ops" && role !== "support") {
     return (
@@ -27,12 +27,12 @@ export default function AdminKycPage() {
 
   const handleSubmit = async () => {
     if (!targetKey) return;
-    await overrideKyc.mutateAsync({ publicKey: targetKey, verified, level });
+    await overrideKyc({ publicKey: targetKey, verified, level });
     setTargetKey("");
   };
 
   const handleUserOverride = async (publicKey: string, newVerified: boolean) => {
-    await overrideKyc.mutateAsync({ publicKey, verified: newVerified, level: "basic" });
+    await overrideKyc({ publicKey, verified: newVerified, level: "basic" });
   };
 
   return (
@@ -44,7 +44,10 @@ export default function AdminKycPage() {
 
       <section className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800 space-y-4">
         <div>
-          <label htmlFor="publicKey" className="block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+          <label
+            htmlFor="publicKey"
+            className="block text-sm font-medium text-zinc-950 dark:text-zinc-50"
+          >
             {t("publicKeyLabel")}
           </label>
           <input
@@ -77,7 +80,10 @@ export default function AdminKycPage() {
         </label>
 
         <div>
-          <label htmlFor="level" className="block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+          <label
+            htmlFor="level"
+            className="block text-sm font-medium text-zinc-950 dark:text-zinc-50"
+          >
             {t("levelLabel")}
           </label>
           <select
@@ -102,23 +108,33 @@ export default function AdminKycPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">{t("userListTitle")}</h2>
+        <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+          {t("userListTitle")}
+        </h2>
         {isLoading ? (
           <p className="mt-2 text-sm text-zinc-500">{t("loading")}</p>
         ) : (
           <table className="mt-2 min-w-full divide-y divide-zinc-200">
             <thead>
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-zinc-500">{t("user")}</th>
-                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-zinc-500">{t("currentStatus")}</th>
-                <th className="px-4 py-2 text-right text-xs font-medium uppercase text-zinc-500">{t("actions")}</th>
+                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("user")}
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("currentStatus")}
+                </th>
+                <th className="px-4 py-2 text-right text-xs font-medium uppercase text-zinc-500">
+                  {t("actions")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200">
               {data?.users?.map((user) => (
                 <tr key={user.id}>
                   <td className="px-4 py-2">
-                    <p className="font-mono text-xs text-zinc-500">{user.publicKey.slice(0, 8)}…{user.publicKey.slice(-4)}</p>
+                    <p className="font-mono text-xs text-zinc-500">
+                      {user.publicKey.slice(0, 8)}…{user.publicKey.slice(-4)}
+                    </p>
                   </td>
                   <td className="px-4 py-2">
                     {user.kycVerified ? (

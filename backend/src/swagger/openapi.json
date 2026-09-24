@@ -1860,6 +1860,35 @@
           "success",
           "error"
         ]
+      },
+      "AgentDashboard": {
+        "type": "object",
+        "properties": {
+          "agentPublicKey": {
+            "type": "string"
+          },
+          "floatUtilization": {
+            "type": "object"
+          },
+          "earnings": {
+            "type": "object"
+          },
+          "borrowerPortfolio": {
+            "type": "object"
+          },
+          "pendingSettlements": {
+            "type": "object"
+          },
+          "collateralRatio": {
+            "type": "object"
+          },
+          "recentTransactions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
       }
     }
   },
@@ -2734,100 +2763,108 @@
         }
       }
     },
-    "/agents/my-assignments": {
+    "/admin/users": {
       "get": {
-        "summary": "List borrower wallets assigned to the authenticated agent",
-        "description": "Returns the borrowers the authenticated agent (or admin) is scoped to under tenant isolation (the `agents:view-assigned` scope). Agents can read but not modify the data of these borrowers on the loan, score and remittance endpoints, enforced both by the RBAC middleware and by RLS.\n",
+        "summary": "List users (paginated, filterable)",
         "tags": [
-          "Agents"
+          "Admin"
         ],
         "security": [
           {
-            "BearerAuth": []
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 200
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "suspended"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Assignments retrieved successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "agentPublicKey",
-                        "assignments"
-                      ],
-                      "properties": {
-                        "agentPublicKey": {
-                          "type": "string"
-                        },
-                        "assignments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "borrowerPublicKey",
-                              "createdAt"
-                            ],
-                            "properties": {
-                              "borrowerPublicKey": {
-                                "type": "string"
-                              },
-                              "createdAt": {
-                                "type": "string",
-                                "format": "date-time"
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid Bearer token."
-          },
-          "403": {
-            "description": "Requires the agent role."
+            "description": "Paginated user list"
           }
         }
       }
     },
-    "/agents/{agentPublicKey}/assignees": {
-      "post": {
-        "summary": "Assign a borrower to an agent (admin only)",
-        "description": "Grants an agent read access to a borrower's data. Idempotent: assigning the same pair twice returns the existing assignment. Admin only.\n",
+    "/admin/users/{publicKey}": {
+      "get": {
+        "summary": "Get a single user's details",
         "tags": [
-          "Agents"
+          "Admin"
         ],
         "security": [
           {
-            "BearerAuth": []
+            "ApiKeyAuth": []
           }
         ],
         "parameters": [
           {
             "in": "path",
-            "name": "agentPublicKey",
+            "name": "publicKey",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "description": "Agent's Stellar public key receiving the assignment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/admin/users/{publicKey}/status": {
+      "patch": {
+        "summary": "Suspend or activate a user",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
           }
         ],
         "requestBody": {
@@ -2837,12 +2874,11 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "borrowerPublicKey"
+                  "isSuspended"
                 ],
                 "properties": {
-                  "borrowerPublicKey": {
-                    "type": "string",
-                    "description": "Borrower's Stellar public key to assign"
+                  "isSuspended": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -2850,66 +2886,260 @@
           }
         },
         "responses": {
-          "201": {
-            "description": "Assignment created (or already present)."
-          },
-          "400": {
-            "description": "Invalid public key."
-          },
-          "401": {
-            "description": "Missing or invalid Bearer token."
-          },
-          "403": {
-            "description": "Requires the admin role."
+          "200": {
+            "description": "Status updated"
           }
         }
       }
     },
-    "/agents/{agentPublicKey}/assignees/{borrowerPublicKey}": {
-      "delete": {
-        "summary": "Revoke a borrower assignment from an agent (admin only)",
-        "description": "Removes the agent's read access to the borrower. Admin only.\n",
+    "/admin/users/{publicKey}/role": {
+      "patch": {
+        "summary": "Change a user's role",
         "tags": [
-          "Agents"
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "super_admin",
+                      "ops",
+                      "support",
+                      "borrower",
+                      "lender"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          }
+        }
+      }
+    },
+    "/admin/kyc/override": {
+      "post": {
+        "summary": "Override KYC verification status for a user",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "publicKey",
+                  "verified"
+                ],
+                "properties": {
+                  "publicKey": {
+                    "type": "string"
+                  },
+                  "verified": {
+                    "type": "boolean"
+                  },
+                  "level": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "KYC status overridden"
+          }
+        }
+      }
+    },
+    "/admin/system/health": {
+      "get": {
+        "summary": "Get system health status (DB, Redis, Stellar RPC, jobs)",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Health report"
+          }
+        }
+      }
+    },
+    "/admin/settlement/trigger": {
+      "post": {
+        "summary": "Manually trigger batch settlement run",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "loanIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "force": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settlement run completed"
+          }
+        }
+      }
+    },
+    "/admin/feature-flags": {
+      "get": {
+        "summary": "List all feature flags",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feature flags list"
+          }
+        }
+      }
+    },
+    "/admin/feature-flags/{key}": {
+      "put": {
+        "summary": "Update a feature flag's enabled state or value",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Flag updated"
+          },
+          "404": {
+            "description": "Flag not found"
+          }
+        }
+      }
+    },
+    "/agents/dashboard": {
+      "get": {
+        "summary": "Get agent dashboard metrics",
+        "tags": [
+          "Agent"
         ],
         "security": [
           {
             "BearerAuth": []
           }
         ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "agentPublicKey",
-            "required": true,
-            "schema": {
-              "type": "string"
+        "responses": {
+          "200": {
+            "description": "Agent dashboard data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDashboard"
+                }
+              }
             }
-          },
+          }
+        }
+      }
+    },
+    "/agents/dashboard/cache": {
+      "delete": {
+        "summary": "Clear agent dashboard cache",
+        "tags": [
+          "Agent"
+        ],
+        "security": [
           {
-            "in": "path",
-            "name": "borrowerPublicKey",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
+            "BearerAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Assignment revoked."
-          },
-          "400": {
-            "description": "Invalid public key."
-          },
-          "401": {
-            "description": "Missing or invalid Bearer token."
-          },
-          "403": {
-            "description": "Requires the admin role."
-          },
-          "404": {
-            "description": "Assignment not found."
+            "description": "Cache cleared"
           }
         }
       }
@@ -3257,6 +3487,28 @@
         "responses": {
           "200": {
             "description": "Logged out successfully"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer token"
+          }
+        }
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "summary": "Revoke all sessions for the authenticated user",
+        "description": "Invalidates all active token families for the current user. Use this after credential compromise to revoke all devices immediately.\n",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All sessions revoked successfully"
           },
           "401": {
             "description": "Missing or invalid Bearer token"

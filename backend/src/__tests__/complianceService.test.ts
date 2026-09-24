@@ -98,12 +98,14 @@ describe('complianceService', () => {
   it('handles external provider failure gracefully', async () => {
     mockFetch.mockRejectedValue(new Error('Network failure'));
 
-    await expect(complianceService.screenApplicant({
-      subjectId: 'GTEST_FAIL',
-      firstName: 'Fail',
-      lastName: 'Person',
-      countryCode: 'NG',
-    })).rejects.toThrow('Compliance screening is unavailable');
+    await expect(
+      complianceService.screenApplicant({
+        subjectId: 'GTEST_FAIL',
+        firstName: 'Fail',
+        lastName: 'Person',
+        countryCode: 'NG',
+      }),
+    ).rejects.toThrow('Compliance screening is unavailable');
   });
 
   it('handles boundary condition for structuring', async () => {
@@ -114,7 +116,10 @@ describe('complianceService', () => {
         return { rows: [{ status: 'approved', country_code: 'US' }], rowCount: 1 };
       // Exactly at the 80% boundary (threshold=10000, 80%=8000)
       if (text.includes('FROM remittances'))
-        return { rows: [{ count_24h: 3, amount_24h: 15000, near_threshold_count: 2 }], rowCount: 1 };
+        return {
+          rows: [{ count_24h: 3, amount_24h: 15000, near_threshold_count: 2 }],
+          rowCount: 1,
+        };
       return { rows: [], rowCount: 1 };
     });
 
