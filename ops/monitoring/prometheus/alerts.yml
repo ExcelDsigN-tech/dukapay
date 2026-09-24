@@ -106,3 +106,15 @@ groups:
         annotations:
           summary: "Database is down"
           description: "PostgreSQL instance {{ $labels.instance }} is not responding"
+
+  - name: indexer
+    interval: 30s
+    rules:
+      - alert: IndexerLagHigh
+        expr: indexer_lag_ledgers > 100
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Indexer ledger lag exceeds threshold"
+          description: "indexer_lag_ledgers is {{ $value }} (threshold 100 per INDEXER_LAG_ALERT_THRESHOLD). See docs/runbooks/indexer-recovery.md."

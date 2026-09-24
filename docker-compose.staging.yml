@@ -26,6 +26,12 @@ services:
       - PII_KMS_ENDPOINT=${PII_KMS_ENDPOINT}
       - PII_KEK_REGION=${PII_KEK_REGION}
       - LOG_REDACTION=strict
+      - KYC_ENFORCEMENT_ENABLED=true
+      # Recommended, not required: when "true", both anchor vars below must
+      # be set or backend boot fails closed (see validateProductionComplianceFlags).
+      - AUDIT_ANCHOR_ENABLED=${AUDIT_ANCHOR_ENABLED:-false}
+      - AUDIT_ANCHOR_CONTRACT_ID=${AUDIT_ANCHOR_CONTRACT_ID:-}
+      - AUDIT_ANCHOR_SOURCE_SECRET=${AUDIT_ANCHOR_SOURCE_SECRET:-}
     ports:
       - "3001:3001"
     depends_on:
