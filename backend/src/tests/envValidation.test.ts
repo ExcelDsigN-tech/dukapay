@@ -26,9 +26,7 @@ describe('Environment Variable Validation', () => {
     mockExit.mockRestore();
   });
 
-  it('should not exit if all required variables are present', () => {
-    // All required variables are expected to be in originalEnv/process.env
-    // or we set them here for the test
+  function setValidBaseEnv(): void {
     process.env.DATABASE_URL = 'postgres://localhost';
     process.env.REDIS_URL = 'redis://localhost';
     process.env.JWT_SECRET = 'secret';
@@ -45,6 +43,12 @@ describe('Environment Variable Validation', () => {
     process.env.SCORE_DELTA_LATE = '5';
     process.env.REMITTANCE_NFT_CONTRACT_ID = 'C3';
     process.env.MULTISIG_GOVERNANCE_CONTRACT_ID = 'C4';
+  }
+
+  it('should not exit if all required variables are present', () => {
+    // All required variables are expected to be in originalEnv/process.env
+    // or we set them here for the test
+    setValidBaseEnv();
 
     expect(() => validateEnvVars()).not.toThrow();
     expect(mockExit).not.toHaveBeenCalled();
@@ -64,24 +68,9 @@ describe('Environment Variable Validation', () => {
     expect(mockExit).toHaveBeenCalledWith(1);
   });
 
-  it('should exit in production when compliance flags are not enabled', () => {
+  it('should exit in production when KYC is not enabled (hard requirement)', () => {
     process.env.NODE_ENV = 'production';
-    process.env.DATABASE_URL = 'postgres://localhost';
-    process.env.REDIS_URL = 'redis://localhost';
-    process.env.JWT_SECRET = 'secret';
-    process.env.STELLAR_RPC_URL = 'http://localhost';
-    process.env.STELLAR_NETWORK_PASSPHRASE = 'test';
-    process.env.LOAN_MANAGER_CONTRACT_ID = 'C1';
-    process.env.LENDING_POOL_CONTRACT_ID = 'C2';
-    process.env.POOL_TOKEN_ADDRESS = 'T1';
-    process.env.LOAN_MANAGER_ADMIN_SECRET = 'S1';
-    process.env.INTERNAL_API_KEY = 'K1';
-    process.env.FRONTEND_URL = 'http://localhost:3000';
-    process.env.SCORE_DELTA_REPAY = '15';
-    process.env.SCORE_DELTA_DEFAULT = '50';
-    process.env.SCORE_DELTA_LATE = '5';
-    process.env.REMITTANCE_NFT_CONTRACT_ID = 'C3';
-    process.env.MULTISIG_GOVERNANCE_CONTRACT_ID = 'C4';
+    setValidBaseEnv();
     delete process.env.KYC_ENFORCEMENT_ENABLED;
     delete process.env.AUDIT_ANCHOR_ENABLED;
 
@@ -89,26 +78,35 @@ describe('Environment Variable Validation', () => {
     expect(mockExit).toHaveBeenCalledWith(1);
   });
 
-  it('should not exit in production when compliance flags are enabled', () => {
+  it('should warn but not exit in production when KYC is on and audit anchoring is off', () => {
     process.env.NODE_ENV = 'production';
-    process.env.DATABASE_URL = 'postgres://localhost';
-    process.env.REDIS_URL = 'redis://localhost';
-    process.env.JWT_SECRET = 'secret';
-    process.env.STELLAR_RPC_URL = 'http://localhost';
-    process.env.STELLAR_NETWORK_PASSPHRASE = 'test';
-    process.env.LOAN_MANAGER_CONTRACT_ID = 'C1';
-    process.env.LENDING_POOL_CONTRACT_ID = 'C2';
-    process.env.POOL_TOKEN_ADDRESS = 'T1';
-    process.env.LOAN_MANAGER_ADMIN_SECRET = 'S1';
-    process.env.INTERNAL_API_KEY = 'K1';
-    process.env.FRONTEND_URL = 'http://localhost:3000';
-    process.env.SCORE_DELTA_REPAY = '15';
-    process.env.SCORE_DELTA_DEFAULT = '50';
-    process.env.SCORE_DELTA_LATE = '5';
-    process.env.REMITTANCE_NFT_CONTRACT_ID = 'C3';
-    process.env.MULTISIG_GOVERNANCE_CONTRACT_ID = 'C4';
+    setValidBaseEnv();
+    process.env.KYC_ENFORCEMENT_ENABLED = 'true';
+    delete process.env.AUDIT_ANCHOR_ENABLED;
+
+    expect(() => validateEnvVars()).not.toThrow();
+    expect(mockExit).not.toHaveBeenCalled();
+  });
+
+  it('should exit in production when audit anchoring is on but anchor config is missing', () => {
+    process.env.NODE_ENV = 'production';
+    setValidBaseEnv();
     process.env.KYC_ENFORCEMENT_ENABLED = 'true';
     process.env.AUDIT_ANCHOR_ENABLED = 'true';
+    delete process.env.AUDIT_ANCHOR_CONTRACT_ID;
+    delete process.env.AUDIT_ANCHOR_SOURCE_SECRET;
+
+    expect(() => validateEnvVars()).toThrow('Process.exit called with 1');
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('should not exit in production when KYC is on and audit anchoring is fully configured', () => {
+    process.env.NODE_ENV = 'production';
+    setValidBaseEnv();
+    process.env.KYC_ENFORCEMENT_ENABLED = 'true';
+    process.env.AUDIT_ANCHOR_ENABLED = 'true';
+    process.env.AUDIT_ANCHOR_CONTRACT_ID = 'C_ANCHOR';
+    process.env.AUDIT_ANCHOR_SOURCE_SECRET = 'S_ANCHOR';
 
     expect(() => validateEnvVars()).not.toThrow();
     expect(mockExit).not.toHaveBeenCalled();

@@ -35,9 +35,10 @@ npx tsx ops/incident-response/orchestrator.ts contract-exploit --dry-run
 Expected: each containment action prints as `DRY RUN kubectl …`, followed by
 `Notify: <groups>` and one `Evidence: <item>` line per evidence entry.
 No cluster mutation happens under `--dry-run`. The `data-breach` and
-`insider-threat` scenarios exercise `preserve_database_access` (read-only
-`kubectl get networkpolicy allow-db-access`), which previously threw
-`Action is not allowlisted`.
+`insider-threat` scenarios exercise `verify_database_access_policy` (read-only
+`kubectl get networkpolicy allow-db-access`, policy defined in
+`infra/kubernetes/zero-trust/policies.yaml`), which previously threw
+`Action is not allowlisted` before the allowlist + policy were added.
 
 ## 3. On-call ownership
 

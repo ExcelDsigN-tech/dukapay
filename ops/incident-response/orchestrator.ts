@@ -19,9 +19,11 @@ const actions: Record<string, [string, string[]]> = {
   enable_circuit_breakers: ["kubectl", ["-n", "dukapay", "apply", "-f", "infra/kubernetes/zero-trust/incident-circuit-breaker.yaml"]],
   disable_deployments: ["kubectl", ["-n", "dukapay", "scale", "deployment", "--all", "--replicas=0"]],
   // Referenced by the data-breach / insider-threat runbooks: verify the
-  // database access policy still exists (read-only). Real access changes
-  // follow docs/runbooks/ manual steps, never this orchestrator.
-  preserve_database_access: ["kubectl", ["-n", "dukapay", "get", "networkpolicy", "allow-db-access", "-o", "yaml"]],
+  // database access policy still exists (read-only verification, not a
+  // mutation). Real access changes follow docs/runbooks/ manual steps,
+  // never this orchestrator. Policy lives in
+  // infra/kubernetes/zero-trust/policies.yaml as `allow-db-access`.
+  verify_database_access_policy: ["kubectl", ["-n", "dukapay", "get", "networkpolicy", "allow-db-access", "-o", "yaml"]],
 };
 
 async function main(): Promise<void> {
