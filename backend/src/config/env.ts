@@ -26,6 +26,58 @@ const REQUIRED_ENV_VARS = [
 ];
 
 /**
+ * Compliance flags that must be explicitly enabled outside development.
+ * KYC defaults to `false` (dev default) — staging/production deploys must
+ * set it to `"true"`. AUDIT_ANCHOR is recommended but must not block boot:
+ * when it is off in production we log a warning; when it is on, both
+ * AUDIT_ANCHOR_CONTRACT_ID and AUDIT_ANCHOR_SOURCE_SECRET are required.
+ * Called from {@link validateEnvVars} when `NODE_ENV=production`, and
+ * mirrored by `scripts/check-prod-flags.mjs` in CI.
+ */
+export function validateProductionComplianceFlags(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  if (process.env.KYC_ENFORCEMENT_ENABLED !== 'true') {
+    console.error(
+      `\n\x1b[1;31mFATAL ERROR: Production compliance flags not enabled\x1b[0m\n` +
+        `These must be "true" in production: \x1b[1mKYC_ENFORCEMENT_ENABLED\x1b[0m\n` +
+        `See docs/ENVIRONMENT.md launch posture.\n`,
+    );
+    logger.error('Production compliance flags not enabled', {
+      off: ['KYC_ENFORCEMENT_ENABLED'],
+      node_env: process.env.NODE_ENV,
+    });
+    process.exit(1);
+  }
+
+  if (process.env.AUDIT_ANCHOR_ENABLED !== 'true') {
+    const message =
+      'AUDIT_ANCHOR_ENABLED is off in production — audit anchoring disabled (recommended: "true")';
+    console.warn(
+      `\n\x1b[1;33mWARNING: ${message}\x1b[0m\nSee docs/ENVIRONMENT.md launch posture.\n`,
+    );
+    logger.warn(message, { node_env: process.env.NODE_ENV });
+    return;
+  }
+
+  const missing = ['AUDIT_ANCHOR_CONTRACT_ID', 'AUDIT_ANCHOR_SOURCE_SECRET'].filter(
+    (key) => !process.env[key] || process.env[key]!.trim() === '',
+  );
+  if (missing.length > 0) {
+    console.error(
+      `\n\x1b[1;31mFATAL ERROR: Audit anchoring enabled but misconfigured\x1b[0m\n` +
+        `AUDIT_ANCHOR_ENABLED is "true" but missing: \x1b[1m${missing.join(', ')}\x1b[0m\n` +
+        `Anchoring would silently no-op (see auditMerkleService). Set both or disable anchoring.\n`,
+    );
+    logger.error('Audit anchoring misconfigured in production', {
+      missing,
+      node_env: process.env.NODE_ENV,
+    });
+    process.exit(1);
+  }
+}
+
+/**
  * Validates that all critical environment variables are set and non-empty.
  * Logs a clear error message and halts the process if any requirements are unmet.
  */
@@ -57,4 +109,6 @@ export function validateEnvVars(): void {
   }
 
   logger.info('Environment variables validated successfully.');
+
+  validateProductionComplianceFlags();
 }
