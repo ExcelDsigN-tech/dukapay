@@ -51,11 +51,41 @@ export interface StoredRefreshTokenMetadata {
   expiresAt: number;
 }
 
-export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60; // 15 minutes
-export const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
-export const ACCESS_TOKEN_EXPIRES_IN = '15m';
-export const REFRESH_TOKEN_EXPIRES_IN = '7d';
-const CHALLENGE_EXPIRES_IN_MS = 5 * 60 * 1000;
+function getTokenTTLConfig() {
+  const accessTtl = process.env.ACCESS_TOKEN_TTL_SECONDS
+    ? Number.parseInt(process.env.ACCESS_TOKEN_TTL_SECONDS, 10)
+    : 15 * 60;
+  const refreshTtl = process.env.REFRESH_TOKEN_TTL_SECONDS
+    ? Number.parseInt(process.env.REFRESH_TOKEN_TTL_SECONDS, 10)
+    : 7 * 24 * 60 * 60;
+  const challengeTtl = process.env.CHALLENGE_EXPIRES_IN_MS
+    ? Number.parseInt(process.env.CHALLENGE_EXPIRES_IN_MS, 10)
+    : 5 * 60 * 1000;
+
+  if (!Number.isFinite(accessTtl) || accessTtl <= 0) {
+    throw new Error('ACCESS_TOKEN_TTL_SECONDS must be a positive number');
+  }
+  if (!Number.isFinite(refreshTtl) || refreshTtl <= 0) {
+    throw new Error('REFRESH_TOKEN_TTL_SECONDS must be a positive number');
+  }
+  if (!Number.isFinite(challengeTtl) || challengeTtl <= 0) {
+    throw new Error('CHALLENGE_EXPIRES_IN_MS must be a positive number');
+  }
+  if (accessTtl >= refreshTtl) {
+    throw new Error('ACCESS_TOKEN_TTL_SECONDS must be less than REFRESH_TOKEN_TTL_SECONDS');
+  }
+
+  return { accessTtl, refreshTtl, challengeTtl };
+}
+
+const tokenTTLConfig = getTokenTTLConfig();
+
+export const ACCESS_TOKEN_TTL_SECONDS = tokenTTLConfig.accessTtl;
+export const REFRESH_TOKEN_TTL_SECONDS = tokenTTLConfig.refreshTtl;
+const CHALLENGE_EXPIRES_IN_MS = tokenTTLConfig.challengeTtl;
+
+const ACCESS_TOKEN_EXPIRES_IN = `${Math.floor(ACCESS_TOKEN_TTL_SECONDS / 60)}m`;
+const REFRESH_TOKEN_EXPIRES_IN = `${Math.floor(REFRESH_TOKEN_TTL_SECONDS / 86400)}d`;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 1000;
 
 const REFRESH_TOKEN_PREFIX = 'refresh_token:';
@@ -336,6 +366,51 @@ export async function revokeTokenFamily(
 
   logger.withContext().warn('Token family revoked', {
     familyId,
+    reason,
+    revokedAt: new Date(now).toISOString(),
+  });
+}
+
+/**
+ * Invalidates all token families for a given public key (logout all sessions).
+ * Used when credentials are compromised or user explicitly logs out all devices.
+ */
+export async function invalidateAllFamilies(
+  publicKey: string,
+  reason = 'user_initiated',
+): Promise<void> {
+  const now = Date.now();
+  const cachePrefix = `user_families:${publicKey}:`;
+
+  logger.withContext().info('Bulk token family revocation initiated', {
+    publicKey,
+    reason,
+    timestamp: new Date(now).toISOString(),
+  });
+
+  for (const [jti, meta] of inMemoryRefreshTokens.entries()) {
+    if (meta.publicKey === publicKey && !meta.isRevoked) {
+      meta.isRevoked = true;
+      inMemoryRevokedFamilies.set(meta.familyId, { revokedAt: now, reason: `bulk_${reason}` });
+      try {
+        await Promise.race([
+          cacheService.set(
+            `${TOKEN_FAMILY_PREFIX}${meta.familyId}`,
+            { isRevoked: true, revokedAt: now, reason: `bulk_${reason}` },
+            REFRESH_TOKEN_TTL_SECONDS,
+          ),
+          new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error('cache_timeout')), CACHE_TIMEOUT_MS),
+          ),
+        ]);
+      } catch {
+        // in-memory fallback already recorded
+      }
+    }
+  }
+
+  logger.withContext().warn('All token families revoked for user', {
+    publicKey,
     reason,
     revokedAt: new Date(now).toISOString(),
   });

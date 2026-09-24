@@ -105,6 +105,9 @@ export const queryKeys = {
     all: () => ["admin", "governance"] as const,
     pending: () => ["admin", "governance", "pending"] as const,
   },
+  agent: {
+    dashboard: () => ["agent", "dashboard"] as const,
+  },
 } as const;
 
 // ─── Base fetch helper ────────────────────────────────────────────────────────
@@ -214,7 +217,7 @@ export interface UserProfile {
   kycVerified: boolean;
 }
 
-export type UserRole = "admin" | "borrower" | "lender";
+export type UserRole = "admin" | "super_admin" | "ops" | "support" | "borrower" | "lender";
 
 export interface AuthSession {
   publicKey?: string;
@@ -1891,6 +1894,231 @@ export function useMyTransactions(params: CursorListParams = {}) {
   });
 }
 
+export interface AdminUser {
+  id: string;
+  publicKey: string;
+  displayName: string;
+  email: string;
+  role: string;
+  isSuspended: boolean;
+  kycVerified: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+  stats: {
+    loanCount: number;
+    totalPrincipal: string;
+  };
+}
+
+export interface AdminUserListResponse {
+  users: AdminUser[];
+  limit: number;
+  offset: number;
+  count: number;
+}
+
+export interface AdminUserDetail {
+  id: string;
+  publicKey: string;
+  displayName: string;
+  email: string;
+  phone: string;
+  role: string;
+  roles: string[];
+  isSuspended: boolean;
+  kycVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  failedLoginAttempts: number;
+}
+
+export interface SystemHealthCheck {
+  name: string;
+  status: "ok" | "degraded" | "down";
+  detail?: string;
+}
+
+export interface SystemHealthResponse {
+  status: "ok" | "degraded" | "down";
+  timestamp: string;
+  checks: SystemHealthCheck[];
+  jobs: Record<string, unknown>;
+}
+
+export interface SettlementTriggerResponse {
+  success: boolean;
+  message: string;
+  details: Record<string, unknown>;
+  loanIds: number[] | null;
+  force: boolean;
+}
+
+export interface FeatureFlag {
+  key: string;
+  name: string;
+  enabled: boolean;
+  value: string | null;
+  scope: string;
+}
+
+export interface FeatureFlagListResponse {
+  flags: FeatureFlag[];
+}
+
+export interface KycOverrideResponse {
+  success: boolean;
+  publicKey: string;
+  verified: boolean;
+  level: string;
+}
+
+/* ─── Admin Operations hooks ─────────────────────────────────────────── */
+
+export function useAdminUsers(params: {
+  limit?: number;
+  offset?: number;
+  role?: string;
+  status?: string;
+  search?: string;
+} = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.limit) searchParams.set("limit", String(params.limit));
+  if (params.offset) searchParams.set("offset", String(params.offset));
+  if (params.role) searchParams.set("role", params.role);
+  if (params.status) searchParams.set("status", params.status);
+  if (params.search) searchParams.set("search", params.search);
+
+  const qs = searchParams.toString();
+  const url = qs ? `/admin/users?${qs}` : "/admin/users";
+
+  return useQuery({
+    queryKey: queryKeys.adminUsers.all(),
+    queryFn: () => apiFetch<AdminUserListResponse>(url),
+  });
+}
+
+export function useAdminUser(publicKey: string) {
+  return useQuery({
+    queryKey: queryKeys.adminUsers.detail(publicKey),
+    queryFn: () => apiFetch<AdminUserDetail>(`/admin/users/${publicKey}`),
+    enabled: Boolean(publicKey),
+  });
+}
+
+export function useUpdateUserStatus() {
+  const queryClient = useQueryClient();
+  const toast = useContractToast();
+
+  return useMutation({
+    mutationFn: ({ publicKey, isSuspended }: { publicKey: string; isSuspended: boolean }) =>
+      apiFetch<{ success: true; publicKey: string; isSuspended: boolean }>(
+        `/admin/users/${publicKey}/status`,
+        { method: "PATCH", body: JSON.stringify({ isSuspended }) },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers.all() });
+      toast.success("User status updated successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to update user status");
+    },
+  });
+}
+
+export function useUpdateUserRole() {
+  const queryClient = useQueryClient();
+  const toast = useContractToast();
+
+  return useMutation({
+    mutationFn: ({ publicKey, role }: { publicKey: string; role: string }) =>
+      apiFetch<{ success: true; publicKey: string; role: string }>(
+        `/admin/users/${publicKey}/role`,
+        { method: "PATCH", body: JSON.stringify({ role }) },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers.all() });
+      toast.success("User role updated successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to update user role");
+    },
+  });
+}
+
+export function useKycOverride() {
+  const queryClient = useQueryClient();
+  const toast = useContractToast();
+
+  return useMutation({
+    mutationFn: ({ publicKey, verified, level }: { publicKey: string; verified: boolean; level?: string }) =>
+      apiFetch<KycOverrideResponse>("/admin/kyc/override", {
+        method: "POST",
+        body: JSON.stringify({ publicKey, verified, level }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers.all() });
+      toast.success("KYC status overridden successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to override KYC status");
+    },
+  });
+}
+
+export function useAdminSystemHealth() {
+  return useQuery({
+    queryKey: queryKeys.adminSystemHealth.all(),
+    queryFn: () => apiFetch<SystemHealthResponse>("/admin/system/health"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useTriggerSettlement() {
+  const toast = useContractToast();
+
+  return useMutation({
+    mutationFn: ({ loanIds, force }: { loanIds?: number[]; force?: boolean }) =>
+      apiFetch<SettlementTriggerResponse>("/admin/settlement/trigger", {
+        method: "POST",
+        body: JSON.stringify({ loanIds, force }),
+      }),
+    onSuccess: () => {
+      toast.success("Batch settlement run triggered successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to trigger settlement");
+    },
+  });
+}
+
+export function useFeatureFlags() {
+  return useQuery({
+    queryKey: queryKeys.adminFeatureFlags.all(),
+    queryFn: () => apiFetch<FeatureFlagListResponse>("/admin/feature-flags"),
+  });
+}
+
+export function useUpdateFeatureFlag() {
+  const queryClient = useQueryClient();
+  const toast = useContractToast();
+
+  return useMutation({
+    mutationFn: ({ key, enabled, value }: { key: string; enabled?: boolean; value?: string }) =>
+      apiFetch<{ success: true; flag: FeatureFlag }>(
+        `/admin/feature-flags/${key}`,
+        { method: "PUT", body: JSON.stringify({ enabled, value }) },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminFeatureFlags.all() });
+      toast.success("Feature flag updated successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to update feature flag");
+    },
+  });
+}
+
 export function useAdminGovernancePending() {
   return useQuery({
     queryKey: queryKeys.governance.pending(),
@@ -1957,5 +2185,58 @@ export function useReleaseCollateral() {
     onError: (error: Error) => {
       toast.error(error.message ?? "Failed to release collateral");
     },
+  });
+}
+
+/* ─── Agent Dashboard ────────────────────────────────────────────────── */
+
+export interface AgentDashboardData {
+  agentPublicKey: string;
+  floatUtilization: {
+    totalFloat: number;
+    allocated: number;
+    utilizationPct: number;
+  };
+  earnings: {
+    daily: number;
+    weekly: number;
+    monthly: number;
+    total: number;
+  };
+  borrowerPortfolio: {
+    totalLoans: number;
+    activeLoans: number;
+    defaultedLoans: number;
+    totalOutstanding: number;
+    byStatus: Record<string, number>;
+  };
+  pendingSettlements: {
+    count: number;
+    totalValue: number;
+  };
+  collateralRatio: {
+    totalCollateral: number;
+    totalDebt: number;
+    ratio: number;
+  };
+  recentTransactions: Array<{
+    type: string;
+    amount: number;
+    loanId: string | null;
+    timestamp: string;
+  }>;
+}
+
+export function useAgentDashboard() {
+  return useQuery({
+    queryKey: queryKeys.agent.dashboard(),
+    queryFn: () => apiFetch<AgentDashboardData>("/agents/dashboard"),
+    staleTime: 25_000,
+  });
+}
+
+export async function clearAgentDashboardCache() {
+  return apiFetch<{ success: true; message: string }>("/agents/dashboard/cache", {
+    method: "DELETE",
   });
 }

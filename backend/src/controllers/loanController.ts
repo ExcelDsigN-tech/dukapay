@@ -6,7 +6,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { getLoanConfig } from '../config/loanConfig.js';
 import { ErrorCode } from '../errors/errorCodes.js';
 import { sorobanService } from '../services/sorobanService.js';
-import { rejectLoanSchema } from '../schemas/loanSchemas.js';
+import {
+  rejectLoanSchema,
+  markLoanDefaultedSchema,
+  contestDefaultSchema,
+} from '../schemas/loanSchemas.js';
 import { createCursorPaginatedResponse, parseCursorQueryParams } from '../utils/pagination.js';
 import logger from '../utils/logger.js';
 import { cacheService } from '../services/cacheService.js';
@@ -14,6 +18,45 @@ import { notificationService } from '../services/notificationService.js';
 import { invalidateOnRepay, invalidateOnLoanRequest } from '../utils/cacheKeys.js';
 import { roundToCents } from '../money/decimal.js';
 import { sanitizeHtml } from '../utils/sanitize.js';
+
+interface LoanTermConfig {
+  defaultTermLedgers: number;
+  defaultInterestRateBps: number;
+  defaultFeeRateBps: number;
+  ledgerCloseSeconds: number;
+}
+
+function getLoanTermConfig(): LoanTermConfig {
+  const defaultTermLedgers = process.env.DEFAULT_TERM_LEDGERS
+    ? Number.parseInt(process.env.DEFAULT_TERM_LEDGERS, 10)
+    : 17280;
+  const defaultInterestRateBps = process.env.DEFAULT_INTEREST_RATE_BPS
+    ? Number.parseInt(process.env.DEFAULT_INTEREST_RATE_BPS, 10)
+    : 1200;
+  const defaultFeeRateBps = process.env.DEFAULT_FEE_RATE_BPS
+    ? Number.parseInt(process.env.DEFAULT_FEE_RATE_BPS, 10)
+    : 100;
+  const ledgerCloseSeconds = process.env.LEDGER_CLOSE_SECONDS
+    ? Number.parseInt(process.env.LEDGER_CLOSE_SECONDS, 10)
+    : 5;
+
+  if (!Number.isFinite(defaultTermLedgers) || defaultTermLedgers <= 0) {
+    throw new Error('DEFAULT_TERM_LEDGERS must be a positive number');
+  }
+  if (!Number.isFinite(defaultInterestRateBps) || defaultInterestRateBps <= 0) {
+    throw new Error('DEFAULT_INTEREST_RATE_BPS must be a positive number');
+  }
+  if (!Number.isFinite(defaultFeeRateBps) || defaultFeeRateBps < 0) {
+    throw new Error('DEFAULT_FEE_RATE_BPS must be a non-negative number');
+  }
+  if (!Number.isFinite(ledgerCloseSeconds) || ledgerCloseSeconds <= 0) {
+    throw new Error('LEDGER_CLOSE_SECONDS must be a positive number');
+  }
+
+  return { defaultTermLedgers, defaultInterestRateBps, defaultFeeRateBps, ledgerCloseSeconds };
+}
+
+const loanTermConfig = getLoanTermConfig();
 
 // ─── Test/Dev Only ────────────────────────────────────────────────────────────
 
@@ -125,7 +168,12 @@ export const buildRejectLoanTx = async (req: Request, res: Response, next: NextF
  */
 export const markLoanDefaulted = asyncHandler(async (req: Request, res: Response) => {
   const loanId = req.params.loanId as string;
-  const borrower = req.body.borrower || req.user?.publicKey || null;
+  const { borrower: providedBorrower } = markLoanDefaultedSchema.parse(req.body);
+  const borrower = providedBorrower || req.user?.publicKey;
+
+  if (!borrower) {
+    throw AppError.badRequest('Borrower address is required');
+  }
 
   const loanResult = await query(`SELECT loan_id FROM contract_events WHERE loan_id = $1 LIMIT 1`, [
     loanId,
@@ -152,12 +200,9 @@ export const markLoanDefaulted = asyncHandler(async (req: Request, res: Response
 export const contestDefault = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
     const loanId = req.params.loanId as string;
-    const { reason } = req.body as { reason: string };
+    const { reason } = contestDefaultSchema.parse(req.body);
     const borrower = req.user?.publicKey;
 
-    if (!reason || reason.trim().length < 5) {
-      throw AppError.badRequest('A valid reason for contesting is required.');
-    }
     if (!borrower) {
       throw AppError.unauthorized('Authentication required');
     }
@@ -206,9 +251,6 @@ export const contestDefault = asyncHandler(
   },
 );
 
-const LEDGER_CLOSE_SECONDS = 5;
-const DEFAULT_TERM_LEDGERS = 17280; // 1 day in ledgers
-const DEFAULT_INTEREST_RATE_BPS = 1200; // 12%
 
 type BorrowerLoan = {
   loanId: number;
@@ -313,7 +355,7 @@ export const previewLoanAmortizationSchedule = asyncHandler(async (req: Request,
 
   const loanConfig = getLoanConfig();
   const interestRateBps = Math.round(loanConfig.interestRatePercent * 100);
-  const termLedgers = termDays * DEFAULT_TERM_LEDGERS;
+  const termLedgers = termDays * loanTermConfig.defaultTermLedgers;
 
   const amortization = buildAmortizationSchedule(amount, interestRateBps, termLedgers, new Date());
 
@@ -322,8 +364,6 @@ export const previewLoanAmortizationSchedule = asyncHandler(async (req: Request,
     amortization,
   });
 });
-
-const FEE_RATE_BPS = 100; // 1% origination fee default
 
 /**
  * Build repayment preview schedule with fees per period
@@ -334,7 +374,7 @@ export const buildRepaymentPreviewSchedule = (
   interestRateBps: number,
   termLedgers: number,
   startDate: Date,
-  feeRateBps: number = FEE_RATE_BPS,
+  feeRateBps: number = loanTermConfig.defaultFeeRateBps,
 ) => {
   const totalInterest = roundToCents(principal * (interestRateBps / 10_000));
   const totalFees = roundToCents(principal * (feeRateBps / 10_000));
@@ -434,11 +474,11 @@ export const getLoanRepaymentPreview = asyncHandler(async (req: Request, res: Re
 
   const principal = Number.parseFloat(String(requestEvent.amount));
   const interestRateBps = Number.parseInt(
-    String(approvalEvent.interest_rate_bps ?? DEFAULT_INTEREST_RATE_BPS),
+    String(approvalEvent.interest_rate_bps ?? loanTermConfig.defaultInterestRateBps),
     10,
   );
   const termLedgers = Number.parseInt(
-    String(approvalEvent.term_ledgers ?? DEFAULT_TERM_LEDGERS),
+    String(approvalEvent.term_ledgers ?? loanTermConfig.defaultTermLedgers),
     10,
   );
 
@@ -507,8 +547,8 @@ export const getBorrowerLoans = asyncHandler(async (req: Request, res: Response)
       loan_calculations AS (
         SELECT
           *,
-          COALESCE(rate_bps, ${DEFAULT_INTEREST_RATE_BPS}) as effective_rate_bps,
-          COALESCE(term_ledgers, ${DEFAULT_TERM_LEDGERS}) as effective_term_ledgers,
+          COALESCE(rate_bps, ${loanTermConfig.defaultInterestRateBps}) as effective_rate_bps,
+          COALESCE(term_ledgers, ${loanTermConfig.defaultTermLedgers}) as effective_term_ledgers,
           COALESCE(approved_ledger, 0) as effective_approved_ledger
         FROM loan_summaries
       ),
@@ -522,8 +562,8 @@ export const getBorrowerLoans = asyncHandler(async (req: Request, res: Response)
         SELECT
           *,
           (principal + accrued_interest - total_repaid) as total_owed,
-          CASE 
-            WHEN approved_at IS NOT NULL THEN (approved_at + (effective_term_ledgers * ${LEDGER_CLOSE_SECONDS} || ' seconds')::interval)
+          CASE
+            WHEN approved_at IS NOT NULL THEN (approved_at + (effective_term_ledgers * ${loanTermConfig.ledgerCloseSeconds} || ' seconds')::interval)
             ELSE NOW()
           END as next_payment_deadline,
           CASE 
@@ -668,8 +708,8 @@ export const getLoanDetails = asyncHandler(async (req: Request, res: Response) =
     0,
   );
 
-  const rateBps = approvalEvent?.interest_rate_bps || DEFAULT_INTEREST_RATE_BPS;
-  const termLedgers = approvalEvent?.term_ledgers || DEFAULT_TERM_LEDGERS;
+  const rateBps = approvalEvent?.interest_rate_bps || loanTermConfig.defaultInterestRateBps;
+  const termLedgers = approvalEvent?.term_ledgers || loanTermConfig.defaultTermLedgers;
   const approvedLedger = approvalEvent?.ledger || 0;
 
   // Check for open dispute
@@ -769,11 +809,11 @@ export const getLoanAmortizationSchedule = asyncHandler(async (req: Request, res
 
   const principal = Number.parseFloat(String(requestEvent.amount));
   const interestRateBps = Number.parseInt(
-    String(approvalEvent.interest_rate_bps ?? DEFAULT_INTEREST_RATE_BPS),
+    String(approvalEvent.interest_rate_bps ?? loanTermConfig.defaultInterestRateBps),
     10,
   );
   const termLedgers = Number.parseInt(
-    String(approvalEvent.term_ledgers ?? DEFAULT_TERM_LEDGERS),
+    String(approvalEvent.term_ledgers ?? loanTermConfig.defaultTermLedgers),
     10,
   );
 

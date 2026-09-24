@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/AppError.js';
+import logger from '../utils/logger.js';
 
 /**
  * Admin API key scopes.
@@ -52,9 +53,10 @@ function parseConfiguredKeys(): ParsedKey[] {
  * Middleware that enforces API-key authentication and authorization.
  *
  * Behaviour:
- * - Legacy keys (no scope prefix) grant access to every endpoint.
+ * - Legacy keys (no scope prefix) grant access to every endpoint (deprecated).
  * - Scoped keys may access only endpoints requiring their exact scope.
  * - Calling requireApiKey() without a required scope accepts only legacy keys.
+ * - Legacy key usage is logged and warned for audit trail.
  */
 export const requireApiKey = (requiredScope?: ApiKeyScope) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
@@ -96,8 +98,14 @@ export const requireApiKey = (requiredScope?: ApiKeyScope) => {
      * Authorize using the required scope.
      */
     if (requiredScope !== undefined) {
-      // Legacy keys bypass scope checks.
-      if (matchedKey.scope !== null && matchedKey.scope !== requiredScope) {
+      // Legacy keys bypass scope checks (deprecated).
+      if (matchedKey.scope === null) {
+        logger.withContext().warn('Legacy API key used - please migrate to scoped keys', {
+          endpoint: req.path,
+          method: req.method,
+          timestamp: new Date().toISOString(),
+        });
+      } else if (matchedKey.scope !== requiredScope) {
         throw AppError.forbidden(`Unauthorised: API key lacks required scope ${requiredScope}`);
       }
 
@@ -108,6 +116,12 @@ export const requireApiKey = (requiredScope?: ApiKeyScope) => {
       if (matchedKey.scope !== null) {
         throw AppError.forbidden('Unauthorised: scoped API keys cannot access this endpoint');
       }
+
+      logger.withContext().warn('Legacy API key used on unscoped endpoint', {
+        endpoint: req.path,
+        method: req.method,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     next();
