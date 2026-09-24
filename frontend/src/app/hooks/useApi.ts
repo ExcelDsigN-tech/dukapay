@@ -105,6 +105,9 @@ export const queryKeys = {
     all: () => ["admin", "governance"] as const,
     pending: () => ["admin", "governance", "pending"] as const,
   },
+  agent: {
+    dashboard: () => ["agent", "dashboard"] as const,
+  },
 } as const;
 
 // ─── Base fetch helper ────────────────────────────────────────────────────────
@@ -1957,5 +1960,58 @@ export function useReleaseCollateral() {
     onError: (error: Error) => {
       toast.error(error.message ?? "Failed to release collateral");
     },
+  });
+}
+
+/* ─── Agent Dashboard ────────────────────────────────────────────────── */
+
+export interface AgentDashboardData {
+  agentPublicKey: string;
+  floatUtilization: {
+    totalFloat: number;
+    allocated: number;
+    utilizationPct: number;
+  };
+  earnings: {
+    daily: number;
+    weekly: number;
+    monthly: number;
+    total: number;
+  };
+  borrowerPortfolio: {
+    totalLoans: number;
+    activeLoans: number;
+    defaultedLoans: number;
+    totalOutstanding: number;
+    byStatus: Record<string, number>;
+  };
+  pendingSettlements: {
+    count: number;
+    totalValue: number;
+  };
+  collateralRatio: {
+    totalCollateral: number;
+    totalDebt: number;
+    ratio: number;
+  };
+  recentTransactions: Array<{
+    type: string;
+    amount: number;
+    loanId: string | null;
+    timestamp: string;
+  }>;
+}
+
+export function useAgentDashboard() {
+  return useQuery({
+    queryKey: queryKeys.agent.dashboard(),
+    queryFn: () => apiFetch<AgentDashboardData>("/agents/dashboard"),
+    staleTime: 25_000,
+  });
+}
+
+export async function clearAgentDashboardCache() {
+  return apiFetch<{ success: true; message: string }>("/agents/dashboard/cache", {
+    method: "DELETE",
   });
 }

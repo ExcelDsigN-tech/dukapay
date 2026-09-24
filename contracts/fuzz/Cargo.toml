@@ -24,6 +24,9 @@ path = "../remittance_nft"
 [dependencies.multisig_governance]
 path = "../multisig_governance"
 
+[dependencies.settlement_netter]
+path = "../settlement_netter"
+
 [[bin]]
 name = "fuzz_target_1"
 path = "fuzz_targets/fuzz_target_1.rs"

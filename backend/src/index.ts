@@ -34,6 +34,7 @@ import {
   startCrossContractReconciler,
   stopCrossContractReconciler,
 } from './services/crossContractReconciler.js';
+import { startAgentDashboardPublisher, stopAgentDashboardPublisher } from './services/agentDashboardUpdates.js';
 import { sorobanService } from './services/sorobanService.js';
 import { validateLoanConfigOnStartup } from './config/loanConfig.js';
 import { startLoanDueCheckCron, stopLoanDueCheckCron } from './cron/loanCheckCron.js';
@@ -92,6 +93,9 @@ const server = app.listen(port, () => {
   // Start cross-contract (disbursement <-> score) reconciliation ledger sweep
   startCrossContractReconciler();
 
+  // Start agent dashboard real-time updates publisher
+  startAgentDashboardPublisher();
+
   // Start periodic notification cleanup
   startNotificationCleanupScheduler();
 
@@ -136,6 +140,7 @@ const shutdown = async (signal: 'SIGTERM' | 'SIGINT') => {
     stopWebhookRetryProcessor();
     stopScoreReconciliationScheduler();
     stopCrossContractReconciler();
+    stopAgentDashboardPublisher();
     stopNotificationCleanupScheduler();
 
     if (
