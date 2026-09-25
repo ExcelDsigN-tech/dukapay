@@ -78,19 +78,33 @@ export default function AdminUsersPage() {
           <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">{t("user")}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">{t("role")}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">{t("status")}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">{t("kyc")}</th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase text-zinc-500">{t("actions")}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("user")}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("role")}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("status")}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-zinc-500">
+                  {t("kyc")}
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase text-zinc-500">
+                  {t("actions")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {data?.users?.map((user) => (
                 <tr key={user.id} className="border-t border-zinc-200 dark:border-zinc-800">
                   <td className="px-4 py-3">
-                    <p className="font-mono text-xs text-zinc-500">{user.publicKey.slice(0, 8)}…{user.publicKey.slice(-4)}</p>
-                    <p className="text-sm text-zinc-950 dark:text-zinc-50">{user.displayName || user.email || t("noName")}</p>
+                    <p className="font-mono text-xs text-zinc-500">
+                      {user.publicKey.slice(0, 8)}…{user.publicKey.slice(-4)}
+                    </p>
+                    <p className="text-sm text-zinc-950 dark:text-zinc-50">
+                      {user.displayName || user.email || t("noName")}
+                    </p>
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -104,7 +118,9 @@ export default function AdminUsersPage() {
                       className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                     >
                       {ROLES.map((r) => (
-                        <option key={r} value={r}>{r}</option>
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -143,9 +159,7 @@ export default function AdminUsersPage() {
         <div className="fixed inset-0 flex items-center justify-center bg-black/30">
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950 max-w-sm">
             <h3 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
-              {actionType === "suspend"
-                ? t("confirmSuspend")
-                : t("confirmActivate")}
+              {actionType === "suspend" ? t("confirmSuspend") : t("confirmActivate")}
             </h3>
             <p className="mt-2 text-sm text-zinc-500">
               {actionUser.displayName || actionUser.email || actionUser.publicKey.slice(0, 8)}

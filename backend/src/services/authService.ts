@@ -84,8 +84,6 @@ export const ACCESS_TOKEN_TTL_SECONDS = tokenTTLConfig.accessTtl;
 export const REFRESH_TOKEN_TTL_SECONDS = tokenTTLConfig.refreshTtl;
 const CHALLENGE_EXPIRES_IN_MS = tokenTTLConfig.challengeTtl;
 
-const ACCESS_TOKEN_EXPIRES_IN = `${Math.floor(ACCESS_TOKEN_TTL_SECONDS / 60)}m`;
-const REFRESH_TOKEN_EXPIRES_IN = `${Math.floor(REFRESH_TOKEN_TTL_SECONDS / 86400)}d`;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 1000;
 
 const REFRESH_TOKEN_PREFIX = 'refresh_token:';
@@ -218,7 +216,7 @@ export function generateJwtToken(
   }
 
   return jwt.sign(payload, secret, {
-    expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+    expiresIn: ACCESS_TOKEN_TTL_SECONDS,
     algorithm: 'HS256',
   });
 }
@@ -252,7 +250,7 @@ export function generateRefreshToken(
   }
 
   const refreshToken = jwt.sign(payload, secret, {
-    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+    expiresIn: REFRESH_TOKEN_TTL_SECONDS,
     algorithm: 'HS256',
   });
 
@@ -380,7 +378,6 @@ export async function invalidateAllFamilies(
   reason = 'user_initiated',
 ): Promise<void> {
   const now = Date.now();
-  const cachePrefix = `user_families:${publicKey}:`;
 
   logger.withContext().info('Bulk token family revocation initiated', {
     publicKey,
@@ -388,7 +385,7 @@ export async function invalidateAllFamilies(
     timestamp: new Date(now).toISOString(),
   });
 
-  for (const [jti, meta] of inMemoryRefreshTokens.entries()) {
+  for (const meta of inMemoryRefreshTokens.values()) {
     if (meta.publicKey === publicKey && !meta.isRevoked) {
       meta.isRevoked = true;
       inMemoryRevokedFamilies.set(meta.familyId, { revokedAt: now, reason: `bulk_${reason}` });

@@ -157,13 +157,13 @@ app.get('/version', (_req: Request, res: Response) => {
     gitSha: process.env.GIT_SHA ?? 'unknown',
     builtAt: process.env.BUILD_TIME ?? 'unknown',
     nodeVersion: process.version,
-      contracts: {
-        loanManager: process.env.LOAN_MANAGER_CONTRACT_ID ?? 'unknown',
-        lendingPool: process.env.LENDING_POOL_CONTRACT_ID ?? 'unknown',
-        remittanceNft: process.env.REMITTANCE_NFT_CONTRACT_ID ?? 'unknown',
-        multisigGovernance: process.env.MULTISIG_GOVERNANCE_CONTRACT_ID ?? 'unknown',
-        settlementNetter: process.env.SETTLEMENT_NETTER_CONTRACT_ID ?? 'unknown',
-      },
+    contracts: {
+      loanManager: process.env.LOAN_MANAGER_CONTRACT_ID ?? 'unknown',
+      lendingPool: process.env.LENDING_POOL_CONTRACT_ID ?? 'unknown',
+      remittanceNft: process.env.REMITTANCE_NFT_CONTRACT_ID ?? 'unknown',
+      multisigGovernance: process.env.MULTISIG_GOVERNANCE_CONTRACT_ID ?? 'unknown',
+      settlementNetter: process.env.SETTLEMENT_NETTER_CONTRACT_ID ?? 'unknown',
+    },
   });
 });
 
@@ -364,7 +364,6 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/remittances', remittanceRoutes);
 app.use('/api/transactions', transactionRoutes);
-app.use('/api/agents', agentRoutes);
 app.use('/api/agents', agentFloatRoutes);
 app.use('/audit', auditRoutes);
 
@@ -382,7 +381,6 @@ app.use('/api/v1/pool', poolRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/privacy', privacyRoutes);
-app.use('/api/v1/agents', agentRoutes);
 app.use('/api/v1/agents', agentFloatRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/user', userRoutes);

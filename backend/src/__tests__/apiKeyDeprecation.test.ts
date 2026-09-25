@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import type { Request, Response, NextFunction } from 'express';
 import { requireApiKey } from '../middleware/auth.js';
 import { AppError } from '../errors/AppError.js';
@@ -11,7 +11,9 @@ describe('API Key Middleware - Legacy Key Deprecation', () => {
   let responseBody: unknown;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    process.env.INTERNAL_API_KEY =
+      'legacy-test-key,admin:loans:test-key,admin:disputes:dispute-key';
+    jest.clearAllMocks();
 
     req = {
       headers: {},
@@ -23,13 +25,13 @@ describe('API Key Middleware - Legacy Key Deprecation', () => {
     responseBody = null;
 
     res = {
-      status: vi.fn(() => res as any),
-      json: vi.fn((data) => {
+      status: jest.fn(() => res as any),
+      json: jest.fn((data) => {
         responseBody = data;
       }),
     };
 
-    next = vi.fn();
+    next = jest.fn();
   });
 
   it('should reject missing API key', () => {
@@ -79,7 +81,7 @@ describe('API Key Middleware - Legacy Key Deprecation', () => {
   });
 
   it('should allow scoped key with matching scope', () => {
-    req.headers = { 'x-api-key': 'admin:loans:test-key' };
+    req.headers = { 'x-api-key': 'test-key' };
     const middleware = requireApiKey('admin:loans');
 
     middleware(req as Request, res as Response, next);
@@ -87,7 +89,7 @@ describe('API Key Middleware - Legacy Key Deprecation', () => {
   });
 
   it('should reject scoped key with non-matching scope', () => {
-    req.headers = { 'x-api-key': 'admin:disputes:test-key' };
+    req.headers = { 'x-api-key': 'dispute-key' };
     const middleware = requireApiKey('admin:loans');
 
     expect(() => {

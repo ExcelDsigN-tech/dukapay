@@ -198,7 +198,10 @@ export const getAgentDashboard = asyncHandler(async (req: Request, res: Response
         type: String(r.event_type ?? ''),
         amount: formatNumber(r.amount as string | number | null),
         loanId: r.loan_id != null ? String(r.loan_id) : null,
-        timestamp: r.created_at instanceof Date ? r.created_at.toISOString() : new Date(r.created_at as string).toISOString(),
+        timestamp:
+          r.created_at instanceof Date
+            ? r.created_at.toISOString()
+            : new Date(r.created_at as string).toISOString(),
       };
     }),
   };

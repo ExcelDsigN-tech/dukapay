@@ -30,7 +30,7 @@ beforeAll(async () => {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 // Real Stellar-format public key so any key-format validation passes
-const TEST_PUBLIC_KEY = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
+const TEST_PUBLIC_KEY = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7';
 const ADMIN_API_KEY = 'test-api-key';
 const LOAN_ID = 42;
 const DISPUTE_ID = 7;

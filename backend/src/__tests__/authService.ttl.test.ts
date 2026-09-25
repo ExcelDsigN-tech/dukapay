@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
@@ -10,7 +10,8 @@ import {
 
 describe('authService - Token TTL Configuration', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    process.env.JWT_SECRET = 'test-jwt-secret';
+    jest.clearAllMocks();
   });
 
   it('should use environment variables for token TTLs when set', () => {
@@ -30,7 +31,7 @@ describe('authService - Token TTL Configuration', () => {
   });
 
   it('should generate token pair with correct TTL values', async () => {
-    const publicKey = 'GBPZ36ZCGN6GCR2UGPWBSGSQYV6L5JX4D33HQXQGFVP7IVQMJ6XCMKL4';
+    const publicKey = 'GBRPK3WI4NMLDW6BWZDTKKOGAXBC6T3PA5ZJZ527ZIMC726NVKBH5J4H';
     const tokenPair = await generateTokenPair(publicKey);
 
     expect(tokenPair.expiresIn).toBe(ACCESS_TOKEN_TTL_SECONDS);
@@ -40,7 +41,7 @@ describe('authService - Token TTL Configuration', () => {
 });
 
 describe('authService - Bulk Token Family Revocation', () => {
-  const publicKey = 'GBPZ36ZCGN6GCR2UGPWBSGSQYV6L5JX4D33HQXQGFVP7IVQMJ6XCMKL4';
+  const publicKey = 'GBRPK3WI4NMLDW6BWZDTKKOGAXBC6T3PA5ZJZ527ZIMC726NVKBH5J4H';
 
   it('should revoke a single token family', async () => {
     const familyId = 'test-family-1';
