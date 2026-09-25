@@ -27,7 +27,11 @@ import {
 } from "../../stores/useWalletStore";
 import { useUserStore, selectUser } from "../../stores/useUserStore";
 import { logoutUser } from "../../lib/session";
-import { useNotificationPreferences, useUpdateNotificationPreferences } from "../../hooks/useApi";
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+  useUpdateUserProfile,
+} from "../../hooks/useApi";
 import { COPY_FEEDBACK_RESET_MS } from "../../components/ui";
 import { useLocaleSwitcher } from "../../hooks/useLocaleSwitcher";
 import { LOCALES, LOCALE_LABELS } from "../../lib/locales";
@@ -136,14 +140,22 @@ function Toggle({
 function ProfileSection() {
   const t = useTranslations("Settings");
   const user = useUserStore(selectUser);
-  const [displayName, setDisplayName] = useState(user?.id ?? "");
+  const updateProfile = useUpdateUserProfile();
+  const [displayName, setDisplayName] = useState(user?.displayName ?? user?.id ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    // In real impl: call PATCH /api/user/profile
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaved(false);
+    updateProfile.mutate(
+      { displayName, email: email.trim() || null },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        },
+      },
+    );
   };
 
   return (
@@ -188,8 +200,18 @@ function ProfileSection() {
           <span className="text-red-600">*</span> {t("common.requiredField")}
         </p>
 
-        <Button variant="primary" onClick={handleSave} className="w-full sm:w-auto">
-          {saved ? t("common.saved") : t("profile.save")}
+        <Button
+          variant="primary"
+          onClick={handleSave}
+          disabled={updateProfile.isPending}
+          aria-busy={updateProfile.isPending}
+          className="w-full sm:w-auto"
+        >
+          {updateProfile.isPending
+            ? t("common.saving")
+            : saved
+              ? t("common.saved")
+              : t("profile.save")}
         </Button>
       </CardContent>
     </Card>
