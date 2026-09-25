@@ -15,6 +15,9 @@ arbitrary = { version = "1.3", features = ["derive"] }
 [dependencies.lending_pool]
 path = "../lending_pool"
 
+[dependencies.circuit_breaker]
+path = "../circuit_breaker"
+
 [dependencies.loan_manager]
 path = "../loan_manager"
 
@@ -34,6 +37,13 @@ bench = false
 [[bin]]
 name = "lending_pool_fuzz"
 path = "fuzz_targets/lending_pool_fuzz.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lending_pool_circuit_breaker_fuzz"
+path = "fuzz_targets/lending_pool_circuit_breaker_fuzz.rs"
 test = false
 doc = false
 bench = false

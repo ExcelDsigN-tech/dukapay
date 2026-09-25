@@ -12,3 +12,4 @@ money = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+circuit_breaker = { path = "../circuit_breaker" }

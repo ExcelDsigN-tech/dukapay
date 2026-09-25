@@ -854,6 +854,7 @@ dependencies = [
 name = "lending_pool"
 version = "0.0.1"
 dependencies = [
+ "circuit_breaker",
  "money",
  "soroban-sdk",
 ]

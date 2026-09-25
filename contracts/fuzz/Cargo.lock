@@ -245,6 +245,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "circuit_breaker"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -477,6 +484,7 @@ version = "0.0.0"
 dependencies = [
  "agent_vault",
  "arbitrary",
+ "circuit_breaker",
  "lending_pool",
  "libfuzzer-sys",
  "loan_manager",

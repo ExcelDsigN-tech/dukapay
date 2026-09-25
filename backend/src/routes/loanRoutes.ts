@@ -144,7 +144,13 @@ router.get('/config', getLoanConfigEndpoint);
  *         description: Reject transaction built
  */
 
-router.post('/:loanId/build-cancel', requireJwtAuth, requireLoanOwner, buildCancelLoanTx);
+router.post(
+  '/:loanId/build-cancel',
+  requireJwtAuth,
+  requireScopes('write:loans'),
+  requireLoanOwner,
+  buildCancelLoanTx,
+);
 
 /**
  * @swagger
@@ -269,7 +275,13 @@ router.post(
  *       404:
  *         description: Loan not found
  */
-router.post('/:loanId/contest-default', requireJwtAuth, requireLoanOwner, contestDefault);
+router.post(
+  '/:loanId/contest-default',
+  requireJwtAuth,
+  requireScopes('write:loans'),
+  requireLoanOwner,
+  contestDefault,
+);
 
 /**
  * @swagger
