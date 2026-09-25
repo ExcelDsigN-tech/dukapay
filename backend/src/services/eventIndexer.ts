@@ -1256,11 +1256,11 @@ export class EventIndexer {
     if (!userId) return;
     try {
       await query(
-        `INSERT INTO scores (user_id, current_score)
+        `INSERT INTO scores (borrower, score)
          VALUES ($1, $2)
-         ON CONFLICT (user_id)
+         ON CONFLICT (borrower)
          DO UPDATE SET
-           current_score = LEAST(850, GREATEST(300, scores.current_score + $3)),
+           score = LEAST(850, GREATEST(300, scores.score + $3)),
            updated_at = CURRENT_TIMESTAMP`,
         [userId, 500 + delta, delta],
       );
