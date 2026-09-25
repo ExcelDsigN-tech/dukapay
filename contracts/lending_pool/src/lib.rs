@@ -944,6 +944,7 @@ impl LendingPool {
         min_assets_out: i128,
     ) -> Result<(), PoolError> {
         provider.require_auth();
+        Self::assert_circuit_ok(&env, symbol_short!("withdraw"))?;
         Self::acquire_lock(&env)?;
         let res = Self::redeem_shares(&env, &provider, &token, shares, min_assets_out);
         Self::release_lock(&env);
@@ -1119,12 +1120,13 @@ impl LendingPool {
         Self::read_total_outstanding(&env, &token)
     }
 
-    pub fn adjust_outstanding(env: Env, token: Address, delta: i128) {
+    pub fn adjust_outstanding(env: Env, token: Address, delta: i128) -> Result<(), PoolError> {
         let lending_pool = Self::admin(&env);
         lending_pool.require_auth();
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "adjust_outstanding"))?;
 
         if delta == 0 {
-            return;
+            return Ok(());
         }
 
         // #1356: delta must be added, not subtracted — a positive delta means
@@ -1142,6 +1144,7 @@ impl LendingPool {
 
         env.storage().instance().set(&key, &updated);
         Self::bump_instance_ttl(&env);
+        Ok(())
     }
 
     pub fn pool_balance(env: Env, token: Address) -> i128 {
