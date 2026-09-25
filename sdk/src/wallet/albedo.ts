@@ -14,8 +14,22 @@ interface AlbedoIntent {
 }
 
 /**
- * Albedo web-wallet adapter. Loads `albedo.link/lib/albedo.intent.js` from a
- * script tag on first use (no npm dependency), matching Albedo's own guidance.
+ * Pinned build of `@albedo-link/intent`. The integrity hash must be updated
+ * together with the version: `curl -s <url> | openssl dgst -sha384 -binary | base64`.
+ */
+export const ALBEDO_SCRIPT_URL =
+  'https://cdn.jsdelivr.net/npm/@albedo-link/intent@0.13.0/lib/albedo.intent.js';
+export const ALBEDO_SCRIPT_INTEGRITY =
+  'sha384-MoOxg+oiO2zk7uG3/ExUMvrSZvpbT7xb3Z1sJ4Ofs2SHsqtx6hyGUd5dOu9jGQMO';
+export const ALBEDO_SCRIPT_TIMEOUT_MS = 15_000;
+
+const LOAD_FAILED_MESSAGE =
+  'Could not load the Albedo wallet. Check your connection or try another wallet.';
+
+/**
+ * Albedo web-wallet adapter. Loads a pinned copy of Albedo's intent script
+ * from a script tag on first use (no npm dependency), checked with Subresource
+ * Integrity so a tampered file is refused by the browser.
  */
 export class AlbedoAdapter implements WalletAdapter {
   readonly id = 'albedo';
@@ -35,12 +49,24 @@ export class AlbedoAdapter implements WalletAdapter {
     }
     await new Promise<void>((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'https://albedo.link/albedo.intent.js';
-      s.onload = () => resolve();
-      s.onerror = () => reject(new WalletError('Failed to load Albedo'));
+      const fail = () => {
+        clearTimeout(timer);
+        s.remove();
+        reject(new WalletError(LOAD_FAILED_MESSAGE));
+      };
+      const timer = setTimeout(fail, ALBEDO_SCRIPT_TIMEOUT_MS);
+      s.src = ALBEDO_SCRIPT_URL;
+      s.integrity = ALBEDO_SCRIPT_INTEGRITY;
+      s.crossOrigin = 'anonymous';
+      s.referrerPolicy = 'no-referrer';
+      s.onload = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      s.onerror = fail;
       document.head.appendChild(s);
     });
-    if (!w.albedo) throw new WalletError('Albedo failed to initialise');
+    if (!w.albedo) throw new WalletError(LOAD_FAILED_MESSAGE);
     return w.albedo;
   }
 

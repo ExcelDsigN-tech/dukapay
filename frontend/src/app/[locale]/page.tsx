@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUpRight, ArrowDownLeft, Users, Activity, Clock, ExternalLink } from "lucide-react";
-import { useTranslations } from "next-intl"; // <--- This is the new one
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   useWalletStore,
@@ -72,6 +72,7 @@ function RepaymentReminderBanner({
 }) {
   const router = useRouter();
   const t = useTranslations("HomePage");
+  const locale = useLocale();
   const mostUrgent = urgentLoans[0];
   if (!mostUrgent) return null;
 
@@ -93,21 +94,19 @@ function RepaymentReminderBanner({
             {t("reminder.due", { hours: hoursLeft, loanId: mostUrgent.id })}
             {urgentLoans.length > 1 && (
               <span className="ml-2 inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-500/30 dark:text-amber-300">
-                +{urgentLoans.length - 1} more
+                {t("reminder.more", { count: urgentLoans.length - 1 })}
               </span>
             )}
           </p>
           <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
-            Amount due:{" "}
-            {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-              mostUrgent.amount,
-            )}{" "}
-            · Due{" "}
-            {dueDate.toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
+            {t("reminder.details", {
+              amount: formatCurrency(mostUrgent.amount),
+              date: dueDate.toLocaleDateString(locale, {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
             })}
           </p>
         </div>
@@ -137,6 +136,7 @@ function formatCurrency(value: number): string {
 
 export default function Home() {
   const t = useTranslations("HomePage");
+  const locale = useLocale();
   const router = useRouter();
   const isConnected = useWalletStore(selectIsWalletConnected);
   const address = useWalletStore(selectWalletAddress);
@@ -173,7 +173,7 @@ export default function Home() {
       return {
         netWorth: formatCurrency(0),
         activeLoans: "0",
-        activeLoansSub: "0 pending",
+        activeLoansSub: t("stats.pending", { count: 0 }),
         totalRemitted: formatCurrency(0),
         yieldApy: "0.0%",
       };
@@ -197,44 +197,48 @@ export default function Home() {
     return {
       netWorth: formatCurrency(netWorth),
       activeLoans: String(activeCount),
-      activeLoansSub: pendingCount > 0 ? `${pendingCount} pending` : "0 pending",
+      activeLoansSub: t("stats.pending", { count: pendingCount }),
       totalRemitted: formatCurrency(totalRemitted),
       yieldApy: `${avgRate.toFixed(1)}%`,
     };
-  }, [loans, remittances, balance, isConnected]);
+  }, [loans, remittances, balance, isConnected, t]);
 
   const recentActivity = useMemo(() => {
     const loanEvents =
       loans?.slice(0, 3).map((l) => ({
         type:
           l.status === "active"
-            ? "Loan Active"
+            ? t("activity.loanActive")
             : l.status === "repaid"
-              ? "Loan Repaid"
-              : "Loan Request",
-        desc: `Loan #${l.id} — ${formatCurrency(l.amount)}`,
+              ? t("activity.loanRepaid")
+              : t("activity.loanRequest"),
+        desc: t("activity.loanDesc", { id: l.id, amount: formatCurrency(l.amount) }),
         amount: l.status === "repaid" ? `+${formatCurrency(l.amount)}` : formatCurrency(l.amount),
-        time: new Date(l.createdAt).toLocaleDateString(),
+        timestamp: new Date(l.createdAt).getTime(),
+        time: new Date(l.createdAt).toLocaleDateString(locale),
         status: l.status === "repaid" ? "completed" : l.status,
       })) ?? [];
 
     const remittanceEvents =
       remittances?.slice(0, 3).map((r) => ({
-        type: "Remittance",
-        desc: `To ${r.recipientAddress.slice(0, 6)}...${r.recipientAddress.slice(-4)}`,
+        type: t("activity.remittance"),
+        desc: t("activity.remittanceDesc", {
+          recipient: `${r.recipientAddress.slice(0, 6)}...${r.recipientAddress.slice(-4)}`,
+        }),
         amount: `-${formatCurrency(r.amount)}`,
-        time: new Date(r.createdAt).toLocaleDateString(),
+        timestamp: new Date(r.createdAt).getTime(),
+        time: new Date(r.createdAt).toLocaleDateString(locale),
         status: r.status,
       })) ?? [];
 
     return [...loanEvents, ...remittanceEvents]
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 5);
-  }, [loans, remittances]);
+  }, [loans, remittances, locale, t]);
 
   if (!isConnected) {
     return (
-      <main className="min-h-screen" aria-label="DukaPay landing page">
+      <main className="min-h-screen" aria-label={t("landingLabel")}>
         <LandingPage
           onConnect={() => {
             void connectWallet();
@@ -268,14 +272,16 @@ export default function Home() {
 
       <ErrorBoundary scope="dashboard summary" variant="section">
         <section
-          aria-label="Portfolio Statistics"
+          aria-label={t("stats.label")}
           className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           {[
             {
               label: t("stats.netWorth"),
               value: stats.netWorth,
-              change: balance ? `${formatCurrency(balance.available)} available` : "",
+              change: balance
+                ? t("stats.available", { amount: formatCurrency(balance.available) })
+                : "",
               icon: Activity,
               trend: "up" as const,
             },
@@ -289,7 +295,7 @@ export default function Home() {
             {
               label: t("stats.totalRemitted"),
               value: stats.totalRemitted,
-              change: `${remittances?.length ?? 0} transfers`,
+              change: t("stats.transfers", { count: remittances?.length ?? 0 }),
               icon: ArrowUpRight,
               trend: "up" as const,
             },
@@ -318,7 +324,7 @@ export default function Home() {
                           ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
                           : "bg-zinc-50 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
                       }`}
-                      aria-label={`Change: ${stat.change}`}
+                      aria-label={t("stats.change", { change: stat.change })}
                     >
                       {stat.change}
                     </span>
@@ -329,10 +335,7 @@ export default function Home() {
                     <span className="inline-flex items-center gap-1">
                       {stat.label}
                       {stat.label.toLowerCase().includes("apy") ? (
-                        <Tooltip
-                          content="APY (Annual Percentage Yield): The estimated yearly return on your deposits, including compounding. This may change over time."
-                          label="APY info"
-                        />
+                        <Tooltip content={t("stats.apyTooltip")} label={t("stats.apyInfo")} />
                       ) : null}
                     </span>
                   </p>
@@ -360,7 +363,7 @@ export default function Home() {
               <button
                 onClick={() => router.push("/activity")}
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 rounded px-2 py-1"
-                aria-label="View all recent activity"
+                aria-label={t("activity.viewAllLabel")}
               >
                 {t("activity.viewAll")}
               </button>
@@ -371,8 +374,8 @@ export default function Home() {
                 {recentActivity.length === 0 ? (
                   <EmptyState
                     icon={Clock}
-                    title={t("activity.emptyTitle") || "No activity"}
-                    description={t("activity.empty") || "Your recent activity will appear here."}
+                    title={t("activity.emptyTitle")}
+                    description={t("activity.empty")}
                   />
                 ) : (
                   recentActivity.map((item, i) => (
@@ -470,7 +473,7 @@ export default function Home() {
               />
               {!currentCreditScore && (
                 <p className="mt-2 text-center text-[10px] text-zinc-400">
-                  Join the ecosystem to build your on-chain credit history.
+                  {t("creditScore.empty")}
                 </p>
               )}
             </section>
@@ -487,7 +490,7 @@ export default function Home() {
               </p>
               <button
                 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 rounded"
-                aria-label="Explore micro-loan opportunities"
+                aria-label={t("outreach.exploreLabel")}
               >
                 {t("outreach.explore")}
                 <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
