@@ -2386,3 +2386,100 @@ fn test_cei_ordering_withdraw_does_not_lose_funds_on_reentrancy_attempt() {
     assert_eq!(bal_after, bal_before - 400);
     assert_eq!(pool_client.get_shares(&provider, &token_id), 600);
 }
+
+#[test]
+fn test_reentrancy_lock_acquire_release_normal_cycle() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+
+    env.as_contract(&pool_id, || {
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        let depth: u32 = env
+            .storage()
+            .instance()
+            .get(&crate::DataKey::CallDepth)
+            .unwrap_or(0);
+        assert_eq!(depth, 1);
+        let locked: bool = env
+            .storage()
+            .instance()
+            .get(&crate::DataKey::ReentrancyLock)
+            .unwrap_or(false);
+        assert!(locked);
+
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+        let depth_after: u32 = env
+            .storage()
+            .instance()
+            .get(&crate::DataKey::CallDepth)
+            .unwrap_or(0);
+        assert_eq!(depth_after, 0);
+        let locked_after: bool = env
+            .storage()
+            .instance()
+            .get(&crate::DataKey::ReentrancyLock)
+            .unwrap_or(false);
+        assert!(!locked_after);
+    });
+}
+
+#[test]
+fn test_reentrancy_lock_over_release_returns_error() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+
+    env.as_contract(&pool_id, || {
+        // Calling exit_cross_contract_call when depth is 0 must fail with ReentrancyGuardTriggered
+        let res = LendingPool::exit_cross_contract_call(&env);
+        assert_eq!(res, Err(PoolError::ReentrancyGuardTriggered));
+
+        // Enter once, exit once (depth becomes 0)
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+
+        // Calling exit again must return error without underflow
+        let over_release = LendingPool::exit_cross_contract_call(&env);
+        assert_eq!(over_release, Err(PoolError::ReentrancyGuardTriggered));
+    });
+}
+
+#[test]
+fn test_reentrancy_lock_call_depth_limit() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+
+    env.as_contract(&pool_id, || {
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        // 4th enter must exceed max depth (3)
+        assert_eq!(
+            LendingPool::enter_cross_contract_call(&env),
+            Err(PoolError::CallDepthExceeded)
+        );
+
+        // Clean up
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+        assert_eq!(
+            LendingPool::exit_cross_contract_call(&env),
+            Err(PoolError::ReentrancyGuardTriggered)
+        );
+    });
+}

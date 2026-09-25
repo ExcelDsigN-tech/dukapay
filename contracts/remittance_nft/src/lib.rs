@@ -728,10 +728,15 @@ impl RemittanceNFT {
         if amount < 0 {
             panic!("negative amount");
         }
+        let old_amount = Self::min_repayment_amount(&env);
         env.storage()
             .instance()
             .set(&DataKey::MinRepaymentAmount, &amount);
         Self::bump_instance_ttl(&env);
+        env.events().publish(
+            (Symbol::new(&env, "MinRepayAmtSet"),),
+            (old_amount, amount),
+        );
     }
 
     pub fn get_min_repayment_amount(env: Env) -> i128 {
@@ -1062,9 +1067,13 @@ impl RemittanceNFT {
         Self::admin(&env).require_auth();
         Self::assert_not_paused(&env)?;
 
-        let approval_key = DataKey::RemintApproval(user);
+        let approval_key = DataKey::RemintApproval(user.clone());
         env.storage().persistent().set(&approval_key, &true);
         Self::bump_persistent_ttl(&env, &approval_key);
+        env.events().publish(
+            (Symbol::new(&env, "RemintApproved"), user),
+            (),
+        );
         Ok(())
     }
 
@@ -1075,10 +1084,16 @@ impl RemittanceNFT {
         Self::admin(&env).require_auth();
         Self::assert_not_paused(&env)?;
 
+        let old_threshold = Self::default_burn_threshold(&env);
         env.storage()
             .instance()
             .set(&Self::burn_threshold_key(), &threshold);
         Self::bump_instance_ttl(&env);
+
+        env.events().publish(
+            (Symbol::new(&env, "BurnThresholdSet"),),
+            (old_threshold, threshold),
+        );
 
         Ok(())
     }

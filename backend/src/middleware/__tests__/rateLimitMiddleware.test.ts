@@ -182,13 +182,24 @@ describe('Rate Limit Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should handle missing userId gracefully', async () => {
+    it('should fall back to IP-based rate limiting when identifier extraction fails', async () => {
       mockRequest.body = {};
+      mockRequest.ip = '192.168.1.1';
+      mockRateLimitService.checkRateLimit.mockResolvedValue({
+        allowed: true,
+        remaining: 4,
+        resetTime: new Date(),
+        currentCount: 1,
+      });
 
       const middleware = createRateLimitMiddleware();
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
-      // Middleware fails open when getIdentifier throws
+      // Middleware falls back to IP rate limiting instead of failing open
+      expect(mockRateLimitService.checkRateLimit).toHaveBeenCalledWith(
+        'fallback:ip:192.168.1.1',
+        expect.any(Object),
+      );
       expect(mockNext).toHaveBeenCalledWith();
     });
 

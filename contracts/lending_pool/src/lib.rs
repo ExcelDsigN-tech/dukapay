@@ -324,19 +324,22 @@ impl LendingPool {
         Ok(())
     }
 
-    fn release_lock(env: &Env) {
+    fn release_lock(env: &Env) -> Result<(), PoolError> {
         let depth: u32 = env
             .storage()
             .instance()
             .get(&DataKey::CallDepth)
-            .unwrap_or(1);
-        let next = depth.saturating_sub(1);
+            .unwrap_or(0);
+        let next = depth
+            .checked_sub(1)
+            .ok_or(PoolError::ReentrancyGuardTriggered)?;
         env.storage().instance().set(&DataKey::CallDepth, &next);
         if next == 0 {
             env.storage()
                 .instance()
                 .set(&DataKey::ReentrancyLock, &false);
         }
+        Ok(())
     }
 
     // ── Share / asset math ────────────────────────────────────────────────
@@ -1239,17 +1242,15 @@ impl LendingPool {
     }
 
     /// Exit cross-contract execution and reset call depth counter.
-    pub fn exit_cross_contract_call(env: &Env) {
+    pub fn exit_cross_contract_call(env: &Env) -> Result<(), PoolError> {
         let current_depth: u32 = env
             .storage()
             .instance()
             .get(&DataKey::CallDepth)
-            .unwrap_or(1);
-        let next_depth = if current_depth > 0 {
-            current_depth - 1
-        } else {
-            0
-        };
+            .unwrap_or(0);
+        let next_depth = current_depth
+            .checked_sub(1)
+            .ok_or(PoolError::ReentrancyGuardTriggered)?;
         env.storage()
             .instance()
             .set(&DataKey::CallDepth, &next_depth);
@@ -1258,6 +1259,7 @@ impl LendingPool {
                 .instance()
                 .set(&DataKey::ReentrancyLock, &false);
         }
+        Ok(())
     }
 }
 

@@ -50,9 +50,14 @@ export const createRateLimitMiddleware = (options: RateLimitMiddlewareOptions = 
       try {
         identifier = getIdentifier(req);
       } catch (err) {
-        // Fail open if identifier resolution fails
-        logger.warn('Failed to extract rate limit identifier, failing open', { error: err });
-        return next();
+        // Fall back to IP-based rate limiting when identifier extraction fails
+        const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+        identifier = `fallback:ip:${ip}`;
+        logger.warn('Failed to extract rate limit identifier, falling back to IP rate limiting', {
+          error: err instanceof Error ? err.message : String(err),
+          fallbackIdentifier: identifier,
+          path: req.path,
+        });
       }
 
       const result = options.tier
