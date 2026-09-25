@@ -81,7 +81,7 @@ export function LoansPageClient() {
   if (isError) {
     return (
       <section className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-        Failed to load loans. Please reconnect your wallet and try again.
+        {t("loadError")}
       </section>
     );
   }
@@ -110,7 +110,7 @@ export function LoansPageClient() {
             },
             {
               label: t("dueThisWeek"),
-              value: `${dueThisWeek} loan${dueThisWeek === 1 ? "" : "s"}`,
+              value: t("loanCount", { count: dueThisWeek }),
               icon: CalendarRange,
             },
             { label: t("portfolioHealth"), value: portfolioHealth, icon: ShieldCheck },
@@ -190,7 +190,9 @@ export function LoansPageClient() {
                       {formatCurrency(loan.totalOwed)}
                     </span>
                     <span className="text-zinc-600 dark:text-zinc-400">
-                      {t("due", { date: new Date(loan.nextPaymentDeadline).toLocaleDateString() })}
+                      {t("due", {
+                        date: new Date(loan.nextPaymentDeadline).toLocaleDateString(locale),
+                      })}
                     </span>
                   </div>
                   <Link
@@ -235,7 +237,7 @@ export function LoansPageClient() {
                   setPage(page + 1);
                 }
               }}
-              summary={`Showing ${displayedLoans.length} loans on page ${page}`}
+              summary={t("summary", { count: displayedLoans.length, page })}
             />
           )}
         </div>

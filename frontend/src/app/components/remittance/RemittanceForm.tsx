@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
@@ -26,6 +27,7 @@ interface RemittanceFormProps {
 }
 
 export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
+  const t = useTranslations("RemittanceForm");
   const [recipientAddress, setRecipientAddress] = useState("");
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState("USDC");
@@ -42,25 +44,24 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
     const newErrors: Record<string, string> = {};
 
     if (!recipientAddress.trim()) {
-      newErrors.recipientAddress = "Recipient address is required";
+      newErrors.recipientAddress = t("errors.recipientRequired");
     } else if (!isValidStellarAddress(recipientAddress)) {
-      newErrors.recipientAddress =
-        "Invalid Stellar address format (must be 56 characters starting with G)";
+      newErrors.recipientAddress = t("errors.recipientInvalid");
     }
 
     if (!amount) {
-      newErrors.amount = "Amount is required";
+      newErrors.amount = t("errors.amountRequired");
     } else {
       const numAmount = parseAmount(amount);
       if (isNaN(numAmount) || numAmount <= 0) {
-        newErrors.amount = "Amount must be greater than 0";
+        newErrors.amount = t("errors.amountPositive");
       } else if (precisionError) {
         newErrors.amount = precisionError;
       }
     }
 
     if (memo && memo.length > 28) {
-      newErrors.memo = "Memo must be 28 characters or less";
+      newErrors.memo = t("errors.memoTooLong");
     }
 
     setErrors(newErrors);
@@ -97,8 +98,8 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
 
   const handleReviewTransaction = async () => {
     if (!validateForm()) {
-      toast.error("Validation Error", {
-        description: "Please fix the errors in the form",
+      toast.error(t("toast.validationTitle"), {
+        description: t("toast.validationDescription"),
       });
       return;
     }
@@ -126,8 +127,8 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
         memo: memo || undefined,
       });
 
-      toast.success("Success!", {
-        description: "Remittance sent successfully",
+      toast.success(t("toast.successTitle"), {
+        description: t("toast.successDescription"),
       });
 
       // Reset form
@@ -138,8 +139,8 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
 
       onSuccess?.();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to send remittance";
-      toast.error("Error", {
+      const errorMessage = error instanceof Error ? error.message : t("toast.errorFallback");
+      toast.error(t("toast.errorTitle"), {
         description: errorMessage,
       });
     }
@@ -152,20 +153,20 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
-              Send Remittance
+              {t("title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <Input
               id="recipientAddress"
-              label="Recipient Address"
-              placeholder="G... (Stellar public key)"
+              label={t("recipient.label")}
+              placeholder={t("recipient.placeholder")}
               value={recipientAddress}
               onChange={(e) => handleAddressChange(e.target.value)}
               disabled={mutation.isPending}
               required
               error={errors.recipientAddress || undefined}
-              helperText="Enter the recipient's Stellar public key (56 characters starting with G)"
+              helperText={t("recipient.helper")}
             />
 
             {/* Token Selection */}
@@ -174,7 +175,7 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
                 htmlFor="token"
                 className="block text-sm font-semibold text-zinc-900 dark:text-zinc-50"
               >
-                Token <span className="text-red-600">*</span>
+                {t("token.label")} <span className="text-red-600">*</span>
               </label>
               <select
                 id="token"
@@ -187,14 +188,12 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
                 <option value="EURC">EURC</option>
                 <option value="PHP">PHP</option>
               </select>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Select the currency for remittance
-              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("token.helper")}</p>
             </div>
 
             <Input
               id="amount"
-              label="Amount"
+              label={t("amount.label")}
               type="text"
               inputMode="decimal"
               placeholder="0.00"
@@ -206,12 +205,12 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
               required
               min="0"
               error={errors.amount || undefined}
-              helperText={helperText ?? `Up to ${decimals} decimal places supported.`}
+              helperText={helperText ?? t("amount.decimalsHelper", { decimals })}
               className={errors.amount ? "border-red-600" : ""}
             />
 
             <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-2">
-              <span className="text-red-600">*</span> Required field
+              <span className="text-red-600">*</span> {t("requiredField")}
             </p>
 
             {/* Memo (Optional) */}
@@ -220,11 +219,11 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
                 htmlFor="memo"
                 className="block text-sm font-semibold text-zinc-900 dark:text-zinc-50"
               >
-                Memo <span className="text-zinc-400">(optional)</span>
+                {t("memo.label")} <span className="text-zinc-400">{t("memo.optional")}</span>
               </label>
               <textarea
                 id="memo"
-                placeholder="Add a note for the recipient (max 28 characters)"
+                placeholder={t("memo.placeholder")}
                 value={memo}
                 onChange={(e) => handleMemoChange(e.target.value)}
                 disabled={mutation.isPending}
@@ -241,7 +240,7 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
                 </div>
               )}
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {memo.length}/28 characters
+                {t("memo.counter", { count: memo.length })}
               </p>
             </div>
 
@@ -250,11 +249,11 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-amber-800 dark:text-amber-300">
-                  <p className="font-semibold mb-1">Before sending:</p>
+                  <p className="font-semibold mb-1">{t("warning.title")}</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Double-check the recipient address</li>
-                    <li>Review the transaction preview</li>
-                    <li>Confirm you have sufficient balance</li>
+                    <li>{t("warning.checkAddress")}</li>
+                    <li>{t("warning.reviewPreview")}</li>
+                    <li>{t("warning.checkBalance")}</li>
                   </ul>
                 </div>
               </div>
@@ -270,12 +269,12 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
                 {mutation.isPending ? (
                   <div role="status" className="flex items-center">
                     <Loader className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
+                    {t("processing")}
                   </div>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Review & Send
+                    {t("reviewAndSend")}
                   </>
                 )}
               </Button>
@@ -287,20 +286,20 @@ export function RemittanceForm({ onSuccess }: RemittanceFormProps) {
         <Card className="bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800">
           <CardContent className="pt-6">
             <h3 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-3">
-              About Remittances
+              {t("about.title")}
             </h3>
             <ul className="space-y-2 text-sm text-indigo-800 dark:text-indigo-400">
               <li className="flex gap-2">
                 <span className="font-bold">•</span>
-                <span>Remittances help build your credit score</span>
+                <span>{t("about.creditScore")}</span>
               </li>
               <li className="flex gap-2">
                 <span className="font-bold">•</span>
-                <span>Funds are secured on the Stellar blockchain</span>
+                <span>{t("about.secured")}</span>
               </li>
               <li className="flex gap-2">
                 <span className="font-bold">•</span>
-                <span>Transactions are typically confirmed within seconds</span>
+                <span>{t("about.fast")}</span>
               </li>
             </ul>
           </CardContent>

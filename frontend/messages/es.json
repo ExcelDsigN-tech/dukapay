@@ -8,13 +8,27 @@
       "netWorth": "Valor neto",
       "activeLoans": "Préstamos activos",
       "totalRemitted": "Total remetido",
-      "yieldApy": "Rendimiento (APY)"
+      "yieldApy": "Rendimiento (APY)",
+      "label": "Estadísticas del portafolio",
+      "available": "{amount} disponible",
+      "pending": "{count} pendientes",
+      "transfers": "{count} transferencias",
+      "change": "Cambio: {change}",
+      "apyTooltip": "APY (rendimiento porcentual anual): el rendimiento anual estimado de tus depósitos, con interés compuesto. Puede cambiar con el tiempo.",
+      "apyInfo": "Información de APY"
     },
     "activity": {
       "title": "Actividad reciente",
       "viewAll": "Ver todo",
       "emptyTitle": "Aun no hay actividad",
-      "empty": "Aún no hay actividad reciente. Sus transacciones aparecerán aquí."
+      "empty": "Aún no hay actividad reciente. Sus transacciones aparecerán aquí.",
+      "viewAllLabel": "Ver toda la actividad reciente",
+      "loanActive": "Préstamo activo",
+      "loanRepaid": "Préstamo pagado",
+      "loanRequest": "Solicitud de préstamo",
+      "remittance": "Remesa",
+      "loanDesc": "Préstamo #{id}, {amount}",
+      "remittanceDesc": "Para {recipient}"
     },
     "quickActions": {
       "title": "Acciones rápidas",
@@ -26,7 +40,8 @@
     "outreach": {
       "title": "Alcance comunitario",
       "description": "Nuevos prestatarios en Ghana buscan micropréstamos para herramientas agrícolas. ¡Ayuda a hacer crecer el ecosistema!",
-      "explore": "Explorar oportunidades"
+      "explore": "Explorar oportunidades",
+      "exploreLabel": "Explora oportunidades de microcréditos"
     },
     "disconnected": {
       "heading": "Tablero",
@@ -38,13 +53,17 @@
     "reminder": {
       "due": "Pago pendiente en {hours}h — Préstamo #{loanId}",
       "repayNow": "Pagar ahora",
-      "dismiss": "Descartar recordatorio de pago"
+      "dismiss": "Descartar recordatorio de pago",
+      "more": "+{count} más",
+      "details": "Monto a pagar: {amount} · Vence {date}"
     },
     "creditScore": {
       "label": "Puntuación crediticia",
       "tooltip": "Puntuación crediticia: una señal on-chain de confiabilidad de pago. Las puntuaciones más altas pueden desbloquear mejores condiciones con el tiempo.",
-      "tooltipLabel": "Información sobre puntuación crediticia"
-    }
+      "tooltipLabel": "Información sobre puntuación crediticia",
+      "empty": "Únete al ecosistema para construir tu historial crediticio en la cadena."
+    },
+    "landingLabel": "Página de inicio de DukaPay"
   },
   "ActivityPage": {
     "title": "Historial de actividad",
@@ -117,7 +136,10 @@
     "status": {
       "active": "Activo",
       "pending": "Pendiente"
-    }
+    },
+    "loanCount": "{count, plural, one {# préstamo} other {# préstamos}}",
+    "summary": "Mostrando {count} préstamos en la página {page}",
+    "loadError": "No se pudieron cargar los préstamos. Vuelve a conectar tu billetera e inténtalo de nuevo."
   },
   "Kingdom": {
     "title": "Panel del Reino",
@@ -256,7 +278,108 @@
   },
   "Settings": {
     "language": "Idioma",
-    "selectLanguage": "Seleccione el idioma"
+    "selectLanguage": "Seleccione el idioma",
+    "eyebrow": "Cuenta",
+    "title": "Configuración",
+    "description": "Administra tu perfil, billetera, notificaciones y preferencias.",
+    "logout": "Cerrar sesión",
+    "sectionsLabel": "Secciones de configuración",
+    "sections": {
+      "profile": "Perfil",
+      "wallet": "Billetera",
+      "notifications": "Notificaciones",
+      "security": "Seguridad",
+      "display": "Pantalla",
+      "gamification": "Gamificación"
+    },
+    "copy": {
+      "title": "Copiar al portapapeles",
+      "copied": "Copiado al portapapeles"
+    },
+    "common": {
+      "saved": "¡Guardado!",
+      "saving": "Guardando...",
+      "requiredField": "Campo obligatorio"
+    },
+    "profile": {
+      "title": "Perfil",
+      "description": "Administra tu nombre visible y tu información de contacto.",
+      "picture": "Foto de perfil",
+      "pictureSoon": "Los avatares aún no están disponibles, muy pronto.",
+      "displayName": "Nombre visible",
+      "displayNamePlaceholder": "p. ej. Alicia",
+      "email": "Correo electrónico (opcional)",
+      "emailHelper": "Solo se usa para notificaciones por correo. Nunca se comparte públicamente.",
+      "save": "Guardar perfil",
+      "emailPlaceholder": "tu@ejemplo.com"
+    },
+    "wallet": {
+      "title": "Billetera",
+      "description": "Tu billetera Stellar conectada y la configuración de red.",
+      "connectedAddress": "Dirección conectada",
+      "network": "Red",
+      "unknownNetwork": "Desconocida",
+      "supported": "Compatible",
+      "unsupported": "No compatible",
+      "disconnect": "Desconectar billetera",
+      "signOut": "Cerrar sesión",
+      "notConnected": "No hay ninguna billetera conectada."
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "description": "Elige sobre qué eventos quieres recibir avisos y cómo.",
+      "delivery": "Entrega",
+      "events": "Eventos",
+      "inApp": "Notificaciones en la app",
+      "inAppDescription": "Mostrar notificaciones dentro de DukaPay",
+      "email": "Notificaciones por correo",
+      "emailDescription": "Requiere un correo electrónico verificado",
+      "sms": "Notificaciones por SMS",
+      "smsDescription": "Requiere un número de teléfono verificado",
+      "phone": "Número de teléfono",
+      "phoneRequired": "Se requiere un número de teléfono para las notificaciones por SMS.",
+      "phoneOptional": "Opcional, salvo que actives las notificaciones por SMS.",
+      "phoneInvalid": "Ingresa un número de teléfono válido.",
+      "loanApproved": "Préstamo aprobado",
+      "loanApprovedDescription": "Cuando se aprueba tu solicitud de préstamo",
+      "repaymentDue": "Pago pendiente",
+      "repaymentDueDescription": "Recordatorio antes del vencimiento de un pago",
+      "repaymentConfirmed": "Pago confirmado",
+      "repaymentConfirmedDescription": "Cuando un pago se registra en la cadena",
+      "loanDefaulted": "Préstamo en mora",
+      "loanDefaultedDescription": "Cuando un préstamo se marca en mora",
+      "scoreChanged": "Cambio en el puntaje crediticio",
+      "scoreChangedDescription": "Cuando tu puntaje sube o baja",
+      "loadError": "No se pudo cargar la configuración de notificaciones.",
+      "save": "Guardar preferencias"
+    },
+    "security": {
+      "title": "Seguridad",
+      "description": "Gestión de sesiones y acceso a la API para desarrolladores.",
+      "activeSession": "Sesión activa",
+      "started": "Inicio",
+      "kycStatus": "Estado de KYC",
+      "verified": "Verificado",
+      "notVerified": "No verificado",
+      "token": "Token de sesión JWT",
+      "showToken": "Mostrar token de sesión",
+      "hideToken": "Ocultar token de sesión",
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "tokenHelper": "Válido por 24 horas. Mantenlo en secreto, da acceso completo a la API."
+    },
+    "display": {
+      "title": "Pantalla",
+      "description": "Preferencias de apariencia e idioma.",
+      "theme": "Tema",
+      "themeHelper": "Elige una preferencia: Claro / Oscuro / Sistema",
+      "themes": {
+        "light": "Claro",
+        "dark": "Oscuro",
+        "system": "Sistema"
+      },
+      "languageHelper": "Cambia el idioma en todo DukaPay y lo recuerda para tu próxima visita."
+    }
   },
   "LoanDetails": {
     "actions": {
@@ -304,10 +427,130 @@
       "extraLedgers": "Ledgers adicionales",
       "newDueDate": "Nueva fecha de vencimiento",
       "submit": "Construir, Firmar y Enviar"
+    },
+    "loadError": "No se pudieron obtener los detalles del préstamo. Inténtalo de nuevo.",
+    "notFound": {
+      "title": "Préstamo no encontrado",
+      "description": "No se encontró el préstamo #{id}. Puede que se haya eliminado o que el ID sea incorrecto.",
+      "back": "Volver a préstamos"
+    },
+    "breadcrumb": {
+      "label": "Ruta de navegación",
+      "home": "Inicio",
+      "loans": "Préstamos"
+    },
+    "loanNumber": "Préstamo #{id}",
+    "eyebrow": "Portal del prestatario",
+    "description": "Sigue los plazos de pago, las condiciones del prestamista y el saldo pendiente actual de este préstamo.",
+    "realtime": {
+      "connected": "Actualizaciones en vivo",
+      "polling": "Consultando mientras se reconecta",
+      "disconnected": "Tiempo real no disponible por ahora",
+      "connecting": "Conectando a actualizaciones en vivo"
+    },
+    "exportCsv": "Exportar CSV",
+    "meta": {
+      "interestRate": "Tasa de interés:",
+      "requested": "Solicitado:",
+      "approved": "Aprobado:"
+    },
+    "plan": {
+      "title": "Plan de pagos",
+      "principal": "Capital",
+      "interestAccrued": "Interés acumulado",
+      "totalRepaid": "Total pagado",
+      "totalOwed": "Total adeudado"
+    },
+    "timeline": {
+      "title": "Cronología de pagos",
+      "error": "No se pudieron cargar los eventos del préstamo.",
+      "empty": "Aún no hay eventos registrados para este préstamo."
+    },
+    "amortization": {
+      "title": "Calendario de amortización",
+      "description": "Consulta el capital, el interés y el saldo restante de cada periodo de pago.",
+      "unavailable": "El calendario de amortización no está disponible para este préstamo en este momento."
+    },
+    "nextPayment": {
+      "title": "Próximo pago",
+      "overdue": "Vencido",
+      "tomorrow": "Vence mañana",
+      "days": "{days} días"
+    },
+    "nextAction": {
+      "title": "Siguiente paso",
+      "description": "Haz un pago antes de la próxima fecha de vencimiento para que tu puntaje siga subiendo.",
+      "makePayment": "Realizar pago",
+      "latestTransaction": "Última transacción"
+    },
+    "collateral": {
+      "title": "Estado de la garantía",
+      "liquidated": "La garantía se liquidó porque la posición cayó por debajo del umbral de garantía.",
+      "defaulted": "La garantía fue embargada.",
+      "repaid": "Garantía liberada, el préstamo está totalmente pagado.",
+      "held": "La garantía se mantiene en custodia durante la vigencia de este préstamo."
     }
   },
   "Lend": {
-    "cooldownActive": "Retiro disponible en aproximadamente {minutes} minuto(s) mientras el enfriamiento está activo."
+    "cooldownActive": "Retiro disponible en aproximadamente {minutes} minuto(s) mientras el enfriamiento está activo.",
+    "disconnected": {
+      "title": "Panel del prestamista",
+      "description": "Conecta tu billetera para ver tu portafolio en el fondo de préstamos."
+    },
+    "loadError": "No se pudieron cargar los datos del panel del prestamista. Inténtalo de nuevo.",
+    "eyebrow": "Portal del prestamista",
+    "title": "Prestar",
+    "description": "Sigue el rendimiento del fondo, administra tus depósitos y controla el crecimiento de tus ganancias.",
+    "live": {
+      "connectedTitle": "Actualizaciones del fondo en vivo conectadas",
+      "connectingTitle": "Conectando a actualizaciones en vivo…",
+      "pollingTitle": "Se perdieron las actualizaciones en vivo, consultando mientras se reconecta",
+      "offlineTitle": "Actualizaciones en vivo desconectadas, reintentando",
+      "connected": "En vivo",
+      "connecting": "Conectando…",
+      "polling": "Reconectando…",
+      "offline": "Sin conexión"
+    },
+    "stats": {
+      "poolSize": "Tamaño total del fondo",
+      "utilization": "Tasa de utilización",
+      "utilizationTooltip": "Tasa de utilización: qué parte del fondo está prestada ahora. Una utilización más alta puede aumentar el rendimiento, pero reducir la liquidez inmediata.",
+      "apy": "APY actual",
+      "apyTooltip": "APY (rendimiento porcentual anual): el rendimiento anual estimado de los depósitos, con interés compuesto. Puede variar según la utilización del fondo y los pagos.",
+      "activeLoans": "Préstamos activos",
+      "info": "Información de {label}"
+    },
+    "deposits": {
+      "title": "Mis depósitos",
+      "deposited": "Monto depositado",
+      "share": "Participación en el fondo",
+      "earnings": "Ganancias estimadas"
+    },
+    "form": {
+      "title": "Depositar / Retirar",
+      "depositAmount": "Monto a depositar",
+      "withdrawAmount": "Monto a retirar",
+      "decimalsHelper": "Se admiten hasta {decimals} decimales.",
+      "deposit": "Depositar",
+      "depositing": "Depositando...",
+      "withdraw": "Retirar",
+      "withdrawing": "Retirando..."
+    },
+    "portfolio": {
+      "title": "Cartera de préstamos",
+      "description": "Vista de solo lectura de los préstamos financiados actualmente por el fondo.",
+      "loanNumber": "Préstamo #{id}",
+      "borrower": "Prestatario: {id}",
+      "apr": "{rate}% TAE",
+      "termDays": "{days} días",
+      "view": "Ver",
+      "emptyTitle": "Aún no hay préstamos activos financiados por el fondo",
+      "emptyDescription": "Los préstamos activos financiados por el fondo aparecerán aquí cuando los prestatarios usen la liquidez disponible."
+    },
+    "yield": {
+      "emptyTitle": "Aún no hay historial de rendimiento",
+      "emptyDescription": "El rendimiento aparecerá aquí cuando el fondo registre depósitos, préstamos y ganancias."
+    }
   },
   "Liquidations": {
     "eyebrow": "Consola de liquidadores",
@@ -403,6 +646,170 @@
       "title": "Reclama tu lugar dentro de la Ciudadela",
       "subtitle": "Conecta tu billetera para reclamar tu acceso.",
       "cta": "Reclamar acceso"
+    }
+  },
+  "RemittanceForm": {
+    "title": "Enviar remesa",
+    "recipient": {
+      "label": "Dirección del destinatario",
+      "placeholder": "G... (clave pública de Stellar)",
+      "helper": "Ingresa la clave pública de Stellar del destinatario (56 caracteres que empiezan con G)"
+    },
+    "token": {
+      "label": "Token",
+      "helper": "Selecciona la moneda de la remesa"
+    },
+    "amount": {
+      "label": "Monto",
+      "decimalsHelper": "Se admiten hasta {decimals} decimales."
+    },
+    "requiredField": "Campo obligatorio",
+    "memo": {
+      "label": "Nota",
+      "optional": "(opcional)",
+      "placeholder": "Agrega una nota para el destinatario (máx. 28 caracteres)",
+      "counter": "{count}/28 caracteres"
+    },
+    "errors": {
+      "recipientRequired": "La dirección del destinatario es obligatoria",
+      "recipientInvalid": "Formato de dirección de Stellar no válido (debe tener 56 caracteres y empezar con G)",
+      "amountRequired": "El monto es obligatorio",
+      "amountPositive": "El monto debe ser mayor que 0",
+      "memoTooLong": "La nota debe tener 28 caracteres o menos"
+    },
+    "warning": {
+      "title": "Antes de enviar:",
+      "checkAddress": "Revisa dos veces la dirección del destinatario",
+      "reviewPreview": "Revisa la vista previa de la transacción",
+      "checkBalance": "Confirma que tienes saldo suficiente"
+    },
+    "processing": "Procesando...",
+    "reviewAndSend": "Revisar y enviar",
+    "about": {
+      "title": "Acerca de las remesas",
+      "creditScore": "Las remesas ayudan a construir tu puntaje crediticio",
+      "secured": "Los fondos están protegidos en la blockchain de Stellar",
+      "fast": "Las transacciones suelen confirmarse en segundos"
+    },
+    "toast": {
+      "validationTitle": "Error de validación",
+      "validationDescription": "Corrige los errores del formulario",
+      "successTitle": "¡Listo!",
+      "successDescription": "Remesa enviada con éxito",
+      "errorTitle": "Error",
+      "errorFallback": "No se pudo enviar la remesa"
+    }
+  },
+  "SendRemittance": {
+    "back": "Volver",
+    "title": "Enviar remesa",
+    "subtitle": "Transfiere fondos a todo el mundo con la blockchain de Stellar",
+    "connectWallet": "⚠️ Conecta tu billetera Stellar para enviar remesas",
+    "success": "✓ ¡Remesa enviada con éxito! Redirigiendo a la página de remesas...",
+    "faq": {
+      "title": "Preguntas frecuentes",
+      "address": {
+        "q": "¿Qué es una dirección de Stellar?",
+        "a": "Una dirección de Stellar es una clave pública de 56 caracteres que identifica de forma única una cuenta de Stellar. Siempre empieza con la letra 'G' y se usa para recibir pagos en la red Stellar."
+      },
+      "duration": {
+        "q": "¿Cuánto tarda una remesa?",
+        "a": "Las transacciones de Stellar suelen confirmarse en 3 a 5 segundos. Tu remesa aparecerá en la cuenta del destinatario casi al instante tras la confirmación en la blockchain."
+      },
+      "fees": {
+        "q": "¿Hay comisiones por transacción?",
+        "a": "Las comisiones de la red Stellar son mínimas (normalmente 0.00001 XLM por operación). Pueden aplicarse comisiones adicionales según tu proveedor de servicios. Revisa la vista previa de la transacción antes de confirmar."
+      },
+      "creditScore": {
+        "q": "¿Las remesas mejoran mi puntaje crediticio?",
+        "a": "¡Sí! Cada remesa exitosa demuestra actividad financiera y ayuda a construir tu historial crediticio en la cadena, lo que puede mejorar tu puntaje crediticio y tu elegibilidad para préstamos."
+      },
+      "wrongAddress": {
+        "q": "¿Qué pasa si ingreso una dirección incorrecta?",
+        "a": "Verifica siempre con cuidado la dirección del destinatario antes de confirmar. La vista previa de la transacción te permite revisarla antes de enviar. Una vez enviadas a la blockchain, las transacciones no se pueden revertir."
+      }
+    },
+    "needHelp": "¿Necesitas ayuda?",
+    "contactSupport": "Contacta a soporte en Telegram"
+  },
+  "RepayLoan": {
+    "eyebrow": "Portal del prestatario",
+    "title": "Pagar préstamo #{id}",
+    "description": "Liquidación en tiempo real en la blockchain para los pagos de tu préstamo.",
+    "amountLabel": "Monto a pagar",
+    "decimalsHelper": "Se admiten hasta {decimals} decimales.",
+    "submit": "Revisar y pagar",
+    "preview": {
+      "operation": "Pagar préstamo",
+      "description": "Pagando {amount} del préstamo #{id}"
+    },
+    "toast": {
+      "walletTitle": "Billetera no conectada",
+      "walletMessage": "Conecta primero tu billetera.",
+      "amountTitle": "Monto no válido",
+      "amountMessage": "Ingresa un monto de pago mayor que cero.",
+      "precisionTitle": "Precisión no válida",
+      "pending": "Transacción de pago enviada",
+      "success": "Pago confirmado"
+    },
+    "tracker": {
+      "idleTitle": "Listo para pagar",
+      "cancelledTitle": "Pago cancelado",
+      "cancelledMessage": "Cancelaste el proceso de pago.",
+      "cancelledGuidance": "No se envió ningún pago. Actualiza el monto e inténtalo de nuevo.",
+      "signingTitle": "Esperando confirmación de la billetera",
+      "signingMessage": "Aprueba la transacción de pago en tu billetera.",
+      "submittingTitle": "Enviando pago",
+      "submittingMessage": "Enviando la transacción de pago a la red.",
+      "successTitle": "Pago registrado",
+      "successMessage": "Tu pago se envió y se confirmó."
+    }
+  },
+  "WalletPage": {
+    "eyebrow": "Mi billetera",
+    "title": "Billetera",
+    "connectPrompt": "Conecta tu billetera Stellar para ver tus saldos y tu historial de transacciones.",
+    "qr": {
+      "show": "Mostrar código QR",
+      "hide": "Ocultar código QR"
+    },
+    "address": {
+      "title": "Dirección de Stellar",
+      "unknownNetwork": "Red desconocida",
+      "viewOnExplorer": "Ver en el explorador"
+    },
+    "balances": {
+      "title": "Saldos de tokens",
+      "refresh": "Actualizar",
+      "refreshLabel": "Actualizar saldos de tokens",
+      "source": "En vivo desde Stellar Horizon",
+      "error": "No se pudieron cargar los saldos desde Horizon.",
+      "empty": "No se encontraron saldos para esta cuenta.",
+      "unknownAsset": "Desconocido"
+    },
+    "history": {
+      "title": "Historial de transacciones",
+      "description": "Pagos recientes desde Stellar Horizon",
+      "exportCsv": "Exportar CSV",
+      "error": "No se pudo cargar el historial de transacciones desde Horizon.",
+      "empty": "No se encontraron transacciones.",
+      "viewOnExplorer": "Ver en Stellar Explorer",
+      "summary": "Mostrando {count} transacciones en la página {page}",
+      "types": {
+        "received": "Recibido",
+        "sent": "Enviado",
+        "accountCreated": "Cuenta creada",
+        "pathPayment": "Pago con ruta"
+      }
+    },
+    "quickActions": {
+      "title": "Acciones rápidas",
+      "deposit": "Depositar en el fondo",
+      "depositDesc": "Gana rendimiento aportando liquidez",
+      "withdraw": "Retirar del fondo",
+      "withdrawDesc": "Retira tus depósitos + rendimiento",
+      "loans": "Ver préstamos",
+      "loansDesc": "Administra préstamos activos y pagos"
     }
   }
 }

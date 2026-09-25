@@ -1,5 +1,6 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl as render } from "../../../test-utils/intl";
 import userEvent from "@testing-library/user-event";
 import { RemittanceForm } from "../remittance/RemittanceForm";
 

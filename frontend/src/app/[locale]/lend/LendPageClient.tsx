@@ -117,7 +117,7 @@ export function LendPageClient() {
   const chartData = useMemo(
     () =>
       (yieldHistory ?? []).map((entry) => ({
-        date: new Date(entry.date).toLocaleDateString(undefined, {
+        date: new Date(entry.date).toLocaleDateString(locale, {
           month: "short",
           day: "numeric",
         }),
@@ -125,7 +125,7 @@ export function LendPageClient() {
         apy: entry.apy,
         principal: entry.principal,
       })),
-    [yieldHistory],
+    [yieldHistory, locale],
   );
 
   const cooldownLedgers = poolStats?.withdrawalCooldownLedgers ?? 0;
@@ -159,9 +159,11 @@ export function LendPageClient() {
   if (!address) {
     return (
       <section className="rounded-3xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-950">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Lender Dashboard</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          {t("disconnected.title")}
+        </h1>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Connect your wallet to view your lending pool portfolio.
+          {t("disconnected.description")}
         </p>
       </section>
     );
@@ -170,7 +172,7 @@ export function LendPageClient() {
   if (poolError || depositorError || loansError || historyError) {
     return (
       <section className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-        Failed to load lender dashboard data. Please try again.
+        {t("loadError")}
       </section>
     );
   }
@@ -182,11 +184,11 @@ export function LendPageClient() {
       <header className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">
-            Lender Portal
+            {t("eyebrow")}
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-50">Lend</h1>
+          <h1 className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t("title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
-            Track pool performance, manage deposits, and monitor yield growth.
+            {t("description")}
           </p>
         </div>
         {address && (
@@ -202,12 +204,12 @@ export function LendPageClient() {
             }`}
             title={
               sseStatus === "connected"
-                ? "Live pool updates connected"
+                ? t("live.connectedTitle")
                 : sseStatus === "connecting"
-                  ? "Connecting to live updates…"
+                  ? t("live.connectingTitle")
                   : sseStatus === "polling"
-                    ? "Live updates dropped — polling while reconnecting"
-                    : "Live updates disconnected — retrying"
+                    ? t("live.pollingTitle")
+                    : t("live.offlineTitle")
             }
           >
             {sseStatus === "connected" ? (
@@ -216,12 +218,12 @@ export function LendPageClient() {
               <WifiOff className="h-3.5 w-3.5" />
             )}
             {sseStatus === "connected"
-              ? "Live"
+              ? t("live.connected")
               : sseStatus === "connecting"
-                ? "Connecting…"
+                ? t("live.connecting")
                 : sseStatus === "polling"
-                  ? "Reconnecting…"
-                  : "Offline"}
+                  ? t("live.polling")
+                  : t("live.offline")}
           </div>
         )}
       </header>
@@ -230,26 +232,24 @@ export function LendPageClient() {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              label: "Total Pool Size",
+              label: t("stats.poolSize"),
               value: formatCurrency(poolStats?.totalDeposits ?? 0),
               icon: CircleDollarSign,
             },
             {
-              label: "Utilization Rate",
+              label: t("stats.utilization"),
               value: formatPercent(poolStats?.utilizationRate ?? 0),
               icon: Percent,
-              tooltip:
-                "Utilization Rate: How much of the pool is currently loaned out. Higher utilization can increase yield, but may reduce instant liquidity.",
+              tooltip: t("stats.utilizationTooltip"),
             },
             {
-              label: "Current APY",
+              label: t("stats.apy"),
               value: formatPercent(poolStats?.apy ?? 0),
               icon: Activity,
-              tooltip:
-                "APY (Annual Percentage Yield): The estimated yearly return on deposits, including compounding. This may vary with pool utilization and repayments.",
+              tooltip: t("stats.apyTooltip"),
             },
             {
-              label: "Active Loans",
+              label: t("stats.activeLoans"),
               value: String(poolStats?.activeLoansCount ?? 0),
               icon: HandCoins,
             },
@@ -266,7 +266,10 @@ export function LendPageClient() {
                   <p className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
                     {item.label}
                     {"tooltip" in item && item.tooltip ? (
-                      <Tooltip content={item.tooltip} label={`${item.label} info`} />
+                      <Tooltip
+                        content={item.tooltip}
+                        label={t("stats.info", { label: item.label })}
+                      />
                     ) : null}
                   </p>
                   {isLoading ? (
@@ -286,10 +289,14 @@ export function LendPageClient() {
       <ErrorBoundary scope="depositor summary" variant="section">
         <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <article className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">My Deposits</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              {t("deposits.title")}
+            </h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl bg-zinc-50 p-4 dark:bg-zinc-900">
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Deposited Amount</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {t("deposits.deposited")}
+                </p>
                 {isLoading ? (
                   <Skeleton className="mt-2 h-7 w-24" />
                 ) : (
@@ -299,7 +306,7 @@ export function LendPageClient() {
                 )}
               </div>
               <div className="rounded-2xl bg-zinc-50 p-4 dark:bg-zinc-900">
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Share of Pool</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("deposits.share")}</p>
                 {isLoading ? (
                   <Skeleton className="mt-2 h-7 w-24" />
                 ) : (
@@ -309,7 +316,7 @@ export function LendPageClient() {
                 )}
               </div>
               <div className="rounded-2xl bg-zinc-50 p-4 dark:bg-zinc-900">
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Estimated Earnings</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("deposits.earnings")}</p>
                 {isLoading ? (
                   <Skeleton className="mt-2 h-7 w-24" />
                 ) : (
@@ -325,7 +332,7 @@ export function LendPageClient() {
           ) : (
             <article className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                Deposit / Withdraw
+                {t("form.title")}
               </h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <form
@@ -339,7 +346,7 @@ export function LendPageClient() {
                     htmlFor="deposit-amount"
                     className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
                   >
-                    Deposit Amount
+                    {t("form.depositAmount")}
                   </label>
                   <input
                     id="deposit-amount"
@@ -369,7 +376,7 @@ export function LendPageClient() {
                   >
                     {depositPrecisionError ??
                       depositHelper ??
-                      `Up to ${depositDecimals} decimal places supported.`}
+                      t("form.decimalsHelper", { decimals: depositDecimals })}
                   </p>
                   <button
                     type="submit"
@@ -377,7 +384,7 @@ export function LendPageClient() {
                     className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <ArrowUpRight className="h-4 w-4" />
-                    {depositOp.isLoading ? "Depositing..." : "Deposit"}
+                    {depositOp.isLoading ? t("form.depositing") : t("form.deposit")}
                   </button>
                   <OperationProgress transaction={depositOp.transaction} type="deposit" />
                 </form>
@@ -393,7 +400,7 @@ export function LendPageClient() {
                     htmlFor="withdraw-amount"
                     className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
                   >
-                    Withdraw Amount
+                    {t("form.withdrawAmount")}
                   </label>
                   <input
                     id="withdraw-amount"
@@ -423,7 +430,7 @@ export function LendPageClient() {
                   >
                     {withdrawPrecisionError ??
                       withdrawHelper ??
-                      `Up to ${withdrawDecimals} decimal places supported.`}
+                      t("form.decimalsHelper", { decimals: withdrawDecimals })}
                   </p>
                   <button
                     type="submit"
@@ -436,7 +443,7 @@ export function LendPageClient() {
                     className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                   >
                     <ArrowDownLeft className="h-4 w-4" />
-                    {withdrawalOp.isLoading ? "Withdrawing..." : "Withdraw"}
+                    {withdrawalOp.isLoading ? t("form.withdrawing") : t("form.withdraw")}
                   </button>
                   {isWithdrawCooldownActive ? (
                     <p
@@ -458,9 +465,11 @@ export function LendPageClient() {
 
       <ErrorBoundary scope="loan portfolio" variant="section">
         <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Loan Portfolio</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            {t("portfolio.title")}
+          </h2>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Read-only view of loans currently funded through the pool.
+            {t("portfolio.description")}
           </p>
 
           <div className="mt-4 space-y-3">
@@ -482,23 +491,23 @@ export function LendPageClient() {
                   >
                     <div>
                       <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                        Loan #{loan.id}
+                        {t("portfolio.loanNumber", { id: loan.id })}
                       </p>
                       <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                        Borrower: {loan.borrowerId}
+                        {t("portfolio.borrower", { id: loan.borrowerId })}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
                       <span>{formatCurrency(loan.amount)}</span>
-                      <span>{loan.interestRate.toFixed(2)}% APR</span>
-                      <span>{loan.termDays} days</span>
+                      <span>{t("portfolio.apr", { rate: loan.interestRate.toFixed(2) })}</span>
+                      <span>{t("portfolio.termDays", { days: loan.termDays })}</span>
                       <LoanStatusBadge status={loan.status} />
                     </div>
                     <Link
                       href={`/${locale}/loans/${loan.id}`}
                       className="inline-flex items-center gap-2 rounded-full border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
                     >
-                      View
+                      {t("portfolio.view")}
                     </Link>
                   </article>
                 ))}
@@ -507,8 +516,8 @@ export function LendPageClient() {
               (loans ?? []).filter((loan) => loan.status === "active").length === 0 && (
                 <EmptyState
                   icon={PiggyBank}
-                  title="No active pool-funded loans yet"
-                  description="Active loans funded by the pool will appear here once borrowers draw against available liquidity."
+                  title={t("portfolio.emptyTitle")}
+                  description={t("portfolio.emptyDescription")}
                 />
               )}
           </div>
@@ -525,8 +534,8 @@ export function LendPageClient() {
           ) : chartData.length === 0 ? (
             <EmptyState
               icon={Activity}
-              title="No yield history yet"
-              description="Yield performance will appear here after the pool records deposits, loans, and earnings."
+              title={t("yield.emptyTitle")}
+              description={t("yield.emptyDescription")}
             />
           ) : (
             <YieldEarningsChart data={chartData} />

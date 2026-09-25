@@ -8,13 +8,27 @@
       "netWorth": "Net Worth",
       "activeLoans": "Active Loans",
       "totalRemitted": "Total Remitted",
-      "yieldApy": "Yield (APY)"
+      "yieldApy": "Yield (APY)",
+      "label": "Portfolio Statistics",
+      "available": "{amount} available",
+      "pending": "{count} pending",
+      "transfers": "{count} transfers",
+      "change": "Change: {change}",
+      "apyTooltip": "APY (Annual Percentage Yield): The estimated yearly return on your deposits, including compounding. This may change over time.",
+      "apyInfo": "APY info"
     },
     "activity": {
       "title": "Recent Activity",
       "viewAll": "View All",
       "emptyTitle": "No activity yet",
-      "empty": "No recent activity yet. Your transactions will appear here."
+      "empty": "No recent activity yet. Your transactions will appear here.",
+      "viewAllLabel": "View all recent activity",
+      "loanActive": "Loan Active",
+      "loanRepaid": "Loan Repaid",
+      "loanRequest": "Loan Request",
+      "remittance": "Remittance",
+      "loanDesc": "Loan #{id}, {amount}",
+      "remittanceDesc": "To {recipient}"
     },
     "quickActions": {
       "title": "Quick Actions",
@@ -26,7 +40,8 @@
     "outreach": {
       "title": "Community Outreach",
       "description": "New borrowers in Ghana are looking for micro-loans for agricultural tools. Help grow the ecosystem!",
-      "explore": "Explore Opportunities"
+      "explore": "Explore Opportunities",
+      "exploreLabel": "Explore micro-loan opportunities"
     },
     "disconnected": {
       "heading": "Dashboard",
@@ -38,13 +53,17 @@
     "reminder": {
       "due": "Repayment due in {hours}h — Loan #{loanId}",
       "repayNow": "Repay now",
-      "dismiss": "Dismiss repayment reminder"
+      "dismiss": "Dismiss repayment reminder",
+      "more": "+{count} more",
+      "details": "Amount due: {amount} · Due {date}"
     },
     "creditScore": {
       "label": "Credit Score",
       "tooltip": "Credit Score: An on-chain signal of repayment reliability. Higher scores can unlock better terms over time.",
-      "tooltipLabel": "Credit score info"
-    }
+      "tooltipLabel": "Credit score info",
+      "empty": "Join the ecosystem to build your on-chain credit history."
+    },
+    "landingLabel": "DukaPay landing page"
   },
   "ActivityPage": {
     "title": "Activity History",
@@ -117,7 +136,10 @@
     "status": {
       "active": "Active",
       "pending": "Pending"
-    }
+    },
+    "loanCount": "{count, plural, one {# loan} other {# loans}}",
+    "summary": "Showing {count} loans on page {page}",
+    "loadError": "Failed to load loans. Please reconnect your wallet and try again."
   },
   "Kingdom": {
     "title": "Kingdom Dashboard",
@@ -256,7 +278,108 @@
   },
   "Settings": {
     "language": "Language",
-    "selectLanguage": "Select Language"
+    "selectLanguage": "Select Language",
+    "eyebrow": "Account",
+    "title": "Settings",
+    "description": "Manage your profile, wallet, notifications, and preferences.",
+    "logout": "Log out",
+    "sectionsLabel": "Settings sections",
+    "sections": {
+      "profile": "Profile",
+      "wallet": "Wallet",
+      "notifications": "Notifications",
+      "security": "Security",
+      "display": "Display",
+      "gamification": "Gamification"
+    },
+    "copy": {
+      "title": "Copy to clipboard",
+      "copied": "Copied to clipboard"
+    },
+    "common": {
+      "saved": "Saved!",
+      "saving": "Saving...",
+      "requiredField": "Required field"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Manage your public display name and contact info.",
+      "picture": "Profile Picture",
+      "pictureSoon": "Avatars are not supported yet, coming soon.",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "e.g. Alice",
+      "email": "Email (optional)",
+      "emailHelper": "Used for email notifications only. Never shared publicly.",
+      "save": "Save Profile",
+      "emailPlaceholder": "you@example.com"
+    },
+    "wallet": {
+      "title": "Wallet",
+      "description": "Your connected Stellar wallet and network settings.",
+      "connectedAddress": "Connected Address",
+      "network": "Network",
+      "unknownNetwork": "Unknown",
+      "supported": "Supported",
+      "unsupported": "Unsupported",
+      "disconnect": "Disconnect Wallet",
+      "signOut": "Sign Out",
+      "notConnected": "No wallet connected."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Choose which events you want to be notified about and how.",
+      "delivery": "Delivery",
+      "events": "Events",
+      "inApp": "In-App Notifications",
+      "inAppDescription": "Show notifications inside DukaPay",
+      "email": "Email Notifications",
+      "emailDescription": "Requires a verified email address",
+      "sms": "SMS Notifications",
+      "smsDescription": "Requires a verified phone number",
+      "phone": "Phone number",
+      "phoneRequired": "A phone number is required for SMS notifications.",
+      "phoneOptional": "Optional unless SMS notifications are enabled.",
+      "phoneInvalid": "Please enter a valid phone number.",
+      "loanApproved": "Loan Approved",
+      "loanApprovedDescription": "When your loan application is approved",
+      "repaymentDue": "Repayment Due",
+      "repaymentDueDescription": "Reminder before a payment is due",
+      "repaymentConfirmed": "Repayment Confirmed",
+      "repaymentConfirmedDescription": "When a repayment is recorded on-chain",
+      "loanDefaulted": "Loan Defaulted",
+      "loanDefaultedDescription": "When a loan is marked as defaulted",
+      "scoreChanged": "Credit Score Changed",
+      "scoreChangedDescription": "When your score goes up or down",
+      "loadError": "Unable to load notification settings.",
+      "save": "Save Preferences"
+    },
+    "security": {
+      "title": "Security",
+      "description": "Session management and developer API access.",
+      "activeSession": "Active Session",
+      "started": "Started",
+      "kycStatus": "KYC Status",
+      "verified": "Verified",
+      "notVerified": "Not Verified",
+      "token": "JWT Session Token",
+      "showToken": "Show session token",
+      "hideToken": "Hide session token",
+      "show": "Show",
+      "hide": "Hide",
+      "tokenHelper": "Valid for 24 hours. Keep this secret, it grants full API access."
+    },
+    "display": {
+      "title": "Display",
+      "description": "Appearance and language preferences.",
+      "theme": "Theme",
+      "themeHelper": "Choose a preference: Light / Dark / System",
+      "themes": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "languageHelper": "Changes the language across DukaPay and remembers it for your next visit."
+    }
   },
   "LoanDetails": {
     "actions": {
@@ -304,10 +427,130 @@
       "extraLedgers": "Additional ledgers",
       "newDueDate": "New due date",
       "submit": "Build, Sign & Submit"
+    },
+    "loadError": "Failed to fetch loan details. Please try again.",
+    "notFound": {
+      "title": "Loan not found",
+      "description": "Loan #{id} could not be located. It may have been removed or the ID is incorrect.",
+      "back": "Back to loans"
+    },
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "home": "Home",
+      "loans": "Loans"
+    },
+    "loanNumber": "Loan #{id}",
+    "eyebrow": "Borrower Portal",
+    "description": "Track repayment timing, lender terms, and the current outstanding balance for this loan.",
+    "realtime": {
+      "connected": "Live loan updates",
+      "polling": "Polling while reconnecting",
+      "disconnected": "Realtime temporarily unavailable",
+      "connecting": "Connecting to live updates"
+    },
+    "exportCsv": "Export CSV",
+    "meta": {
+      "interestRate": "Interest rate:",
+      "requested": "Requested:",
+      "approved": "Approved:"
+    },
+    "plan": {
+      "title": "Repayment plan",
+      "principal": "Principal",
+      "interestAccrued": "Interest accrued",
+      "totalRepaid": "Total repaid",
+      "totalOwed": "Total owed"
+    },
+    "timeline": {
+      "title": "Repayment timeline",
+      "error": "Failed to load loan events.",
+      "empty": "No loan events recorded yet."
+    },
+    "amortization": {
+      "title": "Amortization Schedule",
+      "description": "See the principal, interest, and remaining balance for each repayment period.",
+      "unavailable": "Amortization schedule is unavailable for this loan right now."
+    },
+    "nextPayment": {
+      "title": "Next payment due",
+      "overdue": "Overdue",
+      "tomorrow": "Due tomorrow",
+      "days": "{days} days"
+    },
+    "nextAction": {
+      "title": "Next action",
+      "description": "Make a repayment before the next due date to keep your score trending upward.",
+      "makePayment": "Make Payment",
+      "latestTransaction": "Latest transaction"
+    },
+    "collateral": {
+      "title": "Collateral status",
+      "liquidated": "Collateral was liquidated after the position fell below the collateral threshold.",
+      "defaulted": "Collateral has been seized.",
+      "repaid": "Collateral released, loan fully repaid.",
+      "held": "Collateral is held in escrow for the duration of this loan."
     }
   },
   "Lend": {
-    "cooldownActive": "Withdraw available in about {minutes} minute(s) while cooldown is active."
+    "cooldownActive": "Withdraw available in about {minutes} minute(s) while cooldown is active.",
+    "disconnected": {
+      "title": "Lender Dashboard",
+      "description": "Connect your wallet to view your lending pool portfolio."
+    },
+    "loadError": "Failed to load lender dashboard data. Please try again.",
+    "eyebrow": "Lender Portal",
+    "title": "Lend",
+    "description": "Track pool performance, manage deposits, and monitor yield growth.",
+    "live": {
+      "connectedTitle": "Live pool updates connected",
+      "connectingTitle": "Connecting to live updates…",
+      "pollingTitle": "Live updates dropped, polling while reconnecting",
+      "offlineTitle": "Live updates disconnected, retrying",
+      "connected": "Live",
+      "connecting": "Connecting…",
+      "polling": "Reconnecting…",
+      "offline": "Offline"
+    },
+    "stats": {
+      "poolSize": "Total Pool Size",
+      "utilization": "Utilization Rate",
+      "utilizationTooltip": "Utilization Rate: How much of the pool is currently loaned out. Higher utilization can increase yield, but may reduce instant liquidity.",
+      "apy": "Current APY",
+      "apyTooltip": "APY (Annual Percentage Yield): The estimated yearly return on deposits, including compounding. This may vary with pool utilization and repayments.",
+      "activeLoans": "Active Loans",
+      "info": "{label} info"
+    },
+    "deposits": {
+      "title": "My Deposits",
+      "deposited": "Deposited Amount",
+      "share": "Share of Pool",
+      "earnings": "Estimated Earnings"
+    },
+    "form": {
+      "title": "Deposit / Withdraw",
+      "depositAmount": "Deposit Amount",
+      "withdrawAmount": "Withdraw Amount",
+      "decimalsHelper": "Up to {decimals} decimal places supported.",
+      "deposit": "Deposit",
+      "depositing": "Depositing...",
+      "withdraw": "Withdraw",
+      "withdrawing": "Withdrawing..."
+    },
+    "portfolio": {
+      "title": "Loan Portfolio",
+      "description": "Read-only view of loans currently funded through the pool.",
+      "loanNumber": "Loan #{id}",
+      "borrower": "Borrower: {id}",
+      "apr": "{rate}% APR",
+      "termDays": "{days} days",
+      "view": "View",
+      "emptyTitle": "No active pool-funded loans yet",
+      "emptyDescription": "Active loans funded by the pool will appear here once borrowers draw against available liquidity."
+    },
+    "yield": {
+      "emptyTitle": "No yield history yet",
+      "emptyDescription": "Yield performance will appear here after the pool records deposits, loans, and earnings."
+    }
   },
   "Liquidations": {
     "eyebrow": "Liquidator Console",
@@ -531,6 +774,170 @@
       "title": "Claim your place inside the Citadel",
       "subtitle": "Connect your wallet to claim access.",
       "cta": "Claim Access"
+    }
+  },
+  "RemittanceForm": {
+    "title": "Send Remittance",
+    "recipient": {
+      "label": "Recipient Address",
+      "placeholder": "G... (Stellar public key)",
+      "helper": "Enter the recipient's Stellar public key (56 characters starting with G)"
+    },
+    "token": {
+      "label": "Token",
+      "helper": "Select the currency for remittance"
+    },
+    "amount": {
+      "label": "Amount",
+      "decimalsHelper": "Up to {decimals} decimal places supported."
+    },
+    "requiredField": "Required field",
+    "memo": {
+      "label": "Memo",
+      "optional": "(optional)",
+      "placeholder": "Add a note for the recipient (max 28 characters)",
+      "counter": "{count}/28 characters"
+    },
+    "errors": {
+      "recipientRequired": "Recipient address is required",
+      "recipientInvalid": "Invalid Stellar address format (must be 56 characters starting with G)",
+      "amountRequired": "Amount is required",
+      "amountPositive": "Amount must be greater than 0",
+      "memoTooLong": "Memo must be 28 characters or less"
+    },
+    "warning": {
+      "title": "Before sending:",
+      "checkAddress": "Double-check the recipient address",
+      "reviewPreview": "Review the transaction preview",
+      "checkBalance": "Confirm you have sufficient balance"
+    },
+    "processing": "Processing...",
+    "reviewAndSend": "Review & Send",
+    "about": {
+      "title": "About Remittances",
+      "creditScore": "Remittances help build your credit score",
+      "secured": "Funds are secured on the Stellar blockchain",
+      "fast": "Transactions are typically confirmed within seconds"
+    },
+    "toast": {
+      "validationTitle": "Validation Error",
+      "validationDescription": "Please fix the errors in the form",
+      "successTitle": "Success!",
+      "successDescription": "Remittance sent successfully",
+      "errorTitle": "Error",
+      "errorFallback": "Failed to send remittance"
+    }
+  },
+  "SendRemittance": {
+    "back": "Back",
+    "title": "Send Remittance",
+    "subtitle": "Transfer funds globally using the Stellar blockchain",
+    "connectWallet": "⚠️ Please connect your Stellar wallet to send remittances",
+    "success": "✓ Remittance sent successfully! Redirecting to remittances page...",
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "address": {
+        "q": "What is a Stellar address?",
+        "a": "A Stellar address is a 56-character public key that uniquely identifies a Stellar account. It always starts with the letter 'G' and is used to receive payments on the Stellar network."
+      },
+      "duration": {
+        "q": "How long does a remittance take?",
+        "a": "Stellar transactions are typically confirmed within 3-5 seconds. Your remittance will appear in the recipient's account almost instantly after blockchain confirmation."
+      },
+      "fees": {
+        "q": "Are there transaction fees?",
+        "a": "Stellar network fees are minimal (typically 0.00001 XLM per operation). Additional fees may apply depending on your service provider. Review the transaction preview before confirming."
+      },
+      "creditScore": {
+        "q": "Do remittances improve my credit score?",
+        "a": "Yes! Each successful remittance demonstrates financial activity and helps build your on-chain credit history, which can improve your credit score and loan eligibility."
+      },
+      "wrongAddress": {
+        "q": "What if I enter the wrong address?",
+        "a": "Always verify the recipient address carefully before confirming. The transaction preview allows you to review the recipient address before sending. Once sent on the blockchain, transactions cannot be reversed."
+      }
+    },
+    "needHelp": "Need help?",
+    "contactSupport": "Contact Support on Telegram"
+  },
+  "RepayLoan": {
+    "eyebrow": "Borrower Portal",
+    "title": "Repay Loan #{id}",
+    "description": "Real-time blockchain settlement for your loan repayments.",
+    "amountLabel": "Repayment amount",
+    "decimalsHelper": "Up to {decimals} decimal places supported.",
+    "submit": "Review & Repay",
+    "preview": {
+      "operation": "Repay Loan",
+      "description": "Repaying {amount} for loan #{id}"
+    },
+    "toast": {
+      "walletTitle": "Wallet not connected",
+      "walletMessage": "Please connect your wallet first.",
+      "amountTitle": "Invalid amount",
+      "amountMessage": "Enter a repayment amount greater than zero.",
+      "precisionTitle": "Invalid precision",
+      "pending": "Repayment transaction submitted",
+      "success": "Repayment confirmed"
+    },
+    "tracker": {
+      "idleTitle": "Ready to repay",
+      "cancelledTitle": "Repayment cancelled",
+      "cancelledMessage": "You cancelled the repayment flow.",
+      "cancelledGuidance": "No payment was submitted. Update the amount and try again.",
+      "signingTitle": "Awaiting wallet confirmation",
+      "signingMessage": "Approve the repayment transaction in your wallet.",
+      "submittingTitle": "Submitting repayment",
+      "submittingMessage": "Sending repayment transaction to the network.",
+      "successTitle": "Repayment recorded",
+      "successMessage": "Your repayment was submitted and confirmed."
+    }
+  },
+  "WalletPage": {
+    "eyebrow": "My Wallet",
+    "title": "Wallet",
+    "connectPrompt": "Connect your Stellar wallet to view your balances and transaction history.",
+    "qr": {
+      "show": "Show QR Code",
+      "hide": "Hide QR Code"
+    },
+    "address": {
+      "title": "Stellar Address",
+      "unknownNetwork": "Unknown Network",
+      "viewOnExplorer": "View on Explorer"
+    },
+    "balances": {
+      "title": "Token Balances",
+      "refresh": "Refresh",
+      "refreshLabel": "Refresh token balances",
+      "source": "Live from Stellar Horizon",
+      "error": "Failed to load balances from Horizon.",
+      "empty": "No balances found for this account.",
+      "unknownAsset": "Unknown"
+    },
+    "history": {
+      "title": "Transaction History",
+      "description": "Recent payments from Stellar Horizon",
+      "exportCsv": "Export CSV",
+      "error": "Failed to load transaction history from Horizon.",
+      "empty": "No transactions found.",
+      "viewOnExplorer": "View on Stellar Explorer",
+      "summary": "Showing {count} transactions on page {page}",
+      "types": {
+        "received": "Received",
+        "sent": "Sent",
+        "accountCreated": "Account Created",
+        "pathPayment": "Path Payment"
+      }
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "deposit": "Deposit to Pool",
+      "depositDesc": "Earn yield by supplying liquidity",
+      "withdraw": "Withdraw from Pool",
+      "withdrawDesc": "Withdraw your deposits + yield",
+      "loans": "View Loans",
+      "loansDesc": "Manage active loans and repayments"
     }
   }
 }

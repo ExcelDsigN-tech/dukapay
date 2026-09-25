@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Wallet,
   ArrowDownLeft,
@@ -31,8 +32,8 @@ import { COPY_FEEDBACK_RESET_MS } from "../../components/ui";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -135,6 +136,7 @@ function useHorizonPayments(address: string, horizonUrl: string, cursor: string 
 // ─── QR Code display ──────────────────────────────────────────────────────────
 
 function QRDisplay({ address }: { address: string }) {
+  const t = useTranslations("WalletPage.qr");
   const [show, setShow] = useState(false);
   return (
     <div>
@@ -144,7 +146,7 @@ function QRDisplay({ address }: { address: string }) {
         leftIcon={<QrCode className="h-4 w-4" />}
         onClick={() => setShow((v) => !v)}
       >
-        {show ? "Hide" : "Show"} QR Code
+        {show ? t("hide") : t("show")}
       </Button>
       {show && (
         <div className="mt-4 flex flex-col items-center gap-3 p-6 rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
@@ -163,16 +165,15 @@ function QRDisplay({ address }: { address: string }) {
 // ─── Connect wallet prompt ─────────────────────────────────────────────────────
 
 function ConnectWalletPrompt() {
+  const t = useTranslations("WalletPage");
   return (
     <main className="flex min-h-[60vh] flex-col items-center justify-center gap-6 p-8">
       <div className="rounded-2xl bg-zinc-50 p-6 dark:bg-zinc-900">
         <Wallet className="h-12 w-12 text-indigo-600 dark:text-indigo-400" />
       </div>
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Wallet</h1>
-        <p className="mt-2 max-w-md text-zinc-500 dark:text-zinc-400">
-          Connect your Stellar wallet to view your balances and transaction history.
-        </p>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{t("title")}</h1>
+        <p className="mt-2 max-w-md text-zinc-500 dark:text-zinc-400">{t("connectPrompt")}</p>
       </div>
     </main>
   );
@@ -181,6 +182,8 @@ function ConnectWalletPrompt() {
 // ─── Balances card ─────────────────────────────────────────────────────────────
 
 function BalancesCard({ address, horizonUrl }: { address: string; horizonUrl: string }) {
+  const t = useTranslations("WalletPage.balances");
+  const locale = useLocale();
   const {
     data: balances,
     isLoading,
@@ -190,31 +193,31 @@ function BalancesCard({ address, horizonUrl }: { address: string; horizonUrl: st
   } = useHorizonBalances(address, horizonUrl);
 
   function assetLabel(b: HorizonBalance): string {
-    return b.asset_type === "native" ? "XLM" : (b.asset_code ?? "Unknown");
+    return b.asset_type === "native" ? "XLM" : (b.asset_code ?? t("unknownAsset"));
   }
 
   function formatBalance(b: HorizonBalance): string {
     const num = parseFloat(b.balance);
-    return isNaN(num) ? b.balance : num.toLocaleString("en-US", { maximumFractionDigits: 7 });
+    return isNaN(num) ? b.balance : num.toLocaleString(locale, { maximumFractionDigits: 7 });
   }
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Token Balances</CardTitle>
+          <CardTitle>{t("title")}</CardTitle>
           <Button
             variant="ghost"
             size="sm"
             leftIcon={<RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />}
             onClick={() => refetch()}
             disabled={isFetching}
-            aria-label="Refresh token balances"
+            aria-label={t("refreshLabel")}
           >
-            Refresh
+            {t("refresh")}
           </Button>
         </div>
-        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Live from Stellar Horizon</p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{t("source")}</p>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -223,14 +226,10 @@ function BalancesCard({ address, horizonUrl }: { address: string; horizonUrl: st
           </div>
         ) : isError ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
-            <p className="text-sm text-red-700 dark:text-red-400">
-              Failed to load balances from Horizon.
-            </p>
+            <p className="text-sm text-red-700 dark:text-red-400">{t("error")}</p>
           </div>
         ) : !balances || balances.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">
-            No balances found for this account.
-          </p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">{t("empty")}</p>
         ) : (
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {balances.map((b, i) => (
@@ -275,6 +274,8 @@ function TransactionHistoryCard({
   horizonUrl: string;
   explorerBase: string;
 }) {
+  const t = useTranslations("WalletPage.history");
+  const locale = useLocale();
   const [page, setPage] = useState(1);
   const [pageCursors, setPageCursors] = useState<Record<number, string | null>>({ 1: null });
   const { data, isLoading, isError } = useHorizonPayments(
@@ -295,12 +296,12 @@ function TransactionHistoryCard({
   function paymentLabel(p: HorizonPayment): string {
     switch (p.type) {
       case "payment":
-        return isInflow(p) ? "Received" : "Sent";
+        return isInflow(p) ? t("types.received") : t("types.sent");
       case "create_account":
-        return "Account Created";
+        return t("types.accountCreated");
       case "path_payment_strict_send":
       case "path_payment_strict_receive":
-        return "Path Payment";
+        return t("types.pathPayment");
       default:
         return p.type.replace(/_/g, " ");
     }
@@ -315,7 +316,7 @@ function TransactionHistoryCard({
   function paymentAmount(p: HorizonPayment): string {
     if (!p.amount) return "—";
     const asset = p.asset_type === "native" ? "XLM" : (p.asset_code ?? "");
-    return `${parseFloat(p.amount).toLocaleString("en-US", { maximumFractionDigits: 7 })} ${asset}`;
+    return `${parseFloat(p.amount).toLocaleString(locale, { maximumFractionDigits: 7 })} ${asset}`;
   }
 
   function exportCsv() {
@@ -341,10 +342,8 @@ function TransactionHistoryCard({
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Transaction History</CardTitle>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Recent payments from Stellar Horizon
-            </p>
+            <CardTitle>{t("title")}</CardTitle>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("description")}</p>
           </div>
           <button
             type="button"
@@ -352,7 +351,7 @@ function TransactionHistoryCard({
             disabled={payments.length === 0 || isLoading || isError}
             className="inline-flex items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
           >
-            Export CSV
+            {t("exportCsv")}
           </button>
         </div>
       </CardHeader>
@@ -361,14 +360,10 @@ function TransactionHistoryCard({
           <TransactionsSkeleton />
         ) : isError ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
-            <p className="text-sm text-red-700 dark:text-red-400">
-              Failed to load transaction history from Horizon.
-            </p>
+            <p className="text-sm text-red-700 dark:text-red-400">{t("error")}</p>
           </div>
         ) : !payments || payments.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">
-            No transactions found.
-          </p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">{t("empty")}</p>
         ) : (
           <div className="space-y-4">
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -410,7 +405,7 @@ function TransactionHistoryCard({
                         {paymentAmount(p)}
                       </p>
                       <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                        {formatDate(p.created_at)}
+                        {formatDate(p.created_at, locale)}
                       </p>
                     </div>
                     <a
@@ -418,7 +413,7 @@ function TransactionHistoryCard({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                      title="View on Stellar Explorer"
+                      title={t("viewOnExplorer")}
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
@@ -456,7 +451,7 @@ function TransactionHistoryCard({
                   setPage(page + 1);
                 }
               }}
-              summary={`Showing ${payments.length} transactions on page ${page}`}
+              summary={t("summary", { count: payments.length, page })}
             />
           </div>
         )}
@@ -468,6 +463,7 @@ function TransactionHistoryCard({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function WalletPage() {
+  const t = useTranslations("WalletPage");
   const isConnected = useWalletStore(selectIsWalletConnected);
   const address = useWalletStore(selectWalletAddress);
   const network = useWalletStore(selectWalletNetwork);
@@ -480,8 +476,10 @@ export default function WalletPage() {
   return (
     <main className="space-y-8 min-h-screen p-8 lg:p-12 max-w-5xl mx-auto">
       <header>
-        <p className="text-sm font-semibold uppercase tracking-widest text-indigo-600">My Wallet</p>
-        <h1 className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">Wallet</h1>
+        <p className="text-sm font-semibold uppercase tracking-widest text-indigo-600">
+          {t("eyebrow")}
+        </p>
+        <h1 className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t("title")}</h1>
       </header>
 
       {/* Address card */}
@@ -489,7 +487,7 @@ export default function WalletPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <CardTitle>Stellar Address</CardTitle>
+              <CardTitle>{t("address.title")}</CardTitle>
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
                   network?.isSupported
@@ -498,7 +496,7 @@ export default function WalletPage() {
                 }`}
               >
                 <Globe className="h-3 w-3" />
-                {network?.name ?? "Unknown Network"}
+                {network?.name ?? t("address.unknownNetwork")}
               </span>
             </div>
           </CardHeader>
@@ -519,7 +517,7 @@ export default function WalletPage() {
                 className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900 transition-colors"
               >
                 <ExternalLink className="h-4 w-4" />
-                View on Explorer
+                {t("address.viewOnExplorer")}
               </a>
               <QRDisplay address={address} />
             </div>
@@ -535,7 +533,7 @@ export default function WalletPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle>{t("quickActions.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {[
@@ -544,24 +542,24 @@ export default function WalletPage() {
                 icon: ArrowDownLeft,
                 iconClass: "text-indigo-600 dark:text-indigo-400",
                 bg: "bg-indigo-50 dark:bg-indigo-500/10",
-                title: "Deposit to Pool",
-                desc: "Earn yield by supplying liquidity",
+                title: t("quickActions.deposit"),
+                desc: t("quickActions.depositDesc"),
               },
               {
                 href: "/lend",
                 icon: ArrowUpRight,
                 iconClass: "text-green-600 dark:text-green-400",
                 bg: "bg-green-50 dark:bg-green-500/10",
-                title: "Withdraw from Pool",
-                desc: "Withdraw your deposits + yield",
+                title: t("quickActions.withdraw"),
+                desc: t("quickActions.withdrawDesc"),
               },
               {
                 href: "/loans",
                 icon: ArrowDownLeft,
                 iconClass: "text-amber-600 dark:text-amber-400",
                 bg: "bg-amber-50 dark:bg-amber-500/10",
-                title: "View Loans",
-                desc: "Manage active loans and repayments",
+                title: t("quickActions.loans"),
+                desc: t("quickActions.loansDesc"),
               },
             ].map((action) => (
               <Link
