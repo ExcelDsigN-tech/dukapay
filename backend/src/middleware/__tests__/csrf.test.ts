@@ -48,6 +48,32 @@ describe('CSRF Protection Middleware', () => {
     expect(cookies[0]).toContain('SameSite=Strict');
   });
 
+  it('should set CSRF cookie with HttpOnly flag to prevent XSS-based CSRF bypass', async () => {
+    const app = createTestApp();
+    const response = await request(app).get('/api/test-safe').expect(200);
+
+    const cookies: string[] = response.headers['set-cookie'] as string[];
+    expect(cookies).toBeDefined();
+    const csrfCookie = cookies.find((c) => c.startsWith(CSRF_COOKIE_NAME));
+    expect(csrfCookie).toBeDefined();
+    // HttpOnly must be present so JavaScript cannot access the cookie directly
+    expect(csrfCookie).toMatch(/HttpOnly/i);
+  });
+
+  it('should expose CSRF token in X-CSRF-Token response header (Double Submit pattern)', async () => {
+    const app = createTestApp();
+    const response = await request(app).get('/api/v1/auth/csrf').expect(200);
+
+    // Token must be accessible via response header so JavaScript can read it once
+    const headerToken = response.headers[CSRF_HEADER_NAME];
+    expect(headerToken).toBeDefined();
+    expect(typeof headerToken).toBe('string');
+    expect((headerToken as string).length).toBe(64); // 32 bytes hex
+
+    // Token in header must match the token returned in the JSON body
+    expect(headerToken).toBe(response.body.data.csrfToken);
+  });
+
   it('should issue CSRF token via GET /api/v1/auth/csrf', async () => {
     const app = createTestApp();
     const response = await request(app).get('/api/v1/auth/csrf').expect(200);
@@ -125,5 +151,35 @@ describe('CSRF Protection Middleware', () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.message).toBe('exempt challenge');
+  });
+
+  it('end-to-end: fetch CSRF token via header then use it to complete a mutating request', async () => {
+    const app = createTestApp();
+
+    // Step 1: GET the CSRF endpoint — server sets httpOnly cookie and exposes token in header
+    const getResp = await request(app).get('/api/v1/auth/csrf').expect(200);
+
+    const setCookieHeader: string[] = getResp.headers['set-cookie'] as string[];
+    expect(setCookieHeader).toBeDefined();
+    const csrfCookie = setCookieHeader.find((c) => c.startsWith(CSRF_COOKIE_NAME));
+    expect(csrfCookie).toBeDefined();
+
+    // Extract cookie value (everything between '=' and the first ';')
+    const cookieValue = csrfCookie!.split('=')[1].split(';')[0];
+
+    // Step 2: Token delivered via response header (simulating JS reading it once)
+    const tokenFromHeader = getResp.headers[CSRF_HEADER_NAME] as string;
+    expect(tokenFromHeader).toBeDefined();
+
+    // Step 3: Submit mutating request with cookie + header token (Double Submit)
+    const postResp = await request(app)
+      .post('/api/test-mutate')
+      .set('Cookie', `${CSRF_COOKIE_NAME}=${cookieValue}`)
+      .set(CSRF_HEADER_NAME, tokenFromHeader)
+      .send({ amount: 100 })
+      .expect(200);
+
+    expect(postResp.body.success).toBe(true);
+    expect(postResp.body.message).toBe('mutated');
   });
 });

@@ -39,13 +39,21 @@ export function generateCsrfToken(): string {
 
 export function setCsrfCookie(res: Response, token: string): void {
   const isProduction = process.env.NODE_ENV === 'production';
+  // httpOnly: true prevents JavaScript from reading the cookie directly,
+  // which closes the XSS-based CSRF bypass attack vector.
+  // The token is delivered to the frontend via the X-CSRF-Token response header
+  // (Double Submit Cookie pattern) so JavaScript can include it in subsequent requests.
   res.cookie(CSRF_COOKIE_NAME, token, {
-    httpOnly: false, // Accessible by frontend JavaScript to include in X-CSRF-Token header
+    httpOnly: true,
     secure: isProduction,
     sameSite: 'strict',
     path: '/',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
   });
+  // Expose token in response header so the frontend can read it once and store it
+  // in memory (e.g. a module-level variable or React state), then send it back
+  // via the X-CSRF-Token request header on every mutating request.
+  res.setHeader(CSRF_HEADER_NAME, token);
 }
 
 export interface CsrfOptions {
