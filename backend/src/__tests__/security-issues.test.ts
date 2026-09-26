@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from '@jest/globals';
+import { describe, it, expect, beforeAll } from '@jest/globals';
 import { Keypair } from '@stellar/stellar-sdk';
 import * as authService from '../services/authService.js';
 import { resolveRoleForWallet } from '../auth/rbac.js';

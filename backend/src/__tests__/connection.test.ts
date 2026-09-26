@@ -69,7 +69,7 @@ describe('Database connection pool', () => {
 
     jest.resetModules();
     const { pool, closePool } = await import('../db/connection.js');
-    expect((pool.options as any).statement_timeout).toBe(25000);
+    expect(pool.options.statement_timeout).toBe(25000);
     await closePool();
   });
 

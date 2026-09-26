@@ -91,6 +91,31 @@ export interface PoolStats {
   sharePrice: Stroops;
 }
 
+/** Aggregate protocol analytics from `GET /pool/analytics`. Amounts are numbers, not stroops. */
+export interface PoolAnalytics {
+  totalDeposits: number;
+  totalWithdrawals: number;
+  totalYieldDistributed: number;
+  totalLoansIssued: number;
+  totalVolume: number;
+  activeAgents: number;
+  /** ISO-8601 timestamp of when the snapshot was computed. */
+  updatedAt: string;
+}
+
+/**
+ * Envelope returned by `GET /pool/analytics`.
+ *
+ * The endpoint wraps the snapshot, so callers must read `analytics` off the
+ * response rather than treating the body as the payload itself. `source`
+ * reports whether the snapshot was served from the 300s server-side cache.
+ */
+export interface PoolAnalyticsResponse {
+  success: boolean;
+  analytics: PoolAnalytics;
+  source: 'cache' | 'database';
+}
+
 export interface DepositorPortfolio {
   address: Address;
   token: Address;

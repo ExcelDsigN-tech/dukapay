@@ -5,6 +5,7 @@ process.env.INTERNAL_API_KEY = 'test-api-key';
 process.env.NODE_ENV = 'test';
 
 import { jest } from '@jest/globals';
+import type { Express } from 'express';
 
 // ESM-compatible mocking
 const mockQuery = jest.fn<(...args: unknown[]) => Promise<unknown>>();
@@ -20,7 +21,7 @@ jest.unstable_mockModule('../db/transaction.js', () => ({
 
 let request: typeof import('supertest');
 let jwt: typeof import('jsonwebtoken');
-let app: any;
+let app: Express;
 // Dynamic imports after mocks
 beforeAll(async () => {
   ({ default: request } = await import('supertest'));

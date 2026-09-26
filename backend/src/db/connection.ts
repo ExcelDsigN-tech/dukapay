@@ -211,9 +211,15 @@ export const closePool = async (options?: { timeoutMs?: number }) => {
 
 export { pool, pool as default };
 
-// Add drain method for graceful shutdown
-if (!(pool as any).drain) {
-  (pool as any).drain = async () => {
+// `pg.Pool` exposes no `drain()`, so attach one for graceful-shutdown callers
+// that expect it. Typed via an intersection instead of `any` so the optional
+// member stays checked.
+type DrainablePool = typeof pool & { drain?: () => Promise<void> };
+
+const drainablePool = pool as DrainablePool;
+
+if (!drainablePool.drain) {
+  drainablePool.drain = async () => {
     await pool.end();
   };
 }

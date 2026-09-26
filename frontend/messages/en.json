@@ -862,6 +862,11 @@
   },
   "RepayLoan": {
     "eyebrow": "Borrower Portal",
+    "wallet": {
+      "connectedTitle": "Wallet connected",
+      "disconnectedTitle": "Wallet required",
+      "disconnectedDescription": "Connect your Stellar wallet to approve this repayment with Freighter."
+    },
     "title": "Repay Loan #{id}",
     "description": "Real-time blockchain settlement for your loan repayments.",
     "amountLabel": "Repayment amount",
@@ -892,6 +897,13 @@
       "successTitle": "Repayment recorded",
       "successMessage": "Your repayment was submitted and confirmed."
     }
+  },
+  "WalletConnection": {
+    "connect": "Connect Wallet",
+    "successTitle": "Wallet connected",
+    "successMessage": "Your wallet is ready. You can continue with the on-chain transaction.",
+    "errorTitle": "Wallet connection failed",
+    "errorMessage": "Unable to connect to Freighter. Make sure the extension is installed and unlocked."
   },
   "WalletPage": {
     "eyebrow": "My Wallet",

@@ -19,6 +19,10 @@ jest.mock("../../hooks/useLogout", () => ({
   useLogout: () => ({ logout: jest.fn() }),
 }));
 
+jest.mock("../../components/providers/WalletProvider", () => ({
+  useWallet: () => ({ connectWallet: jest.fn(), isFreighterAvailable: true }),
+}));
+
 jest.mock("../../stores/useUserStore", () => ({
   useUserStore: jest.fn((selector) =>
     selector({

@@ -1,7 +1,9 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { Keypair } from '@stellar/stellar-sdk';
+import { AppError } from '../../errors/AppError.js';
 
 process.env.JWT_SECRET = 'test-jwt-secret-min-32-chars-long!!';
 
@@ -39,8 +41,7 @@ const buildApp = () => {
       publicKey: (req as { user?: { publicKey: string } }).user?.publicKey ?? null,
     }),
   );
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  app.use((err: any, _req: any, res: any, _next: any) => {
+  app.use((err: AppError, _req: Request, res: Response, _next: NextFunction) => {
     res.status(err.statusCode ?? 500).json({ success: false });
   });
   return app;

@@ -11,8 +11,6 @@ import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals
 import express, { type Express, type Request, type Response, type NextFunction } from 'express';
 import request from 'supertest';
 
-const okHandler = (_req: Request, res: Response) => res.json({ success: true, data: {} });
-
 jest.unstable_mockModule('../controllers/agentController.js', () => ({
   getMyAssignments: jest.fn((_req: Request, res: Response) =>
     res.json({ success: true, data: { agentPublicKey: 'X', assignments: [] } }),

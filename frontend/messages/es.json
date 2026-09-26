@@ -734,6 +734,11 @@
   },
   "RepayLoan": {
     "eyebrow": "Portal del prestatario",
+    "wallet": {
+      "connectedTitle": "Billetera conectada",
+      "disconnectedTitle": "Se requiere billetera",
+      "disconnectedDescription": "Conecta tu billetera Stellar para aprobar este pago con Freighter."
+    },
     "title": "Pagar préstamo #{id}",
     "description": "Liquidación en tiempo real en la blockchain para los pagos de tu préstamo.",
     "amountLabel": "Monto a pagar",
@@ -764,6 +769,13 @@
       "successTitle": "Pago registrado",
       "successMessage": "Tu pago se envió y se confirmó."
     }
+  },
+  "WalletConnection": {
+    "connect": "Conectar billetera",
+    "successTitle": "Billetera conectada",
+    "successMessage": "Tu billetera está lista. Puedes continuar con la transacción en la cadena.",
+    "errorTitle": "No se pudo conectar la billetera",
+    "errorMessage": "No se pudo conectar con Freighter. Asegúrate de que la extensión esté instalada y desbloqueada."
   },
   "WalletPage": {
     "eyebrow": "Mi billetera",

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import request from 'supertest';
+import type { Express } from 'express';
 import { query, getClient } from '../../db/connection.js';
 import { generateJwtToken } from '../../services/authService.js';
 import type { PoolClient } from 'pg';
@@ -24,7 +25,7 @@ const describeIfDb = (name: string, fn: () => void) => {
 };
 
 describeIfDb('Integration: Scores API against real schema', () => {
-  let app: any;
+  let app: Express;
   let client: PoolClient;
   const testBorrower = 'G_INTEGRATION_TEST_BORROWER_1';
 

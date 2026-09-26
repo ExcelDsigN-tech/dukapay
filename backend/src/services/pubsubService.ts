@@ -23,7 +23,7 @@ class PubSubService {
     }
   }
 
-  async initSubscriber(onMessage: (payload: any) => void) {
+  async initSubscriber(onMessage: (payload: unknown) => void) {
     try {
       if (!this.subClient) {
         this.subClient = createClient({ url: REDIS_URL });
