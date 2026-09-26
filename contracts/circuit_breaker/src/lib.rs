@@ -578,35 +578,58 @@ impl CircuitBreaker {
     /// active (non-expired) pause: global, contract-wide, or function-level.
     ///
     /// Guarded contracts call this at the top of sensitive entry points.
+    /// Performs lazy cleanup of expired pause entries to prevent unbounded storage growth.
     pub fn is_blocked(env: Env, contract: Address, function: Symbol) -> bool {
         let now = env.ledger().timestamp();
 
-        // Global pause.
+        // Global pause cleanup: remove if expired.
         if let Some(expiry) = env.storage().instance().get::<Symbol, u64>(&KEY_GLOBAL) {
             if now < expiry {
                 return true;
             }
+            env.storage().instance().remove(&KEY_GLOBAL);
         }
 
-        let state: Map<Address, Map<Symbol, u64>> = env
+        let mut state: Map<Address, Map<Symbol, u64>> = env
             .storage()
             .instance()
             .get(&KEY_STATE)
             .unwrap_or(Map::new(&env));
 
-        if let Some(inner) = state.get(contract.clone()) {
+        if let Some(mut inner) = state.get(contract.clone()) {
             let wildcard = Self::wildcard(&env);
-            if let Some(expiry) = inner.get(wildcard) {
+            let mut should_remove_contract = false;
+
+            // Check and clean contract-wide pause.
+            if let Some(expiry) = inner.get(wildcard.clone()) {
                 if now < expiry {
                     return true;
                 }
+                inner.remove(wildcard);
             }
-            if let Some(expiry) = inner.get(function) {
+
+            // Check and clean function-specific pause.
+            if let Some(expiry) = inner.get(function.clone()) {
                 if now < expiry {
                     return true;
                 }
+                inner.remove(function);
+            }
+
+            // Update storage only if inner map is not empty.
+            if inner.is_empty() {
+                state.remove(contract);
+                should_remove_contract = true;
+            } else {
+                state.set(contract.clone(), inner);
+            }
+
+            // Update root state map only if it changed.
+            if should_remove_contract || !state.is_empty() {
+                env.storage().instance().set(&KEY_STATE, &state);
             }
         }
+
         false
     }
 

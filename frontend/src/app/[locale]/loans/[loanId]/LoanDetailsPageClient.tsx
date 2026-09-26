@@ -446,16 +446,4 @@ export function LoanDetailsPageClient() {
       />
     </section>
   );
-
-  const [depositOpen, setDepositOpen] = useState(false);
-
-  const [releaseOpen, setReleaseOpen] = useState(false);
-
-  const depositCollateral = useDepositCollateral();
-
-  const releaseCollateral = useReleaseCollateral();
-
-  const optimisticUI = useOptimisticUI();
-
-  const toast = useContractToast();
 }
