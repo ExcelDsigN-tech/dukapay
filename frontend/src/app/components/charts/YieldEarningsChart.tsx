@@ -12,6 +12,8 @@ import {
 } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import { DollarSign, TrendingUp } from "lucide-react";
+import { useLocale } from "next-intl";
+import { formatCurrency } from "../../utils/formatLocale";
 
 export interface YieldDataPoint {
   date: string;
@@ -26,6 +28,7 @@ interface YieldEarningsChartProps {
 }
 
 export function YieldEarningsChart({ data, className }: YieldEarningsChartProps) {
+  const locale = useLocale();
   // Calculate total earnings
   const totalEarnings = data.reduce((sum, point) => sum + point.earnings, 0);
   const avgAPY =
@@ -33,15 +36,8 @@ export function YieldEarningsChart({ data, className }: YieldEarningsChartProps)
       ? (data.reduce((sum, point) => sum + point.apy, 0) / data.length).toFixed(2)
       : "0.00";
 
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  // Format currency using locale-aware utility (see issue #536)
+  const fmtCurrency = (value: number) => formatCurrency(value, locale);
 
   return (
     <Card className={className}>
@@ -51,7 +47,7 @@ export function YieldEarningsChart({ data, className }: YieldEarningsChartProps)
           <div className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
             <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-              {formatCurrency(totalEarnings)}
+              {fmtCurrency(totalEarnings)}
             </span>
           </div>
         </div>
@@ -176,7 +172,7 @@ export function YieldEarningsChart({ data, className }: YieldEarningsChartProps)
               </p>
             </div>
             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {formatCurrency(totalEarnings)}
+              {fmtCurrency(totalEarnings)}
             </p>
           </div>
 

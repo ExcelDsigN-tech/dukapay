@@ -23,10 +23,7 @@ import CollateralActionModal from "@/app/components/transaction/CollateralAction
 import { useOptimisticUI } from "@/app/hooks/useOptimisticUI";
 
 import { useContractToast } from "@/app/hooks/useContractToast";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-}
+import { formatCurrency } from "../../../utils/formatLocale";
 
 function formatDate(iso: string | undefined, locale: string) {
   if (!iso) return "—";
@@ -212,10 +209,10 @@ export function LoanDetailsPageClient() {
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {[
-              [t("plan.principal"), formatCurrency(loan.principal)],
-              [t("plan.interestAccrued"), formatCurrency(loan.accruedInterest)],
-              [t("plan.totalRepaid"), formatCurrency(loan.totalRepaid)],
-              [t("plan.totalOwed"), formatCurrency(loan.totalOwed)],
+              [t("plan.principal"), formatCurrency(loan.principal, locale)],
+              [t("plan.interestAccrued"), formatCurrency(loan.accruedInterest, locale)],
+              [t("plan.totalRepaid"), formatCurrency(loan.totalRepaid, locale)],
+              [t("plan.totalOwed"), formatCurrency(loan.totalOwed, locale)],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl bg-zinc-50 p-4 dark:bg-zinc-900">
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">{label}</p>

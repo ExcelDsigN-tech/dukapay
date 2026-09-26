@@ -9,6 +9,7 @@ import { ErrorBoundary } from "../../components/global_ui/ErrorBoundary";
 import { StatusIndicator } from "../../components/ui/StatusIndicator";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { downloadCsv, rowsToCsv } from "../../utils/csv";
+import { formatCurrency, formatDate } from "../../utils/formatLocale";
 
 type FilterType = "all" | "loan" | "remittance";
 
@@ -75,7 +76,7 @@ export default function ActivityPage() {
                     ? "Loan Active"
                     : "Loan Request",
       description: `Loan #${loan.id} — ${loan.currency}`,
-      amount: `${loan.status === "repaid" ? "+" : "-"}${formatCurrency(loan.amount)}`,
+      amount: `${loan.status === "repaid" ? "+" : "-"}${formatCurrency(loan.amount, locale)}`,
       timestamp: new Date(loan.createdAt).toISOString(),
       status: loan.status,
       txHash: undefined,
@@ -88,7 +89,7 @@ export default function ActivityPage() {
         0,
         6,
       )}...${remittance.recipientAddress.slice(-4)}`,
-      amount: `-${formatCurrency(remittance.amount)}`,
+      amount: `-${formatCurrency(remittance.amount, locale)}`,
       timestamp: new Date(remittance.createdAt).toISOString(),
       status: remittance.status,
       txHash: undefined,
@@ -116,7 +117,7 @@ export default function ActivityPage() {
   function handleExportCsv() {
     const today = new Date().toISOString().split("T")[0];
     const rows = allActivity.map((item) => ({
-      date: formatDate(item.timestamp),
+      date: formatDate(item.timestamp, locale),
       type: item.type,
       amount: item.amount,
       status: item.status,
@@ -277,7 +278,7 @@ export default function ActivityPage() {
                       {item.amount}
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {formatDate(item.timestamp)}
+                      {formatDate(item.timestamp, locale)}
                     </p>
                     <StatusIndicator
                       label={t(`status.${item.status}`)}
@@ -343,18 +344,6 @@ export default function ActivityPage() {
       )}
     </main>
   );
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-}
-
-function formatDate(timestamp: string): string {
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function getStatusTone(status: string): "success" | "warning" | "danger" | "info" | "neutral" {

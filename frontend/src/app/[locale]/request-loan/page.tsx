@@ -9,6 +9,8 @@ import { Card, CardContent } from "../../components/ui/Card";
 import { WizardSkeleton } from "../../components/skeletons/WizardSkeleton";
 import { useCreditScore, useMinimumScore } from "../../hooks/useApi";
 import { useToastStore } from "../../stores/useToastStore";
+import { useLocale } from "next-intl";
+import { formatNumber } from "../../utils/formatLocale";
 import {
   useWalletStore,
   selectWalletAddress,
@@ -59,6 +61,7 @@ function getScoreBandMax(score: number): number {
 }
 
 export default function RequestLoanPage() {
+  const locale = useLocale();
   const borrowerAddress = useWalletStore(selectWalletAddress);
   const isWalletConnected = useWalletStore(selectIsWalletConnected);
   const [successLoanId, setSuccessLoanId] = useState<string | null>(null);
@@ -229,7 +232,7 @@ export default function RequestLoanPage() {
               Eligibility: score {resolvedCreditScore} / minimum {minimumScore}
             </p>
             <p className="mt-1 text-zinc-500 dark:text-zinc-400">
-              Maximum loan amount currently available: ${maxAmount.toLocaleString("en-US")}
+              Maximum loan amount currently available: ${formatNumber(maxAmount, locale)}
             </p>
           </div>
 

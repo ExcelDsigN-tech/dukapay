@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { Suspense, useState, useMemo } from "react";
+import { useLocale } from "next-intl";
+import { formatCurrency } from "../../utils/formatLocale";
 import type { CreditScoreDataPoint } from "../charts/CreditScoreTrendChart";
 import type { YieldDataPoint } from "../charts/YieldEarningsChart";
 import type { RiskTierDataPoint } from "../charts/RiskTierChart";
@@ -178,6 +180,7 @@ export function FinancialPerformanceDashboard({
   userType = "both",
   walletAddress,
 }: FinancialPerformanceDashboardProps) {
+  const locale = useLocale();
   const [useMockData, setUseMockData] = useState(true);
 
   // ── Existing chart data hooks ──
@@ -283,11 +286,7 @@ export function FinancialPerformanceDashboard({
   };
 
   const fmt = (n: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(n);
+    formatCurrency(n, locale);
 
   return (
     <div className="space-y-6">

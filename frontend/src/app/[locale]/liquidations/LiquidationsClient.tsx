@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   buildLiquidateLoanTransaction,
   queryKeys,
@@ -16,10 +16,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { useContractToast } from "../../hooks/useContractToast";
 import { selectWalletAddress, useWalletStore } from "../../stores/useWalletStore";
 import { useQueryClient } from "@tanstack/react-query";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-}
+import { formatCurrency } from "../../utils/formatLocale";
 
 function formatRatio(value: number) {
   return value > 10 ? `${value.toFixed(2)}%` : `${(value * 100).toFixed(2)}%`;
@@ -81,10 +78,10 @@ function LiquidationsTable({
                   </span>
                 </td>
                 <td className="px-4 py-4 text-zinc-600 dark:text-zinc-300">
-                  {formatCurrency(loan.collateral)}
+                  {formatCurrency(loan.collateral, locale)}
                 </td>
                 <td className="px-4 py-4 text-zinc-600 dark:text-zinc-300">
-                  {formatCurrency(loan.totalDebt)}
+                  {formatCurrency(loan.totalDebt, locale)}
                 </td>
                 <td className="px-4 py-4">
                   <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 dark:bg-red-500/10 dark:text-red-300">
@@ -114,6 +111,7 @@ function LiquidationsTable({
 
 export default function LiquidationsClient() {
   const t = useTranslations("Liquidations");
+  const locale = useLocale();
   const address = useWalletStore(selectWalletAddress);
   const { signTransaction } = useWallet();
   const toast = useContractToast();

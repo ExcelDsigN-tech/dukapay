@@ -26,18 +26,8 @@ import { Spinner } from "../../components/global_ui/Spinner";
 import { PaginationControls } from "../../components/ui/PaginationControls";
 import Link from "next/link";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { formatCurrency, formatDate } from "../../utils/formatLocale";
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 const STATUS_CONFIG: Record<
   Remittance["status"],
@@ -180,13 +170,13 @@ export default function RemittancesPage() {
           {[
             {
               label: "Total Remitted",
-              value: stats ? formatCurrency(stats.totalRemitted) : "—",
+              value: stats ? formatCurrency(stats.totalRemitted, locale) : "—",
               icon: DollarSign,
               sub: `${stats?.count ?? 0} completed transfers on this page`,
             },
             {
               label: "Average Amount",
-              value: stats ? formatCurrency(stats.avgAmount) : "—",
+              value: stats ? formatCurrency(stats.avgAmount, locale) : "—",
               icon: TrendingUp,
               sub: "per completed transfer on this page",
             },
@@ -263,50 +253,82 @@ export default function RemittancesPage() {
           {/* Date + Amount range */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 block">
+              <label
+                htmlFor="filter-date-from"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 block"
+              >
                 From Date
               </label>
               <input
+                id="filter-date-from"
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
+                aria-describedby="filter-date-from-hint"
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-indigo-500 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
               />
+              <span id="filter-date-from-hint" className="sr-only">
+                Filter remittances from this date
+              </span>
             </div>
             <div>
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 block">
+              <label
+                htmlFor="filter-date-to"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 block"
+              >
                 To Date
               </label>
               <input
+                id="filter-date-to"
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
+                aria-describedby="filter-date-to-hint"
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-indigo-500 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
               />
+              <span id="filter-date-to-hint" className="sr-only">
+                Filter remittances up to this date
+              </span>
             </div>
             <div>
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 block">
+              <label
+                htmlFor="filter-min-amount"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 block"
+              >
                 Min Amount
               </label>
               <input
+                id="filter-min-amount"
                 type="number"
                 placeholder="0.00"
                 value={minAmount}
                 onChange={(e) => setMinAmount(e.target.value)}
+                aria-describedby="filter-min-amount-hint"
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
               />
+              <span id="filter-min-amount-hint" className="sr-only">
+                Minimum transfer amount in USD
+              </span>
             </div>
             <div>
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 block">
+              <label
+                htmlFor="filter-max-amount"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 block"
+              >
                 Max Amount
               </label>
               <input
+                id="filter-max-amount"
                 type="number"
                 placeholder="0.00"
                 value={maxAmount}
                 onChange={(e) => setMaxAmount(e.target.value)}
+                aria-describedby="filter-max-amount-hint"
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
               />
+              <span id="filter-max-amount-hint" className="sr-only">
+                Maximum transfer amount in USD
+              </span>
             </div>
           </div>
         </CardContent>
@@ -380,7 +402,7 @@ export default function RemittancesPage() {
                       </div>
                       <div className="col-span-2">
                         <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                          {formatCurrency(remittance.amount)}
+                          {formatCurrency(remittance.amount, locale)}
                         </span>
                       </div>
                       <div className="col-span-2">
@@ -390,7 +412,7 @@ export default function RemittancesPage() {
                       </div>
                       <div className="col-span-2">
                         <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                          {formatDate(remittance.createdAt)}
+                          {formatDate(remittance.createdAt, locale)}
                         </span>
                       </div>
                       <div className="col-span-2">

@@ -31,9 +31,12 @@ const isDev = process.env.NODE_ENV !== "production";
 // than this fix should make alone. 'unsafe-inline' matches Next.js's own
 // documented non-nonce fallback and the precedent already set below for
 // style-src.
-// ponytail: unsafe-inline on script-src, upgrade to nonce-based CSP
-// (https://nextjs.org/docs/app/guides/content-security-policy#nonces) if
-// stricter XSS protection becomes a requirement.
+// TODO(security-debt): 'unsafe-inline' on script-src and style-src is
+// known security debt — it weakens XSS protection. The correct fix is a
+// nonce-based CSP via Next.js middleware (see
+// https://nextjs.org/docs/app/guides/content-security-policy#nonces),
+// but that disables static/CDN caching on every route and is a larger
+// call than this patch. Tracked for a follow-up. See issue #535.
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
@@ -69,6 +72,26 @@ const nextConfig: NextConfig = {
         {
           key: "Permissions-Policy",
           value: "camera=(), microphone=(), geolocation=()",
+        },
+        // HSTS: instruct browsers to only use HTTPS for 2 years, including
+        // subdomains, and opt into the preload list. Downgrade attacks become
+        // impossible once the browser has seen this header. See issue #535.
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+        // COOP: prevents other browsing contexts (e.g. pop-ups opened by
+        // this page) from sharing the same agent cluster, strengthening
+        // cross-origin isolation. See issue #535.
+        {
+          key: "Cross-Origin-Opener-Policy",
+          value: "same-origin",
+        },
+        // CORP: prevents other origins from loading our resources in their
+        // own documents, reducing Spectre-style side-channel risk. See issue #535.
+        {
+          key: "Cross-Origin-Resource-Policy",
+          value: "same-origin",
         },
       ],
     },

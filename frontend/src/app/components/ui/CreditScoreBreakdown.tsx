@@ -1,7 +1,9 @@
 "use client";
 
 import { Loader2, AlertCircle } from "lucide-react";
+import { useLocale } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "./Card";
+import { formatCurrency } from "../../utils/formatLocale";
 
 interface CreditScoreBreakdownProps {
   score?: number | null;
@@ -25,6 +27,7 @@ export function CreditScoreBreakdown({
   isLoading = false,
   error = null,
 }: CreditScoreBreakdownProps) {
+  const locale = useLocale();
   if (isLoading) {
     return (
       <Card>
@@ -117,9 +120,7 @@ export function CreditScoreBreakdown({
               Total repaid
             </p>
             <p className="mt-2 text-lg font-bold text-zinc-900 dark:text-zinc-50">
-              {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-                breakdown.totalRepaid,
-              )}
+              {formatCurrency(breakdown.totalRepaid, locale)}
             </p>
           </div>
           <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
