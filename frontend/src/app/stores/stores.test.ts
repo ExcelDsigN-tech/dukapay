@@ -65,6 +65,27 @@ describe("useUserStore", () => {
     expect(user?.sessionStartedAt).toBeDefined();
   });
 
+  it("persists the user without ever writing the JWT to localStorage", () => {
+    useUserStore.getState().setUser({
+      id: "u1",
+      email: "alice@example.com",
+      kycVerified: true,
+    });
+
+    // The token lives in an httpOnly cookie and must not exist on the store.
+    expect("authToken" in useUserStore.getState()).toBe(false);
+
+    const persisted = window.localStorage.getItem("dukapay-user");
+    expect(persisted).toBeTruthy();
+    expect(persisted).not.toContain("authToken");
+
+    const parsed = JSON.parse(persisted as string) as {
+      state: { user?: { id?: string }; isAuthenticated?: boolean };
+    };
+    expect(parsed.state.user?.id).toBe("u1");
+    expect(parsed.state.isAuthenticated).toBe(true);
+  });
+
   it("clearUser resets everything", () => {
     useUserStore.getState().setUser({ id: "u1", email: "a@a.com", kycVerified: false });
     useUserStore.getState().clearUser();

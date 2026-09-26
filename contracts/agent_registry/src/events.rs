@@ -27,4 +27,8 @@ pub fn reputation_updated(env: &Env, agent: &Address, old_reputation: i128, new_
 pub fn license_renewed(env: &Env, agent: &Address, old_expiry: u64, new_expiry: u64) {
     let topics = (Symbol::new(env, "LicenseRenewed"), agent.clone());
     env.events().publish(topics, (old_expiry, new_expiry));
+/// Emitted when the contract is patched in place via `upgrade`.
+pub fn contract_upgraded(env: &Env, old_version: u32, new_version: u32) {
+    let topics = (Symbol::new(env, "ContractUpgraded"),);
+    env.events().publish(topics, (old_version, new_version));
 }

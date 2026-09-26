@@ -162,6 +162,10 @@ impl GovernanceContract {
         proposer.require_auth();
         Self::require_signer_or_admin(&env, &proposer)?;
 
+        if target == env.current_contract_address() {
+            return Err(GovernanceError::InvalidUpgradeTarget);
+        }
+
         if let Some(pending) = Self::load_pending(&env) {
             // Allow replacing an upgrade that has already expired.
             let now = env.ledger().timestamp();

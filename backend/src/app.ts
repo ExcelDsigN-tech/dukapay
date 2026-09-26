@@ -34,6 +34,7 @@ import { metricsHandler, metricsMiddleware } from './middleware/metrics.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { pauseGuard } from './middleware/pauseGuard.js';
+import { csrfProtection, hasAuthCookie } from './middleware/csrf.js';
 import { asyncHandler } from './utils/asyncHandler.js';
 import { AppError } from './errors/AppError.js';
 const app = express();
@@ -136,6 +137,21 @@ app.use(metricsMiddleware);
 // Pause guard: reject state-mutating requests when contracts are paused
 // Issue #1381: Cross-layer emergency pause coordination
 app.use(pauseGuard);
+
+// CSRF protection for ambient (cookie) credentials.
+//
+// The JWT is stored in an httpOnly cookie, so browsers automatically attach it
+// to requests. Mutating requests authenticated that way must also present the
+// double-submit CSRF token. Bearer-token clients (mobile apps, `tests/load`,
+// existing supertest suites) are stateless and are left untouched.
+const csrfGuard = csrfProtection();
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const hasBearer = (req.headers.authorization ?? '').startsWith('Bearer ');
+  if (!hasBearer && hasAuthCookie(req.headers.cookie)) {
+    return csrfGuard(req, res, next);
+  }
+  return next();
+});
 
 app.get('/', (_req: Request, res: Response) => {
   res.send('DukaPay Backend is running');

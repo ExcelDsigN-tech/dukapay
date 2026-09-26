@@ -37,6 +37,24 @@ export function generateCsrfToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
+const DEFAULT_JWT_COOKIE_NAME = 'dukapay_jwt';
+
+/**
+ * Returns true when the request carries the httpOnly JWT auth cookie.
+ *
+ * Used to decide whether a request is authenticated by *ambient* credentials
+ * (cookies) rather than an explicit `Authorization: Bearer` header. Ambient
+ * credentials are the ones CSRF protection must cover.
+ */
+export function hasAuthCookie(cookieHeader: string | undefined): boolean {
+  if (!cookieHeader) {
+    return false;
+  }
+
+  const cookieName = process.env.JWT_COOKIE_NAME ?? DEFAULT_JWT_COOKIE_NAME;
+  return parseCookies(cookieHeader)[cookieName] !== undefined;
+}
+
 export function setCsrfCookie(res: Response, token: string): void {
   const isProduction = process.env.NODE_ENV === 'production';
   res.cookie(CSRF_COOKIE_NAME, token, {
