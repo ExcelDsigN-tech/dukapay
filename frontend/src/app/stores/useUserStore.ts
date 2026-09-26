@@ -8,6 +8,10 @@
  *  - Track authentication state (isAuthenticated, isLoading, error)
  *  - Provide actions to set / clear the user (login / logout)
  *
+ * The JWT itself is deliberately NOT kept here: it lives in an httpOnly cookie
+ * set by the backend, so it is never readable from JavaScript and never written
+ * to localStorage.
+ *
  * Design decision: server-fetched data lives in TanStack Query (useApi.ts).
  * This store holds the runtime session state so any component can read it
  * without prop-drilling or re-fetching.
@@ -34,8 +38,6 @@ export interface User {
 interface UserState {
   /** Authenticated user, or null when logged out */
   user: User | null;
-  /** JWT token for API authentication */
-  authToken: string | null;
   /** True while an auth operation (login/logout/refresh) is in progress */
   isLoading: boolean;
   /** Error message from the last failed auth operation */
@@ -47,8 +49,6 @@ interface UserState {
 interface UserActions {
   /** Call this after a successful login or session hydration */
   setUser: (user: User) => void;
-  /** Store the JWT token received after login */
-  setAuthToken: (token: string | null) => void;
   /** Call this on logout or session expiry — clears all user data */
   clearUser: () => void;
   /** Call this to update individual fields (e.g. after KYC verification) */
@@ -63,7 +63,6 @@ export type UserStore = UserState & UserActions;
 
 const initialState: UserState = {
   user: null,
-  authToken: null,
   isLoading: false,
   error: null,
   isAuthenticated: false,
@@ -91,8 +90,6 @@ export const useUserStore = create<UserStore>()(
 
         clearUser: () => set({ ...initialState }, false, "user/clearUser"),
 
-        setAuthToken: (authToken) => set({ authToken }, false, "user/setAuthToken"),
-
         updateUser: (partial) => {
           if (partial.kycVerified) {
             useGamificationStore.getState().addXP(30, "Profile completion");
@@ -112,10 +109,10 @@ export const useUserStore = create<UserStore>()(
       }),
       {
         name: "dukapay-user",
-        // Only persist the user object — not transient loading/error state
+        // Only persist the user object — never the JWT (it lives in an
+        // httpOnly cookie) and not transient loading/error state.
         partialize: (state) => ({
           user: state.user,
-          authToken: state.authToken,
           isAuthenticated: state.isAuthenticated,
         }),
       },
@@ -129,7 +126,6 @@ export const useUserStore = create<UserStore>()(
 // which would bypass Zustand's shallow-equality bailout.
 
 export const selectUser = (state: UserStore) => state.user;
-export const selectAuthToken = (state: UserStore) => state.authToken;
 export const selectIsAuthenticated = (state: UserStore) => state.isAuthenticated;
 export const selectUserIsLoading = (state: UserStore) => state.isLoading;
 export const selectUserError = (state: UserStore) => state.error;

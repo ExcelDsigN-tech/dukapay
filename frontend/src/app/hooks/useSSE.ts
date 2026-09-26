@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useUserStore } from "../stores/useUserStore";
 
 export type SSEStatus = "connecting" | "connected" | "disconnected";
 export type RealtimeStatus = SSEStatus | "polling";
@@ -23,8 +22,9 @@ interface UseSSEOptions<T> {
 
 /**
  * Generic SSE hook with exponential backoff reconnection using fetch + ReadableStream.
- * Supports custom Authorization header which the native EventSource API does not.
- * Falls back to polling when SSE fails with configurable interval.
+ * Authenticated streams rely on the httpOnly auth cookies sent with
+ * `credentials: "include"` (the native EventSource API cannot send headers,
+ * so fetch is used instead).
  */
 export function useSSE<T = unknown>({
   url,
@@ -35,7 +35,6 @@ export function useSSE<T = unknown>({
   pollingInterval = 30_000,
 }: UseSSEOptions<T>): RealtimeStatus {
   const [status, setStatus] = useState<RealtimeStatus>("connecting");
-  const token = useUserStore((s) => s.authToken);
   const retryDelay = useRef(1_000);
   const abortControllerRef = useRef<AbortController | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,16 +90,11 @@ export function useSSE<T = unknown>({
       abortControllerRef.current = controller;
 
       try {
-        const headers: Record<string, string> = {
-          Accept: "text/event-stream",
-        };
-
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
         const response = await fetch(url as string, {
-          headers,
+          headers: {
+            Accept: "text/event-stream",
+          },
+          credentials: "include",
           signal: controller.signal,
         });
 
@@ -178,7 +172,7 @@ export function useSSE<T = unknown>({
       }
       stopPolling();
     };
-  }, [url, token, pollingInterval]);
+  }, [url, pollingInterval]);
 
   return status;
 }

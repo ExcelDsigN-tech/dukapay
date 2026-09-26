@@ -10,7 +10,6 @@ import {
   Monitor,
   Crown,
   LogOut,
-  Key,
   CheckCheck,
   Copy,
 } from "lucide-react";
@@ -26,7 +25,6 @@ import {
   selectWalletNetwork,
 } from "../../stores/useWalletStore";
 import { useUserStore, selectUser } from "../../stores/useUserStore";
-import { logoutUser } from "../../lib/session";
 import {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
@@ -507,8 +505,6 @@ function NotificationsSection() {
 function SecuritySection() {
   const t = useTranslations("Settings.security");
   const user = useUserStore(selectUser);
-  const authToken = useUserStore((s) => s.authToken);
-  const [showToken, setShowToken] = useState(false);
 
   return (
     <Card>
@@ -543,36 +539,6 @@ function SecuritySection() {
             </div>
           </div>
         </div>
-
-        {/* API Key */}
-        {authToken && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Key className="h-4 w-4 text-zinc-500" />
-                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  {t("token")}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowToken((v) => !v)}
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                aria-label={showToken ? t("hideToken") : t("showToken")}
-              >
-                {showToken ? t("hide") : t("show")}
-              </button>
-            </div>
-            <div className="relative rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="text-xs font-mono text-zinc-700 dark:text-zinc-300 break-all">
-                {showToken ? authToken : `${authToken.slice(0, 20)}${"•".repeat(30)}`}
-              </p>
-              <div className="absolute right-2 top-2">
-                <CopyButton value={authToken} />
-              </div>
-            </div>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1.5">{t("tokenHelper")}</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -663,8 +629,9 @@ function DisplaySection() {
 
 export default function SettingsPage() {
   const t = useTranslations("Settings");
+  const { logout } = useLogout();
   const [activeSection, setActiveSection] = useState<SectionId>("profile");
-  const handleLogout = () => logoutUser("manual");
+  const handleLogout = () => logout();
 
   const activateSection = (id: SectionId) => {
     setActiveSection(id);
