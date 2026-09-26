@@ -94,6 +94,12 @@ All core Soroban contracts (`LendingPool`, `AgentVault`, `LoanManager`) inherit 
   - Public Auth / OTP Endpoints: 5 requests / minute.
   - Standard API Endpoints: 100 requests / minute per user/IP.
   - Internal Webhook Ingestion: Scoped by HMAC signature verification and IP whitelist.
+  - Sensitive read endpoints (each with its own counter, keyed by authenticated wallet, or by IP when unauthenticated; over the limit returns `429` with a `Retry-After` header):
+    - `GET /api/admin/audit-logs`: 30 requests / minute per admin.
+    - `GET /api/admin/disputes`, `GET /api/admin/disputes/:disputeId`: 60 / minute per admin (shared counter).
+    - `GET /api/admin/governance/pending`: 60 / minute per admin.
+    - `GET /api/pool/analytics` and `GET /api/score/leaderboard` (public): 60 / minute per IP.
+    - `GET /api/score/:userId`, `/:userId/breakdown`, `/:walletAddress/history`, `/:walletAddress/nft`: 60 / minute per wallet (shared counter).
 - **Redis Rate-Limiter Store**: Distributed atomic counters prevent burst traffic and distributed brute-force attempts across clusters.
 
 ---
