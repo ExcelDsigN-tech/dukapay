@@ -19,7 +19,7 @@ export type ConnectWalletButtonProps = Omit<
  * Freighter — so the resulting state flows back into `useWalletStore` and the
  * calling page re-renders. Surrounding copy stays with the page, but the
  * button's own accessible name is always `Connect Wallet`, which the E2E page
- * object in `e2e/utils/page-objects/WalletPage.ts` relies on.
+ * object in `frontend/e2e/utils/page-objects/WalletPage.ts` relies on.
  */
 export function ConnectWalletButton({ className, ...props }: ConnectWalletButtonProps) {
   const t = useTranslations("WalletConnection");
