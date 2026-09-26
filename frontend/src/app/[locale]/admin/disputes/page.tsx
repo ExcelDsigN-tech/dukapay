@@ -32,17 +32,17 @@ function formatDate(value: string) {
 function useAdminGuard() {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
-  const token = useUserStore((state) => state.authToken);
-  const session = useVerifySession({ enabled: Boolean(token) });
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
+  const session = useVerifySession({ enabled: isAuthenticated });
   const role = session.data?.role ?? user?.role;
-  const isChecking = Boolean(token) && !role && session.isLoading;
+  const isChecking = isAuthenticated && !role && session.isLoading;
   const isAdmin = role === "admin";
 
   useEffect(() => {
-    if (!token || (!isChecking && !isAdmin)) {
+    if (!isAuthenticated || (!isChecking && !isAdmin)) {
       router.replace("/");
     }
-  }, [isAdmin, isChecking, router, token]);
+  }, [isAdmin, isChecking, isAuthenticated, router]);
 
   return { isAdmin, isChecking };
 }

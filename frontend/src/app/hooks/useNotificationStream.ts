@@ -11,17 +11,18 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
  * Connects to the SSE /api/notifications/stream endpoint and pushes new
  * notifications into the TanStack Query cache so the UI updates immediately.
  *
- * Uses fetch + ReadableStream to support custom Authorization header.
+ * Uses fetch + ReadableStream so the httpOnly auth cookies are sent with
+ * `credentials: "include"`.
  */
 export function useNotificationStream() {
   const queryClient = useQueryClient();
-  const token = useUserStore((s: UserStore) => s.authToken);
+  const isAuthenticated = useUserStore((s: UserStore) => s.isAuthenticated);
   const retryDelay = useRef(1_000);
   const abortControllerRef = useRef<AbortController | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     let cancelled = false;
 
@@ -42,7 +43,6 @@ export function useNotificationStream() {
           credentials: "include",
           headers: {
             Accept: "text/event-stream",
-            Authorization: `Bearer ${token}`,
           },
           signal: controller.signal,
         });
@@ -140,5 +140,5 @@ export function useNotificationStream() {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [token, queryClient]);
+  }, [isAuthenticated, queryClient]);
 }

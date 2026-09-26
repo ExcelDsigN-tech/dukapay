@@ -73,6 +73,7 @@ pub enum GovernanceError {
     NotUpgradeSigner = 4037,
     InvalidUpgradeThreshold = 4038,
     TooManyUpgradeSigners = 4039,
+    InvalidUpgradeTarget = 4040,
 }
 
 /// Status of a pending admin transfer proposal.

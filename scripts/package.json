@@ -10,6 +10,7 @@
     "gen:money": "ts-node gen-money.ts",
     "gen:money:check": "ts-node gen-money.ts --check",
     "money:property-test": "tsx money-property-test.ts",
+    "money:parity": "tsx money-parity.ts",
     "audit:verify": "tsx verify-audit-proof.ts",
     "drift:check": "tsx drift-check.ts"
   },

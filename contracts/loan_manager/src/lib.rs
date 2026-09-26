@@ -1198,6 +1198,16 @@ impl LoanManager {
             return Err(LoanError::MaxLoansReached);
         }
 
+        let borrower_loans_key = DataKey::BorrowerLoans(borrower.clone());
+        let mut borrower_loans: Vec<u32> = env
+            .storage()
+            .instance()
+            .get(&borrower_loans_key)
+            .unwrap_or(Vec::new(&env));
+        if borrower_loans.len() >= max_loans_per_borrower {
+            return Err(LoanError::MaxLoansReached);
+        }
+
         let mut loan_counter: u32 = env
             .storage()
             .instance()
@@ -1239,12 +1249,6 @@ impl LoanManager {
         Self::bump_persistent_ttl(&env, &DataKey::Loan(loan_counter));
 
         // Add loan ID to borrower's loan list
-        let borrower_loans_key = DataKey::BorrowerLoans(borrower.clone());
-        let mut borrower_loans: Vec<u32> = env
-            .storage()
-            .instance()
-            .get(&borrower_loans_key)
-            .unwrap_or(Vec::new(&env));
         borrower_loans.push_back(loan_counter);
         env.storage()
             .instance()
@@ -1588,7 +1592,7 @@ impl LoanManager {
         }
 
         let loan_key = DataKey::Loan(loan_id);
-        let loan: Loan = env
+        let mut loan: Loan = env
             .storage()
             .persistent()
             .get(&loan_key)
@@ -1616,25 +1620,20 @@ impl LoanManager {
             .instance()
             .get(&DataKey::Token)
             .expect("token not set");
-        let token_client = TokenClient::new(&env, &token);
-        token_client.transfer(&loan.borrower, &env.current_contract_address(), &amount);
-
-        let loan_key = DataKey::Loan(loan_id);
-        let mut loan: Loan = env
-            .storage()
-            .persistent()
-            .get(&loan_key)
-            .expect("loan not found");
 
         let updated_collateral = loan
             .collateral_amount
             .checked_add(amount)
             .expect("collateral overflow");
+        let borrower = loan.borrower.clone();
         loan.collateral_amount = updated_collateral;
         env.storage().persistent().set(&loan_key, &loan);
         Self::bump_persistent_ttl(&env, &loan_key);
 
-        events::collateral_deposited(&env, loan.borrower.clone(), loan_id, updated_collateral);
+        let token_client = TokenClient::new(&env, &token);
+        token_client.transfer(&borrower, &env.current_contract_address(), &amount);
+
+        events::collateral_deposited(&env, borrower, loan_id, updated_collateral);
 
         Ok(())
     }
