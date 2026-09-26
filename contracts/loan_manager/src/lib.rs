@@ -156,6 +156,8 @@ pub enum DataKey {
     PriceOracle,
     CollateralToken,
     ReentrancyLock,
+    /// Address of the multisig governance contract authorized to call set_admin.
+    GovernanceContract,
 }
 
 #[contract]
@@ -953,6 +955,7 @@ impl LoanManager {
         lending_pool: Address,
         token: Address,
         admin: Address,
+        governance_contract: Address,
     ) -> Result<(), LoanError> {
         if env.storage().instance().has(&DataKey::Admin) {
             return Err(LoanError::AlreadyInitialized);
@@ -968,6 +971,9 @@ impl LoanManager {
             .set(&DataKey::LendingPool, &lending_pool);
         env.storage().instance().set(&DataKey::Token, &token);
         env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::GovernanceContract, &governance_contract);
         env.storage().instance().set(&DataKey::LoanCounter, &0u32);
         env.storage().instance().set(&DataKey::Paused, &false);
         env.storage()
@@ -2382,6 +2388,30 @@ impl LoanManager {
         Self::admin(&env)
     }
 
+    /// Set a new admin address. Only callable by the multisig governance contract.
+    /// This is the exclusive admin transfer path — direct propose/accept is not supported.
+    pub fn set_admin(env: Env, new_admin: Address) {
+        let current_admin = Self::admin(&env);
+        // Only the governance contract can call this function
+        let governance_contract: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::GovernanceContract)
+            .expect("governance contract not set");
+        governance_contract.require_auth();
+
+        env.storage()
+            .instance()
+            .set(&DataKey::Admin, &new_admin);
+        env.storage().instance().remove(&DataKey::ProposedAdmin);
+        Self::bump_instance_ttl(&env);
+
+        env.events().publish(
+            (Symbol::new(&env, "AdminTransferred"), current_admin.clone()),
+            new_admin.clone(),
+        );
+    }
+
     pub fn get_proposed_admin(env: Env) -> Option<Address> {
         Self::bump_instance_ttl(&env);
         env.storage().instance().get(&DataKey::ProposedAdmin)
@@ -2653,37 +2683,8 @@ impl LoanManager {
             .unwrap_or(Self::DEFAULT_TERM_LEDGERS)
     }
 
-    pub fn propose_admin(env: Env, new_admin: Address) {
-        let current_admin = Self::admin(&env);
-        current_admin.require_auth();
-
-        env.storage()
-            .instance()
-            .set(&DataKey::ProposedAdmin, &new_admin);
-        Self::bump_instance_ttl(&env);
-        env.events().publish(
-            (Symbol::new(&env, "AdminProposed"), current_admin),
-            new_admin,
-        );
-    }
-
-    pub fn accept_admin(env: Env) -> Result<(), LoanError> {
-        let proposed_admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::ProposedAdmin)
-            .ok_or(LoanError::NotInitialized)?;
-        proposed_admin.require_auth();
-
-        env.storage()
-            .instance()
-            .set(&DataKey::Admin, &proposed_admin);
-        env.storage().instance().remove(&DataKey::ProposedAdmin);
-        Self::bump_instance_ttl(&env);
-        env.events()
-            .publish((Symbol::new(&env, "AdminTransferred"),), proposed_admin);
-        Ok(())
-    }
+    // Admin transfer is exclusively through the governance contract via set_admin().
+    // Direct propose/accept admin transfer is not supported to enforce timelock + multisig.
 
     pub fn pause(env: Env) {
         Self::admin(&env).require_auth();

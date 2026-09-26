@@ -46,7 +46,19 @@ function getKmsEndpoint(): string {
 }
 
 function getKekKey(): Buffer {
-  const hex = process.env.PII_KEK_KEY ?? '0'.repeat(64);
+  const hex = process.env.PII_KEK_KEY;
+  if (!hex) {
+    throw new Error(
+      'PII_KEK_KEY environment variable is required. ' +
+      'Generate a 64-character hex key: openssl rand -hex 32',
+    );
+  }
+  if (!/^[0-9a-fA-F]{64}$/.test(hex)) {
+    throw new Error(
+      'PII_KEK_KEY must be a valid 64-character hex string. ' +
+      'Generate one with: openssl rand -hex 32',
+    );
+  }
   return Buffer.from(hex, 'hex');
 }
 
