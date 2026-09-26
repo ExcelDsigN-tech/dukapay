@@ -14,4 +14,14 @@ const customJestConfig = {
   testPathIgnorePatterns: ["<rootDir>/e2e/", "<rootDir>/node_modules/"],
 };
 
-module.exports = createJestConfig(customJestConfig);
+// next-intl and its ICU dependencies only ship ESM, so let Jest transform them.
+const ESM_PACKAGES = ["next-intl", "use-intl", "intl-messageformat", "@formatjs", "icu-minify"];
+
+module.exports = async () => {
+  const config = await createJestConfig(customJestConfig)();
+  config.transformIgnorePatterns = [
+    `/node_modules/(?!(${ESM_PACKAGES.join("|")})/)`,
+    ...config.transformIgnorePatterns.filter((pattern) => !pattern.startsWith("/node_modules/")),
+  ];
+  return config;
+};

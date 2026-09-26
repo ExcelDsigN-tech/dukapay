@@ -20,6 +20,66 @@ export const swaggerSchemas = {
     },
     required: ['success', 'message'],
   },
+  AgentDashboard: {
+    type: 'object',
+    properties: {
+      agentPublicKey: { type: 'string' },
+      floatUtilization: {
+        type: 'object',
+        properties: {
+          totalFloat: { type: 'number' },
+          allocated: { type: 'number' },
+          utilizationPct: { type: 'number' },
+        },
+      },
+      earnings: {
+        type: 'object',
+        properties: {
+          daily: { type: 'number' },
+          weekly: { type: 'number' },
+          monthly: { type: 'number' },
+          total: { type: 'number' },
+        },
+      },
+      borrowerPortfolio: {
+        type: 'object',
+        properties: {
+          totalLoans: { type: 'integer' },
+          activeLoans: { type: 'integer' },
+          defaultedLoans: { type: 'integer' },
+          totalOutstanding: { type: 'number' },
+          byStatus: { type: 'object', additionalProperties: { type: 'integer' } },
+        },
+      },
+      pendingSettlements: {
+        type: 'object',
+        properties: {
+          count: { type: 'integer' },
+          totalValue: { type: 'number' },
+        },
+      },
+      collateralRatio: {
+        type: 'object',
+        properties: {
+          totalCollateral: { type: 'number' },
+          totalDebt: { type: 'number' },
+          ratio: { type: 'number' },
+        },
+      },
+      recentTransactions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            type: { type: 'string' },
+            amount: { type: 'number' },
+            loanId: { type: 'string', nullable: true },
+            timestamp: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+  },
   SimpleSuccessResponse: {
     type: 'object',
     properties: {

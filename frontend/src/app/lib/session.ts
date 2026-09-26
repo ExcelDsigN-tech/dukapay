@@ -15,28 +15,6 @@ export class SessionExpiredError extends Error {
   }
 }
 
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  const [, payload] = token.split(".");
-  if (!payload || typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    return JSON.parse(window.atob(padded)) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-export function isJwtExpired(token: string): boolean {
-  const payload = decodeJwtPayload(token);
-  const exp = payload?.exp;
-
-  return typeof exp === "number" && exp * 1000 <= Date.now();
-}
-
 export function clearSessionState() {
   useUserStore.getState().clearUser();
   useWalletStore.getState().disconnect();

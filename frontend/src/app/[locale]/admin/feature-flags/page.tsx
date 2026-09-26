@@ -10,6 +10,7 @@ export default function AdminFeatureFlagsPage() {
   const role = useUserStore((state) => state.user?.role);
   const { data, isLoading, isError } = useFeatureFlags();
   const { mutateAsync: updateFlag } = useUpdateFeatureFlag();
+  const updateFlag = useUpdateFeatureFlag();
 
   if (role && role !== "admin" && role !== "super_admin") {
     return (

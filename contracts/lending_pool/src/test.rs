@@ -1,9 +1,10 @@
 use crate::{events, LendingPool, LendingPoolClient};
+use circuit_breaker::{CircuitBreaker, CircuitBreakerClient};
 use soroban_sdk::testutils::{Address as _, Events as _, Ledger as _};
 use soroban_sdk::token::Client as TokenClient;
 use soroban_sdk::token::StellarAssetClient;
 use soroban_sdk::xdr::ToXdr;
-use soroban_sdk::{Address, BytesN, Env, FromVal, IntoVal, TryFromVal};
+use soroban_sdk::{Address, BytesN, Env, FromVal, IntoVal, Symbol, TryFromVal, Vec};
 
 fn create_token_contract<'a>(
     env: &Env,
@@ -17,6 +18,23 @@ fn create_token_contract<'a>(
 
 fn create_upgrade_hash(env: &Env) -> BytesN<32> {
     BytesN::from_array(env, &[7u8; 32])
+}
+
+/// Deploy a governance `CircuitBreaker` with three signers and threshold 1,
+/// returning the contract id, client and a signer the tests can act as.
+fn deploy_circuit_breaker(env: &Env) -> (Address, CircuitBreakerClient, Address) {
+    let admin = Address::generate(env);
+    let s1 = Address::generate(env);
+    let s2 = Address::generate(env);
+    let s3 = Address::generate(env);
+    let mut signers = Vec::new(env);
+    signers.push_back(s1.clone());
+    signers.push_back(s2);
+    signers.push_back(s3);
+    let id = env.register(CircuitBreaker, ());
+    let client = CircuitBreakerClient::new(env, &id);
+    client.initialize(&admin, &signers, &1, &3_600);
+    (id, client, s1)
 }
 
 #[test]
@@ -394,6 +412,121 @@ fn test_emergency_withdraw_bypasses_pause_and_cooldown() {
     pool_client.emergency_withdraw(&provider, &token_id, &1_500, &0);
 
     assert_eq!(token_client.balance(&provider), 5_000);
+    assert_eq!(token_client.balance(&pool_id), 0);
+}
+
+// ── Circuit breaker integration (emergency_withdraw must not bypass it) ───────
+// #492/#493: emergency_withdraw deliberately bypasses the pool-internal pause
+// flag and the withdrawal cooldown, but it must still honour the DukaPay
+// CircuitBreaker (global, contract-level or function-level pauses), otherwise
+// the breaker's purpose of halting fund movement during an incident is
+// defeated.
+
+#[test]
+fn test_emergency_withdraw_blocked_by_global_pause() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token_admin = Address::generate(&env);
+    let (token_id, stellar_asset_client, token_client) = create_token_contract(&env, &token_admin);
+
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&token_admin);
+
+    let (breaker_id, breaker_client, signer) = deploy_circuit_breaker(&env);
+    pool_client.set_circuit_breaker(&Some(breaker_id));
+
+    let provider = Address::generate(&env);
+    stellar_asset_client.mint(&provider, &1_500);
+    pool_client.deposit(&provider, &token_id, &1_500, &0);
+
+    breaker_client.pause_all(&signer);
+    assert!(breaker_client.is_blocked(&pool_id, &Symbol::new(&env, "withdraw")));
+
+    let result = pool_client.try_emergency_withdraw(&provider, &token_id, &1_500, &0);
+    assert_eq!(result, Err(Ok(crate::PoolError::CircuitBreakerTripped)));
+
+    assert_eq!(token_client.balance(&pool_id), 1_500);
+    assert_eq!(token_client.balance(&provider), 0);
+}
+
+#[test]
+fn test_emergency_withdraw_blocked_by_contract_pause() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token_admin = Address::generate(&env);
+    let (token_id, stellar_asset_client, _token_client) = create_token_contract(&env, &token_admin);
+
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&token_admin);
+
+    let (breaker_id, breaker_client, signer) = deploy_circuit_breaker(&env);
+    pool_client.set_circuit_breaker(&Some(breaker_id));
+
+    let provider = Address::generate(&env);
+    stellar_asset_client.mint(&provider, &1_500);
+    pool_client.deposit(&provider, &token_id, &1_500, &0);
+
+    breaker_client.pause_contract(&signer, &pool_id);
+    assert!(breaker_client.is_contract_paused(&pool_id));
+
+    let result = pool_client.try_emergency_withdraw(&provider, &token_id, &1_500, &0);
+    assert_eq!(result, Err(Ok(crate::PoolError::CircuitBreakerTripped)));
+}
+
+#[test]
+fn test_emergency_withdraw_blocked_by_function_pause() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token_admin = Address::generate(&env);
+    let (token_id, stellar_asset_client, _token_client) = create_token_contract(&env, &token_admin);
+
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&token_admin);
+
+    let (breaker_id, breaker_client, signer) = deploy_circuit_breaker(&env);
+    pool_client.set_circuit_breaker(&Some(breaker_id));
+
+    let provider = Address::generate(&env);
+    stellar_asset_client.mint(&provider, &1_500);
+    pool_client.deposit(&provider, &token_id, &1_500, &0);
+
+    breaker_client.pause_function(&signer, &pool_id, &Symbol::new(&env, "withdraw"));
+    assert!(breaker_client.is_function_paused(&pool_id, &Symbol::new(&env, "withdraw")));
+
+    let result = pool_client.try_emergency_withdraw(&provider, &token_id, &1_500, &0);
+    assert_eq!(result, Err(Ok(crate::PoolError::CircuitBreakerTripped)));
+}
+
+#[test]
+fn test_emergency_withdraw_allowed_when_unrelated_function_paused() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token_admin = Address::generate(&env);
+    let (token_id, stellar_asset_client, token_client) = create_token_contract(&env, &token_admin);
+
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&token_admin);
+
+    let (breaker_id, breaker_client, signer) = deploy_circuit_breaker(&env);
+    pool_client.set_circuit_breaker(&Some(breaker_id));
+
+    let provider = Address::generate(&env);
+    stellar_asset_client.mint(&provider, &1_500);
+    pool_client.deposit(&provider, &token_id, &1_500, &0);
+
+    breaker_client.pause_function(&signer, &pool_id, &Symbol::new(&env, "deposit"));
+    assert!(!breaker_client.is_blocked(&pool_id, &Symbol::new(&env, "withdraw")));
+
+    pool_client.emergency_withdraw(&provider, &token_id, &1_500, &0);
+    assert_eq!(token_client.balance(&provider), 1_500);
     assert_eq!(token_client.balance(&pool_id), 0);
 }
 
@@ -1669,6 +1802,32 @@ fn test_adjust_outstanding_zero_delta_is_a_no_op() {
     assert_eq!(pool_client.get_total_outstanding(&token), 1_000);
 }
 
+#[test]
+fn test_adjust_outstanding_blocked_during_circuit_breaker_pause() {
+    // #494: `adjust_outstanding` mutates loan accounting, so it must honour
+    // the circuit breaker even though it is admin-gated.
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token = Address::generate(&env);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+
+    let (breaker_id, breaker_client, signer) = deploy_circuit_breaker(&env);
+    pool_client.set_circuit_breaker(&Some(breaker_id));
+
+    pool_client.adjust_outstanding(&token, &1_000);
+
+    breaker_client.pause_all(&signer);
+
+    let result = pool_client.try_adjust_outstanding(&token, &500);
+    assert_eq!(result, Err(Ok(crate::PoolError::CircuitBreakerTripped)));
+
+    assert_eq!(pool_client.get_total_outstanding(&token), 1_000);
+}
+
 // ── #1380: slippage bounds & virtual-share/asset offset ───────────────────────
 //
 // These tests reproduce the single-ledger share-price manipulation described
@@ -2226,4 +2385,101 @@ fn test_cei_ordering_withdraw_does_not_lose_funds_on_reentrancy_attempt() {
     let bal_after = token_client.balance(&pool_id);
     assert_eq!(bal_after, bal_before - 400);
     assert_eq!(pool_client.get_shares(&provider, &token_id), 600);
+}
+
+#[test]
+fn test_reentrancy_lock_acquire_release_normal_cycle() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+
+    env.as_contract(&pool_id, || {
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        let depth: u32 = env
+            .storage()
+            .instance()
+            .get(&crate::DataKey::CallDepth)
+            .unwrap_or(0);
+        assert_eq!(depth, 1);
+        let locked: bool = env
+            .storage()
+            .instance()
+            .get(&crate::DataKey::ReentrancyLock)
+            .unwrap_or(false);
+        assert!(locked);
+
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+        let depth_after: u32 = env
+            .storage()
+            .instance()
+            .get(&crate::DataKey::CallDepth)
+            .unwrap_or(0);
+        assert_eq!(depth_after, 0);
+        let locked_after: bool = env
+            .storage()
+            .instance()
+            .get(&crate::DataKey::ReentrancyLock)
+            .unwrap_or(false);
+        assert!(!locked_after);
+    });
+}
+
+#[test]
+fn test_reentrancy_lock_over_release_returns_error() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+
+    env.as_contract(&pool_id, || {
+        // Calling exit_cross_contract_call when depth is 0 must fail with ReentrancyGuardTriggered
+        let res = LendingPool::exit_cross_contract_call(&env);
+        assert_eq!(res, Err(PoolError::ReentrancyGuardTriggered));
+
+        // Enter once, exit once (depth becomes 0)
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+
+        // Calling exit again must return error without underflow
+        let over_release = LendingPool::exit_cross_contract_call(&env);
+        assert_eq!(over_release, Err(PoolError::ReentrancyGuardTriggered));
+    });
+}
+
+#[test]
+fn test_reentrancy_lock_call_depth_limit() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let pool_id = env.register(LendingPool, ());
+    let pool_client = LendingPoolClient::new(&env, &pool_id);
+    pool_client.initialize(&admin);
+
+    env.as_contract(&pool_id, || {
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::enter_cross_contract_call(&env), Ok(()));
+        // 4th enter must exceed max depth (3)
+        assert_eq!(
+            LendingPool::enter_cross_contract_call(&env),
+            Err(PoolError::CallDepthExceeded)
+        );
+
+        // Clean up
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+        assert_eq!(LendingPool::exit_cross_contract_call(&env), Ok(()));
+        assert_eq!(
+            LendingPool::exit_cross_contract_call(&env),
+            Err(PoolError::ReentrancyGuardTriggered)
+        );
+    });
 }

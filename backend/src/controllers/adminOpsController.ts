@@ -40,9 +40,10 @@ interface AdminUserRow {
 }
 
 function serializeAdminUser(row: AdminUserRow) {
-  const metadata = typeof row.metadata === 'object' && row.metadata !== null
-    ? (row.metadata as Record<string, unknown>)
-    : {};
+  const metadata =
+    typeof row.metadata === 'object' && row.metadata !== null
+      ? (row.metadata as Record<string, unknown>)
+      : {};
 
   return {
     id: String(row.public_key),
@@ -51,8 +52,13 @@ function serializeAdminUser(row: AdminUserRow) {
     email: row.email ?? '',
     role: (row.role ?? 'borrower') as UserRole,
     isSuspended: Boolean(row.is_suspended),
-    kycVerified: Boolean(row.kyc_verified ?? metadata.kycVerified ?? metadata.kyc_verified ?? false),
-    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
+    kycVerified: Boolean(
+      row.kyc_verified ?? metadata.kycVerified ?? metadata.kyc_verified ?? false,
+    ),
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : new Date(row.created_at).toISOString(),
     lastLoginAt: row.last_login_at
       ? row.last_login_at instanceof Date
         ? row.last_login_at.toISOString()
@@ -85,13 +91,17 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
     conditions.push(`(up.metadata->>'is_suspended')::boolean = $${params.length}`);
   } else if (statusFilter === 'active') {
     params.push(false);
-    conditions.push(`((up.metadata->>'is_suspended')::boolean IS NULL OR (up.metadata->>'is_suspended')::boolean = $${params.length})`);
+    conditions.push(
+      `((up.metadata->>'is_suspended')::boolean IS NULL OR (up.metadata->>'is_suspended')::boolean = $${params.length})`,
+    );
   }
 
   if (search) {
     params.push(`%${search}%`);
     const searchParam = `$${params.length}`;
-    conditions.push(`(up.display_name ILIKE ${searchParam} OR up.email ILIKE ${searchParam} OR up.public_key ILIKE ${searchParam})`);
+    conditions.push(
+      `(up.display_name ILIKE ${searchParam} OR up.email ILIKE ${searchParam} OR up.public_key ILIKE ${searchParam})`,
+    );
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -154,9 +164,10 @@ export const getUser = asyncHandler(async (req: Request, res: Response) => {
     throw AppError.notFound('User not found');
   }
 
-  const metadata = typeof row.metadata === 'object' && row.metadata !== null
-    ? (row.metadata as Record<string, unknown>)
-    : {};
+  const metadata =
+    typeof row.metadata === 'object' && row.metadata !== null
+      ? (row.metadata as Record<string, unknown>)
+      : {};
 
   const roles: UserRole[] = ['borrower'];
   if (metadata.role && typeof metadata.role === 'string') {
@@ -177,8 +188,14 @@ export const getUser = asyncHandler(async (req: Request, res: Response) => {
     roles,
     isSuspended: Boolean(metadata.is_suspended ?? false),
     kycVerified: Boolean(metadata.kycVerified ?? metadata.kyc_verified ?? false),
-    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
-    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : new Date(row.updated_at).toISOString(),
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : new Date(row.created_at).toISOString(),
+    updatedAt:
+      row.updated_at instanceof Date
+        ? row.updated_at.toISOString()
+        : new Date(row.updated_at).toISOString(),
     lastLoginAt: row.last_login_at
       ? row.last_login_at instanceof Date
         ? row.last_login_at.toISOString()
@@ -196,7 +213,9 @@ export const updateUserStatus = asyncHandler(async (req: Request, res: Response)
     throw AppError.badRequest('publicKey parameter is required');
   }
 
-  const profile = await query('SELECT metadata FROM user_profiles WHERE public_key = $1', [publicKey]);
+  const profile = await query('SELECT metadata FROM user_profiles WHERE public_key = $1', [
+    publicKey,
+  ]);
   if (profile.rows.length === 0) {
     throw AppError.notFound('User not found');
   }
@@ -231,7 +250,9 @@ export const updateUserRole = asyncHandler(async (req: Request, res: Response) =
     throw AppError.badRequest(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
   }
 
-  const profile = await query('SELECT metadata FROM user_profiles WHERE public_key = $1', [publicKey]);
+  const profile = await query('SELECT metadata FROM user_profiles WHERE public_key = $1', [
+    publicKey,
+  ]);
   if (profile.rows.length === 0) {
     throw AppError.notFound('User not found');
   }
@@ -264,7 +285,9 @@ export const overrideKycStatus = asyncHandler(async (req: Request, res: Response
     throw AppError.badRequest('publicKey is required');
   }
 
-  const profile = await query('SELECT metadata FROM user_profiles WHERE public_key = $1', [publicKey]);
+  const profile = await query('SELECT metadata FROM user_profiles WHERE public_key = $1', [
+    publicKey,
+  ]);
   if (profile.rows.length === 0) {
     throw AppError.notFound('User not found');
   }
@@ -310,7 +333,11 @@ export const getSystemHealth = asyncHandler(async (_req: Request, res: Response)
     };
     checks.push(entry);
   } catch (error) {
-    checks.push({ name: 'database', status: 'down', detail: error instanceof Error ? error.message : String(error) });
+    checks.push({
+      name: 'database',
+      status: 'down',
+      detail: error instanceof Error ? error.message : String(error),
+    });
   }
 
   // Redis connectivity
@@ -318,15 +345,24 @@ export const getSystemHealth = asyncHandler(async (_req: Request, res: Response)
     const redisStart = Date.now();
     await cacheService.get<string>('health:redis:ping');
     const redisLatency = Date.now() - redisStart;
-    checks.push({ name: 'redis', status: redisLatency < 200 ? 'ok' : 'degraded', detail: `${redisLatency}ms` });
+    checks.push({
+      name: 'redis',
+      status: redisLatency < 200 ? 'ok' : 'degraded',
+      detail: `${redisLatency}ms`,
+    });
   } catch (error) {
-    checks.push({ name: 'redis', status: 'down', detail: error instanceof Error ? error.message : String(error) });
+    checks.push({
+      name: 'redis',
+      status: 'down',
+      detail: error instanceof Error ? error.message : String(error),
+    });
   }
 
   // Stellar RPC
   try {
     const rpcResult = await sorobanService.healthCheck();
-    const detail = rpcResult.error ?? (rpcResult.latestLedger ? `ledger ${rpcResult.latestLedger}` : undefined);
+    const detail =
+      rpcResult.error ?? (rpcResult.latestLedger ? `ledger ${rpcResult.latestLedger}` : undefined);
     checks.push({
       name: 'stellar_rpc',
       status: rpcResult.connected ? 'ok' : 'down',
@@ -439,5 +475,14 @@ export const updateFeatureFlag = asyncHandler(async (req: Request, res: Response
     actor: req.user?.publicKey,
   });
 
-  res.json({ success: true, flag: { key: flag.key, name: flag.name, enabled: flag.enabled, value: flag.value, scope: flag.scope } });
+  res.json({
+    success: true,
+    flag: {
+      key: flag.key,
+      name: flag.name,
+      enabled: flag.enabled,
+      value: flag.value,
+      scope: flag.scope,
+    },
+  });
 });

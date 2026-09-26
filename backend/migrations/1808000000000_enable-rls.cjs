@@ -89,6 +89,12 @@ exports.up = (pgm) => {
     CREATE OR REPLACE FUNCTION public.dukapay_request_is_auditor()
     RETURNS boolean LANGUAGE sql STABLE
     AS $$ SELECT public.dukapay_request_claim('role') = 'auditor' $$;
+
+    -- lender is a legacy alias for pool-provider; defined explicitly so that
+    -- RLS policies can identify it without falling through to agent or borrower.
+    CREATE OR REPLACE FUNCTION public.dukapay_request_is_lender()
+    RETURNS boolean LANGUAGE sql STABLE
+    AS $$ SELECT public.dukapay_request_claim('role') = 'lender' $$;
   `);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -342,6 +348,79 @@ exports.up = (pgm) => {
       FOR SELECT
       USING (agent_public_key = public.dukapay_request_wallet());
   `);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Lender policies (issue #566).
+  //
+  // `lender` is a legacy alias for the pool-provider role that predates the
+  // `agent` naming (see rbac.ts).  Its scopes are read:loans + read:pool +
+  // write:loans, but it has no explicit borrower assignments — it should
+  // therefore see:
+  //
+  //   - Its own agent_assignments rows (same as agent).
+  //   - Read-only access to loan_history / contract_events rows for borrowers
+  //     that are explicitly assigned to it via agent_assignments (mirrors the
+  //     agent-view logic, reusing the same join table).
+  //   - Read-only access to its own agent_vaults row (pool balance).
+  //
+  // Lender intentionally cannot read scores, notifications, or compliance
+  // data; those remain behind the borrower / agent / auditor policies.
+  // ─────────────────────────────────────────────────────────────────────────
+  pgm.sql(`
+    DO $$
+    DECLARE
+      tbl text;
+      pol_name text;
+      agent_expr text;
+    BEGIN
+      -- Read-only on loan_history and contract_events for assigned borrowers.
+      FOREACH tbl IN ARRAY ARRAY['loan_history', 'contract_events'] LOOP
+        IF to_regclass('public.' || tbl) IS NOT NULL THEN
+          CASE tbl
+            WHEN 'loan_history' THEN
+              agent_expr := 'a.borrower_public_key = ' || quote_ident(tbl) || '.borrower_public_key';
+            ELSE
+              agent_expr := 'a.borrower_public_key = ' || quote_ident(tbl) || '.address';
+          END CASE;
+
+          pol_name := tbl || '_rls_lender_assigned';
+          EXECUTE format(
+            'CREATE POLICY %I ON public.%I FOR SELECT USING '
+            '(public.dukapay_request_is_lender() AND EXISTS '
+            '(SELECT 1 FROM public.agent_assignments a '
+            ' WHERE a.agent_public_key = public.dukapay_request_wallet() AND %s))',
+            pol_name, tbl, agent_expr
+          );
+        END IF;
+      END LOOP;
+
+      -- Lender may read its own agent_vault row (pool balance).
+      IF to_regclass('public.agent_vaults') IS NOT NULL
+         AND EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_schema = 'public' AND table_name = 'agent_vaults'
+                       AND column_name = 'agent_address') THEN
+        EXECUTE
+          'CREATE POLICY agent_vaults_rls_lender_own '
+          'ON public.agent_vaults FOR SELECT '
+          'USING (public.dukapay_request_is_lender() '
+          '       AND agent_address = public.dukapay_request_wallet())';
+      END IF;
+    END $$;
+  `);
+
+  // Lender may inspect its own assignment rows (same as agent).
+  pgm.sql(`
+    DO $$
+    BEGIN
+      IF to_regclass('public.agent_assignments') IS NOT NULL THEN
+        EXECUTE
+          'CREATE POLICY agent_assignments_rls_lender_own '
+          'ON public.agent_assignments FOR SELECT '
+          'USING (public.dukapay_request_is_lender() '
+          '       AND agent_public_key = public.dukapay_request_wallet())';
+      END IF;
+    END $$;
+  `);
 };
 
 /** @param pgm {import('node-pg-migrate').MigrationBuilder} */
@@ -410,5 +489,6 @@ exports.down = (pgm) => {
     DROP FUNCTION IF EXISTS public.dukapay_request_is_admin();
     DROP FUNCTION IF EXISTS public.dukapay_request_is_agent();
     DROP FUNCTION IF EXISTS public.dukapay_request_is_auditor();
+    DROP FUNCTION IF EXISTS public.dukapay_request_is_lender();
   `);
 };

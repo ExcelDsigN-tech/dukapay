@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import request from 'supertest';
 import app from '../app.js';
 import { Keypair } from '@stellar/stellar-sdk';
@@ -96,6 +96,97 @@ describe('Auth API', () => {
       const response = await request(app).post('/api/auth/login').send({}).expect(400);
 
       expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe('JWT cookie attributes', () => {
+    // The in-memory login limiter allows 5 requests/min per IP and the suites
+    // above already use the default supertest IP. X-Forwarded-For is only
+    // honoured when Express trusts the proxy, so enable it for these tests
+    // only — restoring it afterwards keeps the rate-limiting suite intact.
+    let originalTrustProxy: unknown;
+
+    const CLIENT_IP = '198.51.100.7';
+
+    beforeAll(() => {
+      originalTrustProxy = app.get('trust proxy');
+      app.set('trust proxy', 1);
+    });
+
+    afterAll(() => {
+      app.set('trust proxy', originalTrustProxy ?? false);
+    });
+
+    async function loginAndGetAccessCookie(
+      publicKey: string,
+      message: string,
+      signature: string,
+    ): Promise<string | undefined> {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .set('X-Forwarded-For', CLIENT_IP)
+        .send({ publicKey, message, signature })
+        .expect(200);
+
+      const rawSetCookie = response.headers['set-cookie'] as unknown as
+        | string[]
+        | string
+        | undefined;
+      const cookies = Array.isArray(rawSetCookie)
+        ? rawSetCookie
+        : rawSetCookie
+          ? [rawSetCookie]
+          : [];
+      const cookieName = process.env.JWT_COOKIE_NAME ?? 'dukapay_jwt';
+      return cookies.find((cookie) => cookie.startsWith(`${cookieName}=`));
+    }
+
+    it('sets an httpOnly, SameSite=Strict access cookie (no Secure outside production)', async () => {
+      const keypair = Keypair.random();
+
+      const challenge = await request(app)
+        .post('/api/auth/challenge')
+        .set('X-Forwarded-For', CLIENT_IP)
+        .send({ publicKey: keypair.publicKey() })
+        .expect(200);
+
+      const message = challenge.body.data.message as string;
+      const signature = keypair.sign(Buffer.from(message, 'utf-8')).toString('base64');
+
+      const accessCookie = await loginAndGetAccessCookie(keypair.publicKey(), message, signature);
+
+      expect(accessCookie).toBeDefined();
+      expect(accessCookie).toContain('HttpOnly');
+      expect(accessCookie).toContain('SameSite=Strict');
+      expect(accessCookie).toContain('Path=/');
+      expect(accessCookie).not.toContain('Secure');
+    });
+
+    it('adds the Secure flag to the access cookie when NODE_ENV is production', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      try {
+        const keypair = Keypair.random();
+
+        const challenge = await request(app)
+          .post('/api/auth/challenge')
+          .set('X-Forwarded-For', CLIENT_IP)
+          .send({ publicKey: keypair.publicKey() })
+          .expect(200);
+
+        const message = challenge.body.data.message as string;
+        const signature = keypair.sign(Buffer.from(message, 'utf-8')).toString('base64');
+
+        const accessCookie = await loginAndGetAccessCookie(keypair.publicKey(), message, signature);
+
+        expect(accessCookie).toBeDefined();
+        expect(accessCookie).toContain('HttpOnly');
+        expect(accessCookie).toContain('SameSite=Strict');
+        expect(accessCookie).toContain('Secure');
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+      }
     });
   });
 

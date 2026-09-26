@@ -8,13 +8,27 @@
       "netWorth": "Netong Halaga",
       "activeLoans": "Mga aktibong loan",
       "totalRemitted": "Kabuuang naipadala",
-      "yieldApy": "Kita (APY)"
+      "yieldApy": "Kita (APY)",
+      "label": "Mga Estadistika ng Portfolio",
+      "available": "{amount} available",
+      "pending": "{count} nakabinbin",
+      "transfers": "{count} padala",
+      "change": "Pagbabago: {change}",
+      "apyTooltip": "APY (Annual Percentage Yield): Ang tinatayang taunang kita sa iyong mga deposito, kasama ang compounding. Maaari itong magbago sa paglipas ng panahon.",
+      "apyInfo": "Impormasyon sa APY"
     },
     "activity": {
       "title": "Kamakailang aktibidad",
       "viewAll": "Tingnan lahat",
       "emptyTitle": "Wala pang aktibidad",
-      "empty": "Wala pang kamakailang aktibidad. Lalabas dito ang iyong mga transaksyon."
+      "empty": "Wala pang kamakailang aktibidad. Lalabas dito ang iyong mga transaksyon.",
+      "viewAllLabel": "Tingnan ang lahat ng kamakailang aktibidad",
+      "loanActive": "Aktibong Loan",
+      "loanRepaid": "Nabayarang Loan",
+      "loanRequest": "Kahilingan sa Loan",
+      "remittance": "Remittance",
+      "loanDesc": "Loan #{id}, {amount}",
+      "remittanceDesc": "Para kay {recipient}"
     },
     "quickActions": {
       "title": "Mabilis na aksyon",
@@ -26,7 +40,8 @@
     "outreach": {
       "title": "Pakikilahok sa Komunidad",
       "description": "Ang mga bagong borrower sa Ghana ay naghahanap ng mga micro-loan para sa mga kagamitang pang-agrikultura. Tulungang palaguin ang ecosystem!",
-      "explore": "Galugarin ang mga pagkakataon"
+      "explore": "Galugarin ang mga pagkakataon",
+      "exploreLabel": "Tuklasin ang mga oportunidad sa micro-loan"
     },
     "disconnected": {
       "heading": "Dashboard",
@@ -38,13 +53,17 @@
     "reminder": {
       "due": "Dapat bayaran sa loob ng {hours}h — Loan #{loanId}",
       "repayNow": "Bayaran ngayon",
-      "dismiss": "Itago ang paalala ng pagbabayad"
+      "dismiss": "Itago ang paalala ng pagbabayad",
+      "more": "+{count} pa",
+      "details": "Halagang babayaran: {amount} · Takdang araw {date}"
     },
     "creditScore": {
       "label": "Credit Score",
       "tooltip": "Credit Score: Isang on-chain na senyales ng pagiging mapagkakatiwalaan sa pagbabayad. Ang mas mataas na score ay maaaring mag-unlock ng mas magagandang kondisyon sa paglipas ng panahon.",
-      "tooltipLabel": "Impormasyon tungkol sa credit score"
-    }
+      "tooltipLabel": "Impormasyon tungkol sa credit score",
+      "empty": "Sumali sa ecosystem para makabuo ng iyong on-chain credit history."
+    },
+    "landingLabel": "Landing page ng DukaPay"
   },
   "ActivityPage": {
     "title": "Kasaysayan ng Aktibidad",
@@ -117,7 +136,10 @@
     "status": {
       "active": "Aktibo",
       "pending": "Nakabinbin"
-    }
+    },
+    "loanCount": "{count, plural, one {# loan} other {# loan}}",
+    "summary": "Ipinapakita ang {count} loan sa pahina {page}",
+    "loadError": "Hindi ma-load ang mga loan. Pakikonekta muli ang iyong wallet at subukang muli."
   },
   "Kingdom": {
     "title": "Dashboard ng Kaharian",
@@ -256,7 +278,108 @@
   },
   "Settings": {
     "language": "Wika",
-    "selectLanguage": "Piliin ang Wika"
+    "selectLanguage": "Piliin ang Wika",
+    "eyebrow": "Account",
+    "title": "Mga Setting",
+    "description": "Pamahalaan ang iyong profile, wallet, notification, at mga kagustuhan.",
+    "logout": "Mag-log out",
+    "sectionsLabel": "Mga seksyon ng setting",
+    "sections": {
+      "profile": "Profile",
+      "wallet": "Wallet",
+      "notifications": "Mga Notification",
+      "security": "Seguridad",
+      "display": "Display",
+      "gamification": "Gamification"
+    },
+    "copy": {
+      "title": "Kopyahin sa clipboard",
+      "copied": "Nakopya sa clipboard"
+    },
+    "common": {
+      "saved": "Na-save!",
+      "saving": "Sine-save...",
+      "requiredField": "Kinakailangang field"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Pamahalaan ang iyong pampublikong display name at contact info.",
+      "picture": "Larawan sa Profile",
+      "pictureSoon": "Hindi pa suportado ang avatar, malapit na.",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "hal. Maria",
+      "email": "Email (opsyonal)",
+      "emailHelper": "Ginagamit lang para sa email notification. Hindi kailanman ibinabahagi sa publiko.",
+      "save": "I-save ang Profile",
+      "emailPlaceholder": "ikaw@example.com"
+    },
+    "wallet": {
+      "title": "Wallet",
+      "description": "Ang iyong nakakonektang Stellar wallet at mga setting ng network.",
+      "connectedAddress": "Nakakonektang Address",
+      "network": "Network",
+      "unknownNetwork": "Hindi alam",
+      "supported": "Suportado",
+      "unsupported": "Hindi suportado",
+      "disconnect": "Idiskonekta ang Wallet",
+      "signOut": "Mag-sign Out",
+      "notConnected": "Walang nakakonektang wallet."
+    },
+    "notifications": {
+      "title": "Mga Notification",
+      "description": "Piliin kung aling mga event ang gusto mong maabisuhan at kung paano.",
+      "delivery": "Paraan ng Pagpapadala",
+      "events": "Mga Event",
+      "inApp": "Mga In-App Notification",
+      "inAppDescription": "Ipakita ang mga notification sa loob ng DukaPay",
+      "email": "Mga Email Notification",
+      "emailDescription": "Kailangan ng na-verify na email address",
+      "sms": "Mga SMS Notification",
+      "smsDescription": "Kailangan ng na-verify na numero ng telepono",
+      "phone": "Numero ng telepono",
+      "phoneRequired": "Kailangan ng numero ng telepono para sa SMS notification.",
+      "phoneOptional": "Opsyonal maliban kung naka-on ang SMS notification.",
+      "phoneInvalid": "Maglagay ng wastong numero ng telepono.",
+      "loanApproved": "Naaprubahan ang Loan",
+      "loanApprovedDescription": "Kapag naaprubahan ang iyong loan application",
+      "repaymentDue": "Takdang Bayad",
+      "repaymentDueDescription": "Paalala bago ang takdang araw ng bayad",
+      "repaymentConfirmed": "Nakumpirma ang Bayad",
+      "repaymentConfirmedDescription": "Kapag naitala on-chain ang isang bayad",
+      "loanDefaulted": "Na-default ang Loan",
+      "loanDefaultedDescription": "Kapag minarkahang default ang isang loan",
+      "scoreChanged": "Nagbago ang Credit Score",
+      "scoreChangedDescription": "Kapag tumaas o bumaba ang iyong score",
+      "loadError": "Hindi ma-load ang mga setting ng notification.",
+      "save": "I-save ang mga Kagustuhan"
+    },
+    "security": {
+      "title": "Seguridad",
+      "description": "Pamamahala ng session at API access para sa developer.",
+      "activeSession": "Aktibong Session",
+      "started": "Nagsimula",
+      "kycStatus": "Status ng KYC",
+      "verified": "Na-verify",
+      "notVerified": "Hindi na-verify",
+      "token": "JWT Session Token",
+      "showToken": "Ipakita ang session token",
+      "hideToken": "Itago ang session token",
+      "show": "Ipakita",
+      "hide": "Itago",
+      "tokenHelper": "May bisa sa loob ng 24 na oras. Ilihim ito, nagbibigay ito ng buong API access."
+    },
+    "display": {
+      "title": "Display",
+      "description": "Mga kagustuhan sa itsura at wika.",
+      "theme": "Tema",
+      "themeHelper": "Pumili ng kagustuhan: Light / Dark / System",
+      "themes": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "languageHelper": "Pinapalitan ang wika sa buong DukaPay at tatandaan ito sa susunod mong pagbisita."
+    }
   },
   "LoanDetails": {
     "actions": {
@@ -304,10 +427,130 @@
       "extraLedgers": "Dagdag na ledgers",
       "newDueDate": "Bagong due date",
       "submit": "I-build, Pirmahan at Isumite"
+    },
+    "loadError": "Hindi makuha ang detalye ng loan. Pakisubukang muli.",
+    "notFound": {
+      "title": "Hindi nahanap ang loan",
+      "description": "Hindi mahanap ang Loan #{id}. Maaaring natanggal na ito o mali ang ID.",
+      "back": "Bumalik sa mga loan"
+    },
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "home": "Home",
+      "loans": "Mga Loan"
+    },
+    "loanNumber": "Loan #{id}",
+    "eyebrow": "Portal ng Nanghihiram",
+    "description": "Subaybayan ang iskedyul ng bayad, mga tuntunin ng nagpapahiram, at ang kasalukuyang natitirang balanse ng loan na ito.",
+    "realtime": {
+      "connected": "Live na update ng loan",
+      "polling": "Nagche-check habang kumokonekta muli",
+      "disconnected": "Pansamantalang hindi available ang realtime",
+      "connecting": "Kumokonekta sa live na update"
+    },
+    "exportCsv": "I-export ang CSV",
+    "meta": {
+      "interestRate": "Interest rate:",
+      "requested": "Hiniling:",
+      "approved": "Naaprubahan:"
+    },
+    "plan": {
+      "title": "Plano ng pagbabayad",
+      "principal": "Principal",
+      "interestAccrued": "Naipong interes",
+      "totalRepaid": "Kabuuang nabayaran",
+      "totalOwed": "Kabuuang utang"
+    },
+    "timeline": {
+      "title": "Timeline ng pagbabayad",
+      "error": "Hindi ma-load ang mga event ng loan.",
+      "empty": "Wala pang naitalang event para sa loan."
+    },
+    "amortization": {
+      "title": "Iskedyul ng Amortization",
+      "description": "Tingnan ang principal, interes, at natitirang balanse sa bawat panahon ng pagbabayad.",
+      "unavailable": "Hindi available ngayon ang iskedyul ng amortization para sa loan na ito."
+    },
+    "nextPayment": {
+      "title": "Susunod na bayad",
+      "overdue": "Lampas na sa takdang araw",
+      "tomorrow": "Takdang bayad bukas",
+      "days": "{days} araw"
+    },
+    "nextAction": {
+      "title": "Susunod na hakbang",
+      "description": "Magbayad bago ang susunod na takdang araw para patuloy na tumaas ang iyong score.",
+      "makePayment": "Magbayad",
+      "latestTransaction": "Pinakabagong transaksyon"
+    },
+    "collateral": {
+      "title": "Status ng collateral",
+      "liquidated": "Na-liquidate ang collateral matapos bumaba ang posisyon sa ilalim ng collateral threshold.",
+      "defaulted": "Nakumpiska na ang collateral.",
+      "repaid": "Na-release ang collateral, buong nabayaran na ang loan.",
+      "held": "Nakatago sa escrow ang collateral habang tumatakbo ang loan na ito."
     }
   },
   "Lend": {
-    "cooldownActive": "Available ang withdraw sa humigit-kumulang {minutes} minuto habang aktibo ang cooldown."
+    "cooldownActive": "Available ang withdraw sa humigit-kumulang {minutes} minuto habang aktibo ang cooldown.",
+    "disconnected": {
+      "title": "Dashboard ng Nagpapahiram",
+      "description": "Ikonekta ang iyong wallet para makita ang iyong portfolio sa lending pool."
+    },
+    "loadError": "Hindi ma-load ang data ng dashboard ng nagpapahiram. Pakisubukang muli.",
+    "eyebrow": "Portal ng Nagpapahiram",
+    "title": "Magpahiram",
+    "description": "Subaybayan ang performance ng pool, pamahalaan ang mga deposito, at bantayan ang paglago ng kita.",
+    "live": {
+      "connectedTitle": "Nakakonekta ang live na update ng pool",
+      "connectingTitle": "Kumokonekta sa live na update…",
+      "pollingTitle": "Naputol ang live na update, nagche-check habang kumokonekta muli",
+      "offlineTitle": "Nadiskonekta ang live na update, sinusubukang muli",
+      "connected": "Live",
+      "connecting": "Kumokonekta…",
+      "polling": "Kumokonekta muli…",
+      "offline": "Offline"
+    },
+    "stats": {
+      "poolSize": "Kabuuang Laki ng Pool",
+      "utilization": "Utilization Rate",
+      "utilizationTooltip": "Utilization Rate: Gaano kalaki sa pool ang kasalukuyang naipahiram. Mas mataas na utilization ay maaaring magpataas ng kita, pero maaaring magpababa ng agarang liquidity.",
+      "apy": "Kasalukuyang APY",
+      "apyTooltip": "APY (Annual Percentage Yield): Ang tinatayang taunang kita sa deposito, kasama ang compounding. Maaari itong magbago depende sa utilization ng pool at mga bayad.",
+      "activeLoans": "Mga Aktibong Loan",
+      "info": "Impormasyon tungkol sa {label}"
+    },
+    "deposits": {
+      "title": "Aking mga Deposito",
+      "deposited": "Halagang Nai-deposito",
+      "share": "Bahagi sa Pool",
+      "earnings": "Tinatayang Kita"
+    },
+    "form": {
+      "title": "Mag-deposito / Mag-withdraw",
+      "depositAmount": "Halaga ng Deposito",
+      "withdrawAmount": "Halaga ng Withdrawal",
+      "decimalsHelper": "Hanggang {decimals} decimal place ang suportado.",
+      "deposit": "Mag-deposito",
+      "depositing": "Nagde-deposito...",
+      "withdraw": "Mag-withdraw",
+      "withdrawing": "Nagwi-withdraw..."
+    },
+    "portfolio": {
+      "title": "Portfolio ng Loan",
+      "description": "Read-only na view ng mga loan na kasalukuyang pinopondohan ng pool.",
+      "loanNumber": "Loan #{id}",
+      "borrower": "Nanghihiram: {id}",
+      "apr": "{rate}% APR",
+      "termDays": "{days} araw",
+      "view": "Tingnan",
+      "emptyTitle": "Wala pang aktibong loan na pinondohan ng pool",
+      "emptyDescription": "Lalabas dito ang mga aktibong loan na pinondohan ng pool kapag gumamit na ang mga nanghihiram ng available na liquidity."
+    },
+    "yield": {
+      "emptyTitle": "Wala pang kasaysayan ng kita",
+      "emptyDescription": "Lalabas dito ang performance ng kita kapag nakapagtala na ang pool ng mga deposito, loan, at kita."
+    }
   },
   "Liquidations": {
     "eyebrow": "Console ng Liquidator",
@@ -403,6 +646,170 @@
       "title": "Kunin ang iyong lugar sa loob ng Citadel",
       "subtitle": "Ikonekta ang iyong wallet para makakuha ng access.",
       "cta": "Kunin ang Access"
+    }
+  },
+  "RemittanceForm": {
+    "title": "Magpadala ng Remittance",
+    "recipient": {
+      "label": "Address ng Tatanggap",
+      "placeholder": "G... (Stellar public key)",
+      "helper": "Ilagay ang Stellar public key ng tatanggap (56 na character na nagsisimula sa G)"
+    },
+    "token": {
+      "label": "Token",
+      "helper": "Piliin ang currency para sa remittance"
+    },
+    "amount": {
+      "label": "Halaga",
+      "decimalsHelper": "Hanggang {decimals} decimal place ang suportado."
+    },
+    "requiredField": "Kinakailangang field",
+    "memo": {
+      "label": "Memo",
+      "optional": "(opsyonal)",
+      "placeholder": "Magdagdag ng tala para sa tatanggap (hanggang 28 character)",
+      "counter": "{count}/28 character"
+    },
+    "errors": {
+      "recipientRequired": "Kailangan ang address ng tatanggap",
+      "recipientInvalid": "Hindi wastong format ng Stellar address (dapat 56 na character na nagsisimula sa G)",
+      "amountRequired": "Kailangan ang halaga",
+      "amountPositive": "Dapat mas malaki sa 0 ang halaga",
+      "memoTooLong": "Dapat 28 character o mas kaunti ang memo"
+    },
+    "warning": {
+      "title": "Bago magpadala:",
+      "checkAddress": "Suriing muli ang address ng tatanggap",
+      "reviewPreview": "Suriin ang preview ng transaksyon",
+      "checkBalance": "Tiyaking sapat ang iyong balanse"
+    },
+    "processing": "Pinoproseso...",
+    "reviewAndSend": "Suriin at Ipadala",
+    "about": {
+      "title": "Tungkol sa mga Remittance",
+      "creditScore": "Nakakatulong ang mga remittance sa pagbuo ng iyong credit score",
+      "secured": "Ligtas ang pondo sa Stellar blockchain",
+      "fast": "Karaniwang nakukumpirma ang mga transaksyon sa loob ng ilang segundo"
+    },
+    "toast": {
+      "validationTitle": "Error sa Validation",
+      "validationDescription": "Pakiayos ang mga error sa form",
+      "successTitle": "Tagumpay!",
+      "successDescription": "Matagumpay na naipadala ang remittance",
+      "errorTitle": "Error",
+      "errorFallback": "Hindi naipadala ang remittance"
+    }
+  },
+  "SendRemittance": {
+    "back": "Bumalik",
+    "title": "Magpadala ng Remittance",
+    "subtitle": "Magpadala ng pondo saanman sa mundo gamit ang Stellar blockchain",
+    "connectWallet": "⚠️ Ikonekta ang iyong Stellar wallet para makapagpadala ng remittance",
+    "success": "✓ Matagumpay na naipadala ang remittance! Inililipat ka sa pahina ng mga remittance...",
+    "faq": {
+      "title": "Mga Madalas Itanong",
+      "address": {
+        "q": "Ano ang Stellar address?",
+        "a": "Ang Stellar address ay isang public key na may 56 na character na natatanging tumutukoy sa isang Stellar account. Palagi itong nagsisimula sa letrang 'G' at ginagamit para tumanggap ng bayad sa Stellar network."
+      },
+      "duration": {
+        "q": "Gaano katagal ang isang remittance?",
+        "a": "Karaniwang nakukumpirma ang mga transaksyon sa Stellar sa loob ng 3-5 segundo. Lalabas ang iyong remittance sa account ng tatanggap halos kaagad pagkatapos makumpirma sa blockchain."
+      },
+      "fees": {
+        "q": "May bayad ba sa transaksyon?",
+        "a": "Napakaliit ng bayad sa Stellar network (karaniwang 0.00001 XLM bawat operasyon). Maaaring may dagdag na bayad depende sa iyong service provider. Suriin ang preview ng transaksyon bago kumpirmahin."
+      },
+      "creditScore": {
+        "q": "Nakakatulong ba ang remittance sa aking credit score?",
+        "a": "Oo! Bawat matagumpay na remittance ay nagpapakita ng aktibidad sa pananalapi at tumutulong bumuo ng iyong on-chain credit history, na maaaring magpataas ng iyong credit score at kwalipikasyon sa loan."
+      },
+      "wrongAddress": {
+        "q": "Paano kung mali ang address na nailagay ko?",
+        "a": "Palaging suriing mabuti ang address ng tatanggap bago kumpirmahin. Sa preview ng transaksyon, makikita mo ang address ng tatanggap bago magpadala. Kapag naipadala na sa blockchain, hindi na maibabalik ang transaksyon."
+      }
+    },
+    "needHelp": "Kailangan ng tulong?",
+    "contactSupport": "Makipag-ugnayan sa Support sa Telegram"
+  },
+  "RepayLoan": {
+    "eyebrow": "Portal ng Nanghihiram",
+    "title": "Bayaran ang Loan #{id}",
+    "description": "Real-time na settlement sa blockchain para sa iyong mga bayad sa loan.",
+    "amountLabel": "Halaga ng bayad",
+    "decimalsHelper": "Hanggang {decimals} decimal place ang suportado.",
+    "submit": "Suriin at Magbayad",
+    "preview": {
+      "operation": "Bayaran ang Loan",
+      "description": "Nagbabayad ng {amount} para sa loan #{id}"
+    },
+    "toast": {
+      "walletTitle": "Walang nakakonektang wallet",
+      "walletMessage": "Pakikonekta muna ang iyong wallet.",
+      "amountTitle": "Hindi wastong halaga",
+      "amountMessage": "Maglagay ng halaga ng bayad na higit sa zero.",
+      "precisionTitle": "Hindi wastong precision",
+      "pending": "Naipadala ang transaksyon ng bayad",
+      "success": "Nakumpirma ang bayad"
+    },
+    "tracker": {
+      "idleTitle": "Handa nang magbayad",
+      "cancelledTitle": "Kinansela ang bayad",
+      "cancelledMessage": "Kinansela mo ang proseso ng pagbabayad.",
+      "cancelledGuidance": "Walang naipadalang bayad. I-update ang halaga at subukang muli.",
+      "signingTitle": "Hinihintay ang kumpirmasyon ng wallet",
+      "signingMessage": "Aprubahan ang transaksyon ng bayad sa iyong wallet.",
+      "submittingTitle": "Ipinapadala ang bayad",
+      "submittingMessage": "Ipinapadala ang transaksyon ng bayad sa network.",
+      "successTitle": "Naitala ang bayad",
+      "successMessage": "Naipadala at nakumpirma ang iyong bayad."
+    }
+  },
+  "WalletPage": {
+    "eyebrow": "Aking Wallet",
+    "title": "Wallet",
+    "connectPrompt": "Ikonekta ang iyong Stellar wallet para makita ang iyong balanse at kasaysayan ng transaksyon.",
+    "qr": {
+      "show": "Ipakita ang QR Code",
+      "hide": "Itago ang QR Code"
+    },
+    "address": {
+      "title": "Stellar Address",
+      "unknownNetwork": "Hindi kilalang network",
+      "viewOnExplorer": "Tingnan sa Explorer"
+    },
+    "balances": {
+      "title": "Balanse ng mga Token",
+      "refresh": "I-refresh",
+      "refreshLabel": "I-refresh ang balanse ng mga token",
+      "source": "Live mula sa Stellar Horizon",
+      "error": "Hindi ma-load ang balanse mula sa Horizon.",
+      "empty": "Walang nahanap na balanse para sa account na ito.",
+      "unknownAsset": "Hindi alam"
+    },
+    "history": {
+      "title": "Kasaysayan ng Transaksyon",
+      "description": "Mga kamakailang bayad mula sa Stellar Horizon",
+      "exportCsv": "I-export ang CSV",
+      "error": "Hindi ma-load ang kasaysayan ng transaksyon mula sa Horizon.",
+      "empty": "Walang nahanap na transaksyon.",
+      "viewOnExplorer": "Tingnan sa Stellar Explorer",
+      "summary": "Ipinapakita ang {count} transaksyon sa pahina {page}",
+      "types": {
+        "received": "Natanggap",
+        "sent": "Naipadala",
+        "accountCreated": "Nagawa ang Account",
+        "pathPayment": "Path Payment"
+      }
+    },
+    "quickActions": {
+      "title": "Mabilis na Aksyon",
+      "deposit": "Mag-deposito sa Pool",
+      "depositDesc": "Kumita sa pagbibigay ng liquidity",
+      "withdraw": "Mag-withdraw mula sa Pool",
+      "withdrawDesc": "I-withdraw ang iyong deposito + kita",
+      "loans": "Tingnan ang mga Loan",
+      "loansDesc": "Pamahalaan ang mga aktibong loan at bayad"
     }
   }
 }

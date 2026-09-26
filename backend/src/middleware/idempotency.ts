@@ -10,9 +10,58 @@ interface CachedResponse {
 }
 
 /**
+ * Circuit breaker for Redis operations in idempotency middleware.
+ * Trips when consecutive failures exceed threshold to avoid cascading timeouts.
+ */
+export class IdempotencyCircuitBreaker {
+  private failureCount = 0;
+  private lastFailureTime = 0;
+  private readonly threshold: number;
+  private readonly resetTimeoutMs: number;
+
+  constructor(threshold = 3, resetTimeoutMs = 30_000) {
+    this.threshold = threshold;
+    this.resetTimeoutMs = resetTimeoutMs;
+  }
+
+  isOpen(): boolean {
+    if (this.failureCount >= this.threshold) {
+      const now = Date.now();
+      if (now - this.lastFailureTime < this.resetTimeoutMs) {
+        return true;
+      }
+      // Half-open: allow a single attempt through after timeout
+      return false;
+    }
+    return false;
+  }
+
+  recordSuccess(): void {
+    this.failureCount = 0;
+  }
+
+  recordFailure(): void {
+    this.failureCount += 1;
+    this.lastFailureTime = Date.now();
+  }
+
+  reset(): void {
+    this.failureCount = 0;
+    this.lastFailureTime = 0;
+  }
+
+  getFailures(): number {
+    return this.failureCount;
+  }
+}
+
+export const idempotencyCircuitBreaker = new IdempotencyCircuitBreaker();
+
+/**
  * Middleware to handle Idempotency-Key headers.
  * If the key is present and a cached response exists, it returns the cached response.
  * Otherwise, it intercepts the response, captures it, and stores it in Redis.
+ * If Redis is unavailable or fails, returns 503 Service Unavailable to prevent duplicate execution.
  */
 export const idempotencyMiddleware = async (
   req: Request,
@@ -25,9 +74,26 @@ export const idempotencyMiddleware = async (
     return next();
   }
 
+  // Check circuit breaker before attempting Redis access
+  if (idempotencyCircuitBreaker.isOpen()) {
+    logger.error('Alert: Idempotency circuit breaker is open, rejecting request with 503', {
+      key,
+      url: req.originalUrl,
+      method: req.method,
+      consecutiveFailures: idempotencyCircuitBreaker.getFailures(),
+    });
+    res.status(503).json({
+      error: 'Service Unavailable',
+      message: 'Idempotency service temporarily unavailable. Please retry later.',
+    });
+    return;
+  }
+
   try {
     const cacheKey = `idemp:${key}`;
     const cached = await cacheService.get<CachedResponse>(cacheKey);
+
+    idempotencyCircuitBreaker.recordSuccess();
 
     if (cached) {
       logger.info(`Idempotency hit for key: ${key}`, {
@@ -37,7 +103,6 @@ export const idempotencyMiddleware = async (
 
       // X-Idempotent-Replayed: true signals to the client that this response
       // is a cached replay of a prior request, not a fresh execution.
-      // Clients can use this to de-duplicate toasts and avoid double-counting.
       res
         .status(cached.status)
         .set('X-Idempotency-Cache', 'HIT')
@@ -92,15 +157,29 @@ export const idempotencyMiddleware = async (
             },
             IDEMPOTENCY_TTL,
           );
+          idempotencyCircuitBreaker.recordSuccess();
         } catch (error) {
-          logger.error(`Error caching idempotency key ${key}`, { error });
+          idempotencyCircuitBreaker.recordFailure();
+          logger.error(`Alert: Error caching idempotency key in Redis: ${key}`, {
+            error: error instanceof Error ? error.message : String(error),
+            key,
+          });
         }
       }
     });
 
     next();
   } catch (error) {
-    logger.error('Error in idempotency middleware', { error, key });
-    next();
+    idempotencyCircuitBreaker.recordFailure();
+    logger.error('Alert: Redis failure in idempotency middleware', {
+      error: error instanceof Error ? error.message : String(error),
+      key,
+      url: req.originalUrl,
+      method: req.method,
+    });
+    res.status(503).json({
+      error: 'Service Unavailable',
+      message: 'Idempotency service temporarily unavailable. Please retry later.',
+    });
   }
 };

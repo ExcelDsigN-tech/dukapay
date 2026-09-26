@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { signTransaction } from "@stellar/freighter-api";
 import { submitLoanTransaction } from "../../../hooks/useApi";
 import { Button } from "../../../components/ui/Button";
@@ -30,6 +31,7 @@ import {
 } from "../../../utils/amount";
 
 export default function RepayLoanPage() {
+  const t = useTranslations("RepayLoan");
   const params = useParams<{ loanId: string }>();
   const loanId = params?.loanId ?? "unknown";
   const router = useRouter();
@@ -43,7 +45,7 @@ export default function RepayLoanPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [trackerState, setTrackerState] = useState<TransactionStatusState>("idle");
-  const [trackerTitle, setTrackerTitle] = useState("Ready to repay");
+  const [trackerTitle, setTrackerTitle] = useState(() => t("tracker.idleTitle"));
   const [trackerMessage, setTrackerMessage] = useState("");
   const [trackerGuidance, setTrackerGuidance] = useState<string | undefined>(undefined);
   const [trackerTxHash, setTrackerTxHash] = useState<string | null>(null);
@@ -56,24 +58,24 @@ export default function RepayLoanPage() {
 
   const cancelFlow = () => {
     setTrackerState("cancelled");
-    setTrackerTitle("Repayment cancelled");
-    setTrackerMessage("You cancelled the repayment flow.");
-    setTrackerGuidance("No payment was submitted. Update the amount and try again.");
+    setTrackerTitle(t("tracker.cancelledTitle"));
+    setTrackerMessage(t("tracker.cancelledMessage"));
+    setTrackerGuidance(t("tracker.cancelledGuidance"));
     setIsSubmitting(false);
   };
 
   const handleRepayClick = async (event: FormEvent) => {
     event.preventDefault();
     if (!isWalletConnected || !walletAddress) {
-      toast.error("Wallet not connected", "Please connect your wallet first.");
+      toast.error(t("toast.walletTitle"), t("toast.walletMessage"));
       return;
     }
     if (!amount || Number.isNaN(amountNumber) || amountNumber <= 0) {
-      toast.error("Invalid amount", "Enter a repayment amount greater than zero.");
+      toast.error(t("toast.amountTitle"), t("toast.amountMessage"));
       return;
     }
     if (precisionError) {
-      toast.error("Invalid precision", precisionError);
+      toast.error(t("toast.precisionTitle"), precisionError);
       return;
     }
 
@@ -97,8 +99,8 @@ export default function RepayLoanPage() {
         {
           operations: [
             {
-              type: "Repay Loan",
-              description: `Repaying ${amountNumber} for loan #${loanId}`,
+              type: t("preview.operation"),
+              description: t("preview.description", { amount: amountNumber, id: loanId }),
               amount: amountNumber.toString(),
               token: "USDC", // Assuming USDC for now
             },
@@ -131,8 +133,8 @@ export default function RepayLoanPage() {
     let toastId: string | number | null = null;
     try {
       setTrackerState("signing");
-      setTrackerTitle("Awaiting wallet confirmation");
-      setTrackerMessage("Approve the repayment transaction in your wallet.");
+      setTrackerTitle(t("tracker.signingTitle"));
+      setTrackerMessage(t("tracker.signingMessage"));
 
       const signResult = await signTransaction(unsignedXdr, {
         networkPassphrase: "Test SDF Network ; September 2015",
@@ -144,20 +146,20 @@ export default function RepayLoanPage() {
       }
 
       setTrackerState("submitting");
-      setTrackerTitle("Submitting repayment");
-      setTrackerMessage("Sending repayment transaction to the network.");
-      toastId = toast.showPending("Repayment transaction submitted");
+      setTrackerTitle(t("tracker.submittingTitle"));
+      setTrackerMessage(t("tracker.submittingMessage"));
+      toastId = toast.showPending(t("toast.pending"));
 
       const result = await submitLoanTransaction(signResult.signedTxXdr);
 
       if (result.status === "SUCCESS") {
         setTrackerTxHash(result.txHash);
         setTrackerState("success");
-        setTrackerTitle("Repayment recorded");
-        setTrackerMessage("Your repayment was submitted and confirmed.");
+        setTrackerTitle(t("tracker.successTitle"));
+        setTrackerMessage(t("tracker.successMessage"));
 
         toast.showSuccess(toastId!, {
-          successMessage: "Repayment confirmed",
+          successMessage: t("toast.success"),
           txHash: result.txHash,
         });
 
@@ -189,14 +191,12 @@ export default function RepayLoanPage() {
     <section className="mx-auto max-w-3xl space-y-6">
       <header>
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">
-          Borrower Portal
+          {t("eyebrow")}
         </p>
         <h1 className="mt-3 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-          Repay Loan #{loanId}
+          {t("title", { id: loanId })}
         </h1>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Real-time blockchain settlement for your loan repayments.
-        </p>
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{t("description")}</p>
       </header>
 
       <form
@@ -208,7 +208,7 @@ export default function RepayLoanPage() {
             htmlFor="repayment-amount"
             className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
           >
-            Repayment amount
+            {t("amountLabel")}
           </label>
           <input
             id="repayment-amount"
@@ -232,7 +232,7 @@ export default function RepayLoanPage() {
               precisionError ? "text-red-600 dark:text-red-400" : "text-zinc-500 dark:text-zinc-400"
             }`}
           >
-            {precisionError ?? helperText ?? `Up to ${decimals} decimal places supported.`}
+            {precisionError ?? helperText ?? t("decimalsHelper", { decimals })}
           </p>
         </div>
 
@@ -242,7 +242,7 @@ export default function RepayLoanPage() {
           isLoading={isSubmitting}
           disabled={!!precisionError}
         >
-          Review & Repay
+          {t("submit")}
         </Button>
       </form>
 

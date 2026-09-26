@@ -1,7 +1,7 @@
 use crate::{AgentRegistry, AgentRegistryClient, AgentStatus, RegistryError};
 use proptest::prelude::*;
 use soroban_sdk::testutils::{Address as _, Events as _};
-use soroban_sdk::{Address, Env, FromVal, Symbol};
+use soroban_sdk::{Address, BytesN, Env, FromVal, IntoVal, Symbol};
 
 fn setup() -> (Env, AgentRegistryClient<'static>, Address, Address) {
     let env = Env::default();
@@ -164,4 +164,52 @@ proptest! {
         client.register(&a, &kycs(&env), &region(&env), &bond, &cap);
         prop_assert_eq!(client.get_agent(&a).bond_amount, bond);
     }
+// ── Upgrade (issue #501) ─────────────────────────────────────────────────────
+
+fn create_upgrade_hash(env: &Env) -> BytesN<32> {
+    BytesN::from_array(env, &[7u8; 32])
+}
+
+#[test]
+fn test_version_is_initialized() {
+    let (_env, client, _owner, _op) = setup();
+    assert_eq!(client.version(), 1);
+}
+
+#[test]
+#[should_panic]
+fn test_upgrade_requires_owner_auth() {
+    let (env, client, _owner, _op) = setup();
+    // Clear the blanket auth mock from `setup`, so the owner's `require_auth`
+    // is actually enforced and the upgrade must be rejected.
+    env.mock_auths(&[]);
+    client.upgrade(&create_upgrade_hash(&env));
+}
+
+#[test]
+#[should_panic]
+fn test_upgrade_rejects_unauthorized_signer() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let operator = Address::generate(&env);
+    let outsider = Address::generate(&env);
+
+    let id = env.register(AgentRegistry, ());
+    let client = AgentRegistryClient::new(&env, &id);
+    env.mock_all_auths();
+    client.init(&owner, &operator);
+
+    let hash = create_upgrade_hash(&env);
+    // Only the outsider is authorized; the owner never authorized this call,
+    // so `owner.require_auth()` must reject it.
+    env.mock_auths(&[soroban_sdk::testutils::MockAuth {
+        address: &outsider,
+        invoke: &soroban_sdk::testutils::MockAuthInvoke {
+            contract: &id,
+            fn_name: "upgrade",
+            args: (hash.clone(),).into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+    client.upgrade(&hash);
 }

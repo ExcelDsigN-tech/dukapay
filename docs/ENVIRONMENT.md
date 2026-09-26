@@ -50,6 +50,7 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `REMITTANCE_NFT_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed remittance NFT contract address | `backend/src/config/contracts.ts` |
 | `LENDING_POOL_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed lending pool contract address | `backend/src/config/stellar.ts` |
 | `MULTISIG_GOVERNANCE_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed multisig governance contract address | `backend/src/config/contracts.ts` |
+| `SETTLEMENT_NETTER_CONTRACT_ID` | — | — | — | — | Settlement netter contract address (optional; contract not yet in repo, reported by `/version`) | `backend/src/app.ts` |
 | `POOL_TOKEN_ADDRESS` | ✓ | ✓ | ✓ | — | Pool token contract address | `backend/src/config/stellar.ts` |
 | `AGENT_REGISTRY_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed agent registry contract address | `scripts/deploy.ts` |
 | `AGENT_VAULT_CONTRACT_ID` | ✓ | ✓ | ✓ | — | Deployed agent vault contract address | `scripts/deploy.ts` |
@@ -89,6 +90,8 @@ stricter rate limit (10 requests/minute/IP) to prevent abuse.
 | `AUDITOR_WALLETS` | ✓ | ✓ | ✓ | — | Comma-separated Stellar public keys granted the read-only `auditor` role. Unlisted wallets default to `borrower`. | `backend/src/auth/rbac.ts` |
 | `EXPOSE_STACK_TRACES` | — | — | — | `false` | When `"true"`, include stack traces in error responses. **Never enable in production.** | `backend/src/middleware/errorHandler.ts` |
 | `JWT_COOKIE_NAME` | ✓ | ✓ | ✓ | `dukapay_jwt` | Name of the HTTP cookie used to transport the JWT token | `backend/src/middleware/jwtAuth.ts` |
+| `WEBHOOK_SECRET` | — | ✓ | ✓ | — | Primary HMAC secret for signing outbound webhooks (`x-dukapay-signature`) | `backend/src/services/webhookService.ts` |
+| `WEBHOOK_ROTATION_SECRETS` | — | — | — | — | Comma-separated previous secrets still accepted during key rotation | `backend/src/services/webhookService.ts` |
 | `WEBHOOK_REQUEST_TIMEOUT_MS` | ✓ | ✓ | ✓ | `30000` | Outgoing webhook request timeout | `backend/src/services/webhookService.ts` |
 | `INDEXER_FINALITY_DEPTH` | ✓ | ✓ | ✓ | `5` | Number of confirmed ledgers before an event is considered final | `backend/src/config/indexer.ts` |
 | `INDEXER_LAG_ALERT_THRESHOLD` | ✓ | ✓ | ✓ | `100` | Ledger lag threshold that triggers an alert | `backend/src/config/indexer.ts` |

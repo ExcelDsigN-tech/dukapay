@@ -43,3 +43,11 @@ pub fn invariant_checked(env: &Env, agent: &Address, holds: bool, float: i128, m
     let topics = (Symbol::new(env, "InvariantChecked"), agent.clone());
     env.events().publish(topics, (holds, float, max_allowed));
 }
+
+pub fn contract_upgraded(env: &Env, old_version: u32, new_version: u32) {
+    // Same topic and payload as the other DukaPay contracts' upgrade event.
+    env.events().publish(
+        (Symbol::new(env, "ContractUpgraded"),),
+        (old_version, new_version),
+    );
+}

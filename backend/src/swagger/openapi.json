@@ -72,6 +72,115 @@
           "message"
         ]
       },
+      "AgentDashboard": {
+        "type": "object",
+        "properties": {
+          "agentPublicKey": {
+            "type": "string"
+          },
+          "floatUtilization": {
+            "type": "object",
+            "properties": {
+              "totalFloat": {
+                "type": "number"
+              },
+              "allocated": {
+                "type": "number"
+              },
+              "utilizationPct": {
+                "type": "number"
+              }
+            }
+          },
+          "earnings": {
+            "type": "object",
+            "properties": {
+              "daily": {
+                "type": "number"
+              },
+              "weekly": {
+                "type": "number"
+              },
+              "monthly": {
+                "type": "number"
+              },
+              "total": {
+                "type": "number"
+              }
+            }
+          },
+          "borrowerPortfolio": {
+            "type": "object",
+            "properties": {
+              "totalLoans": {
+                "type": "integer"
+              },
+              "activeLoans": {
+                "type": "integer"
+              },
+              "defaultedLoans": {
+                "type": "integer"
+              },
+              "totalOutstanding": {
+                "type": "number"
+              },
+              "byStatus": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "pendingSettlements": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "totalValue": {
+                "type": "number"
+              }
+            }
+          },
+          "collateralRatio": {
+            "type": "object",
+            "properties": {
+              "totalCollateral": {
+                "type": "number"
+              },
+              "totalDebt": {
+                "type": "number"
+              },
+              "ratio": {
+                "type": "number"
+              }
+            }
+          },
+          "recentTransactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "loanId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "timestamp": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        }
+      },
       "SimpleSuccessResponse": {
         "type": "object",
         "properties": {
@@ -3097,6 +3206,49 @@
           },
           "404": {
             "description": "Flag not found"
+          }
+        }
+      }
+    },
+    "/agents/dashboard": {
+      "get": {
+        "summary": "Get agent dashboard metrics",
+        "tags": [
+          "Agent"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent dashboard data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDashboard"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/dashboard/cache": {
+      "delete": {
+        "summary": "Clear agent dashboard cache",
+        "tags": [
+          "Agent"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cache cleared"
           }
         }
       }

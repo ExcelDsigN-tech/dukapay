@@ -19,7 +19,7 @@ import {
 } from "@tanstack/react-query";
 import { LoanStatusBadge, type LoanStatus } from "../components/ui/LoanStatusBadge";
 import { useUserStore } from "../stores/useUserStore";
-import { isJwtExpired, logoutUser, SessionExpiredError } from "../lib/session";
+import { logoutUser, SessionExpiredError } from "../lib/session";
 import { useWallet } from "../components/providers/WalletProvider";
 import { useContractToast } from "./useContractToast";
 
@@ -59,6 +59,17 @@ export const queryKeys = {
   notifications: {
     all: () => ["notifications"] as const,
     list: (params: Record<string, unknown>) => ["notifications", params] as const,
+  },
+  adminUsers: {
+    all: () => ["admin", "users"] as const,
+    list: (params: Record<string, unknown>) => ["admin", "users", params] as const,
+    detail: (publicKey: string) => ["admin", "users", publicKey] as const,
+  },
+  adminSystemHealth: {
+    all: () => ["admin", "system", "health"] as const,
+  },
+  adminFeatureFlags: {
+    all: () => ["admin", "feature-flags"] as const,
   },
   adminDisputes: {
     all: () => ["admin", "disputes"] as const,
@@ -140,11 +151,74 @@ export class ApiRequestError extends Error {
   }
 }
 
+// ─── CSRF (double-submit cookie) ─────────────────────────────────────────────
+
+/** Non-httpOnly cookie the backend sets so the client can echo it back. */
+export const CSRF_COOKIE_NAME = "XSRF-TOKEN";
+/** Header the backend validates against that cookie. */
+export const CSRF_HEADER_NAME = "x-csrf-token";
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+function isMutatingMethod(method: string | undefined): boolean {
+  return !SAFE_METHODS.has((method ?? "GET").toUpperCase());
+}
+
+/** Reads the double-submit CSRF cookie. Returns null during SSR. */
+function readCsrfCookie(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const prefix = `${CSRF_COOKIE_NAME}=`;
+  for (const rawCookie of document.cookie.split(";")) {
+    const cookie = rawCookie.trim();
+    if (cookie.startsWith(prefix)) {
+      return decodeURIComponent(cookie.slice(prefix.length));
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns the CSRF token to send on mutating requests, bootstrapping the
+ * double-submit cookie from `GET /auth/csrf` the first time it is needed.
+ *
+ * With the JWT in an httpOnly cookie the browser automatically authenticates
+ * mutating requests, so the backend additionally requires this token.
+ */
+export async function getCsrfToken(): Promise<string | null> {
+  const existing = readCsrfCookie();
+  if (existing) {
+    return existing;
+  }
+
+  // No cookie jar (SSR) → nothing to bootstrap; the backend only enforces
+  // CSRF on cookie-authenticated requests, and those always run in a browser.
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  try {
+    await fetch(`${API_URL}/auth/csrf`, {
+      method: "GET",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+  } catch {
+    return null;
+  }
+
+  return readCsrfCookie();
+}
+
 /**
  * Thin fetch wrapper that:
  * - Prepends the API base URL
  * - Sets JSON Content-Type
- * - Attaches the JWT Bearer token when one is stored
+ * - Sends the httpOnly auth cookies via `credentials: "include"`
+ * - Adds the double-submit CSRF token on mutating requests
  * - Throws a descriptive error on non-2xx responses
  */
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -153,38 +227,33 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     headers.set("Content-Type", "application/json");
   }
 
-  // Attach JWT token if available (reads directly from Zustand store state,
-  // safe to call outside React render since Zustand stores are singletons).
-  const token = useUserStore.getState().authToken;
-  if (token) {
-    if (isJwtExpired(token)) {
-      logoutUser("expired");
-      throw new SessionExpiredError();
-    }
-
-    if (!headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${token}`);
+  if (isMutatingMethod(options.method) && !headers.has(CSRF_HEADER_NAME)) {
+    const csrfToken = await getCsrfToken();
+    if (csrfToken) {
+      headers.set(CSRF_HEADER_NAME, csrfToken);
     }
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
-
-  if (response.status === 401 && token) {
-    const error = await response
-      .json()
-      .catch(() => ({ message: "Session expired. Please sign in again." }));
-    logoutUser("expired");
-    throw new SessionExpiredError(error.message);
-  }
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
 
   if (!response.ok) {
-    // Session expiry: fire a global event so SessionExpiryHandler can intercept
+    // Session expiry: clear local state, notify the global handler and surface
+    // a dedicated error so callers can distinguish it from other failures.
     if (response.status === 401) {
+      const error = await response
+        .json()
+        .catch(() => ({ message: "Session expired. Please sign in again." }));
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("auth:session-expired"));
       }
-      throw new Error("Session expired. Please sign in again.");
+      logoutUser("expired");
+      throw new SessionExpiredError(error.message);
     }
+
     const error = await response.json().catch(() => ({ message: response.statusText }));
     const code = (error as { error?: { code?: string } }).error?.code;
     throw new ApiRequestError(
@@ -224,6 +293,7 @@ export interface Remittance {
 export interface UserProfile {
   id: string;
   email: string;
+  displayName: string;
   walletAddress?: string;
   kycVerified: boolean;
 }
@@ -1026,6 +1096,64 @@ export function useUserProfile(
   });
 }
 
+export function useUpdateUserProfile() {
+  const queryClient = useQueryClient();
+  const toast = useContractToast();
+
+  type UpdateProfileContext = {
+    previousProfile: UserProfile | undefined;
+    previousUser: ReturnType<typeof useUserStore.getState>["user"];
+  };
+
+  return useMutation<
+    UserProfile,
+    Error,
+    { displayName: string; email: string | null },
+    UpdateProfileContext
+  >({
+    mutationFn: (profile) =>
+      apiFetch<UserProfile>("/user/profile", {
+        method: "PATCH",
+        body: JSON.stringify(profile),
+      }),
+    onMutate: async (profile) => {
+      const profileKey = queryKeys.user.profile();
+      const optimisticProfile = { displayName: profile.displayName, email: profile.email ?? "" };
+      await queryClient.cancelQueries({ queryKey: profileKey });
+
+      const previousProfile = queryClient.getQueryData<UserProfile>(profileKey);
+      const previousUser = useUserStore.getState().user;
+
+      queryClient.setQueryData<UserProfile | undefined>(profileKey, (current) =>
+        current ? { ...current, ...optimisticProfile } : current,
+      );
+      useUserStore.getState().updateUser(optimisticProfile);
+
+      return { previousProfile, previousUser };
+    },
+    onError: (error, _profile, context) => {
+      const profileKey = queryKeys.user.profile();
+      if (context?.previousProfile !== undefined) {
+        queryClient.setQueryData(profileKey, context.previousProfile);
+      }
+      if (context?.previousUser) {
+        useUserStore.getState().updateUser({
+          displayName: context.previousUser.displayName,
+          email: context.previousUser.email,
+        });
+      }
+      toast.error("Failed to save profile", error.message);
+    },
+    onSuccess: (profile) => {
+      queryClient.setQueryData(queryKeys.user.profile(), profile);
+      useUserStore.getState().updateUser({
+        displayName: profile.displayName,
+        email: profile.email,
+      });
+    },
+  });
+}
+
 /**
  * Fetches the current user's wallet balance.
  */
@@ -1094,7 +1222,7 @@ export function useCreditScore(
   const queryClient = useQueryClient();
   const userData = useUserStore((s) => s.user);
   const walletAddress = userData?.walletAddress;
-  const authToken = useUserStore((s) => s.authToken);
+  const isAuthenticated = useUserStore((s) => s.isAuthenticated);
 
   const [previousScoreState, setPreviousScoreState] = useState<{
     walletAddress: string | undefined;
@@ -1115,7 +1243,7 @@ export function useCreditScore(
   });
 
   useEffect(() => {
-    if (!walletAddress || !authToken || !userId) {
+    if (!walletAddress || !isAuthenticated || !userId) {
       return;
     }
 
@@ -1138,16 +1266,10 @@ export function useCreditScore(
 
       try {
         const url = `${API_URL}/api/events/stream?borrower=${encodeURIComponent(walletAddress)}`;
-        const headers: Record<string, string> = {
-          Accept: "text/event-stream",
-        };
-
-        if (authToken) {
-          headers["Authorization"] = `Bearer ${authToken}`;
-        }
 
         const response = await fetch(url, {
-          headers,
+          headers: { Accept: "text/event-stream" },
+          credentials: "include",
           signal: controller.signal,
         });
 
@@ -1236,7 +1358,7 @@ export function useCreditScore(
         clearTimeout(retryTimeout);
       }
     };
-  }, [authToken, queryClient, walletAddress, userId]);
+  }, [isAuthenticated, queryClient, walletAddress, userId]);
 
   return {
     ...query,
@@ -2006,7 +2128,7 @@ export function useAdminUsers(
   const url = qs ? `/admin/users?${qs}` : "/admin/users";
 
   return useQuery({
-    queryKey: queryKeys.adminUsers.all(),
+    queryKey: queryKeys.adminUsers.list(params),
     queryFn: () => apiFetch<AdminUserListResponse>(url),
   });
 }

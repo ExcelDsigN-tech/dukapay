@@ -18,6 +18,10 @@ pub struct Config {
     pub batch_size: u32,
     /// Number of parallel workers draining the event channel.
     pub worker_concurrency: usize,
+    /// Retries after the initial attempt before a failed event is dead-lettered.
+    pub max_event_retries: u32,
+    /// NDJSON file used to durably record events that exhaust retries.
+    pub dead_letter_file: String,
     /// Bounded channel capacity between the fetcher and the workers.
     pub channel_capacity: usize,
     /// Optional shard config for horizontal scaling: (shard_index, shard_total).
@@ -135,6 +139,8 @@ impl Config {
             poll_interval: Duration::from_millis(parse("INDEXER_POLL_INTERVAL_MS", 3000u64)?),
             batch_size: parse("INDEXER_BATCH_SIZE", 200)?,
             worker_concurrency: parse("INDEXER_WORKER_CONCURRENCY", 8usize)?,
+            max_event_retries: parse("INDEXER_MAX_EVENT_RETRIES", 3u32)?,
+            dead_letter_file: env_or("INDEXER_DEAD_LETTER_FILE", "./dead-letter.ndjson"),
             channel_capacity: parse("INDEXER_CHANNEL_CAPACITY", 10_000usize)?,
             shard: (shard_index, shard_total),
             checkpoint,

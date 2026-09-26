@@ -23,6 +23,9 @@ import eventRoutes from './routes/eventRoutes.js';
 import remittanceRoutes from './routes/remittanceRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
+import agentFloatRoutes from './routes/agentFloatRoutes.js';
+import auditRoutes from './routes/auditRoutes.js';
+import privacyRoutes from './routes/privacyRoutes.js';
 import { registerStatusRoutes } from './routes/statusRoutes.js';
 import { requireApiKey } from './middleware/auth.js';
 import { globalRateLimiter } from './middleware/rateLimiter.js';
@@ -30,7 +33,8 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { metricsHandler, metricsMiddleware } from './middleware/metrics.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
-import { pauseGuard } from './middleware/pauseGuard.js';
+import { pauseGuard, getPauseGuardHealth } from './middleware/pauseGuard.js';
+import { csrfProtection, hasAuthCookie } from './middleware/csrf.js';
 import { asyncHandler } from './utils/asyncHandler.js';
 import { AppError } from './errors/AppError.js';
 const app = express();
@@ -134,6 +138,21 @@ app.use(metricsMiddleware);
 // Issue #1381: Cross-layer emergency pause coordination
 app.use(pauseGuard);
 
+// CSRF protection for ambient (cookie) credentials.
+//
+// The JWT is stored in an httpOnly cookie, so browsers automatically attach it
+// to requests. Mutating requests authenticated that way must also present the
+// double-submit CSRF token. Bearer-token clients (mobile apps, `tests/load`,
+// existing supertest suites) are stateless and are left untouched.
+const csrfGuard = csrfProtection();
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const hasBearer = (req.headers.authorization ?? '').startsWith('Bearer ');
+  if (!hasBearer && hasAuthCookie(req.headers.cookie)) {
+    return csrfGuard(req, res, next);
+  }
+  return next();
+});
+
 app.get('/', (_req: Request, res: Response) => {
   res.send('DukaPay Backend is running');
 });
@@ -154,13 +173,13 @@ app.get('/version', (_req: Request, res: Response) => {
     gitSha: process.env.GIT_SHA ?? 'unknown',
     builtAt: process.env.BUILD_TIME ?? 'unknown',
     nodeVersion: process.version,
-      contracts: {
-        loanManager: process.env.LOAN_MANAGER_CONTRACT_ID ?? 'unknown',
-        lendingPool: process.env.LENDING_POOL_CONTRACT_ID ?? 'unknown',
-        remittanceNft: process.env.REMITTANCE_NFT_CONTRACT_ID ?? 'unknown',
-        multisigGovernance: process.env.MULTISIG_GOVERNANCE_CONTRACT_ID ?? 'unknown',
-        settlementNetter: process.env.SETTLEMENT_NETTER_CONTRACT_ID ?? 'unknown',
-      },
+    contracts: {
+      loanManager: process.env.LOAN_MANAGER_CONTRACT_ID ?? 'unknown',
+      lendingPool: process.env.LENDING_POOL_CONTRACT_ID ?? 'unknown',
+      remittanceNft: process.env.REMITTANCE_NFT_CONTRACT_ID ?? 'unknown',
+      multisigGovernance: process.env.MULTISIG_GOVERNANCE_CONTRACT_ID ?? 'unknown',
+      settlementNetter: process.env.SETTLEMENT_NETTER_CONTRACT_ID ?? 'unknown',
+    },
   });
 });
 
@@ -327,12 +346,17 @@ app.get(
     const anyDown = db === 'down' || redis === 'down' || stellarRpc === 'down';
     const overallStatus = anyDown ? 'down' : indexerStatus === 'degraded' ? 'degraded' : 'ok';
 
+    const pauseGuardHealth = getPauseGuardHealth();
     res.status(anyDown ? 503 : 200).json({
-      status: overallStatus,
+      status:
+        overallStatus === 'ok' && pauseGuardHealth.status === 'degraded'
+          ? 'degraded'
+          : overallStatus,
       checks: {
         db,
         redis,
         stellarRpc,
+        pauseGuard: pauseGuardHealth,
         indexer: {
           status: indexerStatus,
           lagLedgers,
@@ -361,7 +385,6 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/remittances', remittanceRoutes);
 app.use('/api/transactions', transactionRoutes);
-app.use('/api/agents', agentRoutes);
 app.use('/api/agents', agentFloatRoutes);
 app.use('/audit', auditRoutes);
 
@@ -379,7 +402,6 @@ app.use('/api/v1/pool', poolRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/privacy', privacyRoutes);
-app.use('/api/v1/agents', agentRoutes);
 app.use('/api/v1/agents', agentFloatRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/user', userRoutes);

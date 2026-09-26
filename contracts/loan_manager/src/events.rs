@@ -204,3 +204,18 @@ pub fn loan_circuit_breaker_set(env: &Env, breaker: Option<Address>) {
     let topics = (Symbol::new(env, "LoanCircuitBreakerSet"),);
     env.events().publish(topics, breaker);
 }
+
+pub fn liquidation_threshold_updated(env: &Env, old_threshold: u32, new_threshold: u32) {
+    let topics = (Symbol::new(env, "LiquidationThresholdUpdated"),);
+    env.events().publish(topics, (old_threshold, new_threshold));
+}
+
+pub fn liquidation_bonus_bps_updated(env: &Env, old_bonus: u32, new_bonus: u32) {
+    let topics = (Symbol::new(env, "LiquidationBonusBpsUpdated"),);
+    env.events().publish(topics, (old_bonus, new_bonus));
+}
+
+pub fn collateral_token_updated(env: &Env, old_token: Option<Address>, new_token: Address) {
+    let topics = (Symbol::new(env, "CollateralTokenUpdated"),);
+    env.events().publish(topics, (old_token, new_token));
+}

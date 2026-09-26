@@ -1,0 +1,484 @@
+{
+  "policy": {
+    "scale": 7,
+    "mode": "half_even",
+    "display_dp": 2,
+    "allocation": "largest_remainder"
+  },
+  "notes": [
+    "Shared cross-language test vectors for the stroop-integer money kernel (issue #432).",
+    "Consumed by scripts/money-parity.ts, which replays every `input` through both contracts/money",
+    "(via `cargo run -p money --example parity_report`) and backend/src/money/decimal.ts, and fails",
+    "the build if either side's output differs from `expected` or from the other.",
+    "The `round_div` and `split_pro_rata` cases cover the surface both layers genuinely implement in",
+    "common. backend/src/money/calculations.ts is float-based and is deliberately out of scope; see",
+    "the PR description for why a float comparison would be comparing two different formulas.",
+    "The `compute_fee`, `calculate_interest` and `round_amount` cases are the integer reductions of",
+    "those operations over the shared kernel -- round_div(principal * rate_bps, 10_000),",
+    "round_div(principal * rate_bps * days, 10_000 * 365) and round_div(stroops, 10^5) * 10^5, all",
+    "half-even -- so the multiply-then-divide composition and the contract's checked-i128 guards are",
+    "exercised without inventing a second production API next to the kernel.",
+    "`expected` values come from the kernel harness and are additionally asserted by the",
+    "definition-based property checks in contracts/money/tests/parity_vectors.rs and",
+    "backend/src/money/__tests__/parity-vectors.test.ts. Empty weight lists cannot be encoded in the",
+    "case format (`split_pro_rata:0:`) and are covered by the unit tests in both layers instead."
+  ],
+  "cases": [
+    {
+      "id": "round-div-floor-positive",
+      "operation": "round_div",
+      "input": "round_div:7:2:floor",
+      "expected": "ok 3"
+    },
+    {
+      "id": "round-div-floor-negative",
+      "operation": "round_div",
+      "input": "round_div:-7:2:floor",
+      "expected": "ok -4"
+    },
+    {
+      "id": "round-div-ceil-positive",
+      "operation": "round_div",
+      "input": "round_div:7:2:ceil",
+      "expected": "ok 4"
+    },
+    {
+      "id": "round-div-ceil-negative",
+      "operation": "round_div",
+      "input": "round_div:-7:2:ceil",
+      "expected": "ok -3"
+    },
+    {
+      "id": "round-div-exact",
+      "operation": "round_div",
+      "input": "round_div:6:2:half_even",
+      "expected": "ok 3"
+    },
+    {
+      "id": "round-div-exact-ceil",
+      "operation": "round_div",
+      "input": "round_div:10:5:ceil",
+      "expected": "ok 2"
+    },
+    {
+      "id": "round-div-zero-numerator",
+      "operation": "round_div",
+      "input": "round_div:0:7:half_even",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-div-tie-up-low-even",
+      "operation": "round_div",
+      "input": "round_div:5:2:half_even",
+      "expected": "ok 2"
+    },
+    {
+      "id": "round-div-tie-up-high-odd",
+      "operation": "round_div",
+      "input": "round_div:7:2:half_even",
+      "expected": "ok 4"
+    },
+    {
+      "id": "round-div-tie-up-high-even",
+      "operation": "round_div",
+      "input": "round_div:9:2:half_even",
+      "expected": "ok 4"
+    },
+    {
+      "id": "round-div-tie-down-low-odd",
+      "operation": "round_div",
+      "input": "round_div:3:2:half_even",
+      "expected": "ok 2"
+    },
+    {
+      "id": "round-div-tie-down-zero",
+      "operation": "round_div",
+      "input": "round_div:1:2:half_even",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-div-tie-negative-low-even",
+      "operation": "round_div",
+      "input": "round_div:-5:2:half_even",
+      "expected": "ok -2"
+    },
+    {
+      "id": "round-div-tie-negative-high-odd",
+      "operation": "round_div",
+      "input": "round_div:-7:2:half_even",
+      "expected": "ok -4"
+    },
+    {
+      "id": "round-div-negative-denominator",
+      "operation": "round_div",
+      "input": "round_div:7:-2:half_even",
+      "expected": "ok -4"
+    },
+    {
+      "id": "round-div-negative-denominator-negative-num",
+      "operation": "round_div",
+      "input": "round_div:-7:-2:half_even",
+      "expected": "ok 4"
+    },
+    {
+      "id": "round-div-half-up-positive-tie",
+      "operation": "round_div",
+      "input": "round_div:5:2:half_up",
+      "expected": "ok 3"
+    },
+    {
+      "id": "round-div-half-up-negative-tie",
+      "operation": "round_div",
+      "input": "round_div:-5:2:half_up",
+      "expected": "ok -3"
+    },
+    {
+      "id": "round-div-half-up-below-half",
+      "operation": "round_div",
+      "input": "round_div:1:4:half_up",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-div-half-up-above-half",
+      "operation": "round_div",
+      "input": "round_div:3:4:half_up",
+      "expected": "ok 1"
+    },
+    {
+      "id": "round-div-sub-unit-negative-half-even",
+      "operation": "round_div",
+      "input": "round_div:-1:3:half_even",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-div-sub-unit-negative-floor",
+      "operation": "round_div",
+      "input": "round_div:-1:3:floor",
+      "expected": "ok -1"
+    },
+    {
+      "id": "round-div-sub-unit-negative-ceil",
+      "operation": "round_div",
+      "input": "round_div:-1:3:ceil",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-div-sub-unit-positive-floor",
+      "operation": "round_div",
+      "input": "round_div:1:3:floor",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-div-sub-unit-positive-ceil",
+      "operation": "round_div",
+      "input": "round_div:1:3:ceil",
+      "expected": "ok 1"
+    },
+    {
+      "id": "round-div-third-above-half",
+      "operation": "round_div",
+      "input": "round_div:2:3:half_even",
+      "expected": "ok 1"
+    },
+    {
+      "id": "round-div-third-below-half",
+      "operation": "round_div",
+      "input": "round_div:4:3:half_even",
+      "expected": "ok 1"
+    },
+    {
+      "id": "round-div-third-above-half-2",
+      "operation": "round_div",
+      "input": "round_div:5:3:half_even",
+      "expected": "ok 2"
+    },
+    {
+      "id": "round-div-display-precision",
+      "operation": "round_div",
+      "input": "round_div:123456789:1000:half_even",
+      "expected": "ok 123457"
+    },
+    {
+      "id": "round-div-large-above-half",
+      "operation": "round_div",
+      "input": "round_div:1000000007:3:half_even",
+      "expected": "ok 333333336"
+    },
+    {
+      "id": "round-div-large-below-half",
+      "operation": "round_div",
+      "input": "round_div:1000000006:3:half_even",
+      "expected": "ok 333333335"
+    },
+    {
+      "id": "round-div-18-digit-exact",
+      "operation": "round_div",
+      "input": "round_div:999999999999999999:7:half_even",
+      "expected": "ok 142857142857142857"
+    },
+    {
+      "id": "round-div-18-digit-negative-exact",
+      "operation": "round_div",
+      "input": "round_div:-999999999999999999:7:half_even",
+      "expected": "ok -142857142857142857"
+    },
+    {
+      "id": "round-div-div-by-zero",
+      "operation": "round_div",
+      "input": "round_div:5:0:half_even",
+      "expected": "err div_by_zero"
+    },
+    {
+      "id": "round-div-zero-by-zero",
+      "operation": "round_div",
+      "input": "round_div:0:0:floor",
+      "expected": "err div_by_zero"
+    },
+    {
+      "id": "round-div-unknown-mode",
+      "operation": "round_div",
+      "input": "round_div:7:2:half_odd",
+      "expected": "err bad_input"
+    },
+    {
+      "id": "round-div-malformed-numerator",
+      "operation": "round_div",
+      "input": "round_div:seven:2:floor",
+      "expected": "err bad_input"
+    },
+    {
+      "id": "split-three-equal-100",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:100:1,1,1",
+      "expected": "ok 34,33,33"
+    },
+    {
+      "id": "split-three-equal-101",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:101:1,1,1",
+      "expected": "ok 34,34,33"
+    },
+    {
+      "id": "split-coprime-weights",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:1000000007:3,5,7,11",
+      "expected": "ok 115384616,192307694,269230771,423076926"
+    },
+    {
+      "id": "split-seven-equal",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:7:1,1,1,1,1,1,1",
+      "expected": "ok 1,1,1,1,1,1,1"
+    },
+    {
+      "id": "split-zero-total",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:0:1,2,3",
+      "expected": "ok 0,0,0"
+    },
+    {
+      "id": "split-single-weight",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:1:1",
+      "expected": "ok 1"
+    },
+    {
+      "id": "split-stroop-scale-weights",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:10000000:333,333,334",
+      "expected": "ok 3330000,3330000,3340000"
+    },
+    {
+      "id": "split-largest-remainder-order",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:999:2,3,5",
+      "expected": "ok 200,300,499"
+    },
+    {
+      "id": "split-six-weights",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:123456789:1,2,3,4,5,6",
+      "expected": "ok 5878895,11757789,17636684,23515579,29394474,35273368"
+    },
+    {
+      "id": "split-zero-weights-zero-total",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:0:0,0",
+      "expected": "ok 0,0"
+    },
+    {
+      "id": "split-zero-weight-participant",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:5:10,0",
+      "expected": "ok 5,0"
+    },
+    {
+      "id": "split-single-nonzero-weight",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:1000:1,0,0",
+      "expected": "ok 1000,0,0"
+    },
+    {
+      "id": "split-zero-weight-sum",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:100:0,0,0",
+      "expected": "err drift_detected"
+    },
+    {
+      "id": "split-zero-weight-sum-small-total",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:1:0,0",
+      "expected": "err drift_detected"
+    },
+    {
+      "id": "split-negative-weight",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:100:1,-1",
+      "expected": "err drift_detected"
+    },
+    {
+      "id": "split-malformed-weight",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:100:1,,3",
+      "expected": "err bad_input"
+    },
+    {
+      "id": "split-empty-weight-list",
+      "operation": "split_pro_rata",
+      "input": "split_pro_rata:42:",
+      "expected": "err bad_input"
+    },
+    {
+      "id": "fee-bps-250",
+      "operation": "compute_fee",
+      "input": "derived:compute_fee:100000000:250",
+      "expected": "ok 2500000"
+    },
+    {
+      "id": "fee-bps-30",
+      "operation": "compute_fee",
+      "input": "derived:compute_fee:123456789:30",
+      "expected": "ok 370370"
+    },
+    {
+      "id": "fee-bps-max",
+      "operation": "compute_fee",
+      "input": "derived:compute_fee:1000000000000:10000",
+      "expected": "ok 1000000000000"
+    },
+    {
+      "id": "fee-zero-principal",
+      "operation": "compute_fee",
+      "input": "derived:compute_fee:0:250",
+      "expected": "ok 0"
+    },
+    {
+      "id": "fee-zero-rate",
+      "operation": "compute_fee",
+      "input": "derived:compute_fee:123456789:0",
+      "expected": "ok 0"
+    },
+    {
+      "id": "fee-half-stroop-tie",
+      "operation": "compute_fee",
+      "input": "derived:compute_fee:1:5000",
+      "expected": "ok 0"
+    },
+    {
+      "id": "fee-half-stroop-tie-even",
+      "operation": "compute_fee",
+      "input": "derived:compute_fee:2:7500",
+      "expected": "ok 2"
+    },
+    {
+      "id": "fee-overflows-i128",
+      "operation": "compute_fee",
+      "input": "derived:compute_fee:170141183460469231731687303715884105727:10000",
+      "expected": "err overflow"
+    },
+    {
+      "id": "interest-250bps-30d",
+      "operation": "calculate_interest",
+      "input": "derived:calculate_interest:100000000:250:30",
+      "expected": "ok 205479"
+    },
+    {
+      "id": "interest-500bps-365d",
+      "operation": "calculate_interest",
+      "input": "derived:calculate_interest:1000000000000:500:365",
+      "expected": "ok 50000000000"
+    },
+    {
+      "id": "interest-zero-days",
+      "operation": "calculate_interest",
+      "input": "derived:calculate_interest:100000000:250:0",
+      "expected": "ok 0"
+    },
+    {
+      "id": "interest-half-stroop-tie-down",
+      "operation": "calculate_interest",
+      "input": "derived:calculate_interest:1825000:1:1",
+      "expected": "ok 0"
+    },
+    {
+      "id": "interest-half-stroop-tie-up",
+      "operation": "calculate_interest",
+      "input": "derived:calculate_interest:5475000:1:1",
+      "expected": "ok 2"
+    },
+    {
+      "id": "interest-overflows-i128",
+      "operation": "calculate_interest",
+      "input": "derived:calculate_interest:170141183460469231731687303715884105727:10000:365",
+      "expected": "err overflow"
+    },
+    {
+      "id": "round-amount-exact",
+      "operation": "round_amount",
+      "input": "derived:round_amount:123500000",
+      "expected": "ok 123500000"
+    },
+    {
+      "id": "round-amount-sub-cent",
+      "operation": "round_amount",
+      "input": "derived:round_amount:123499999",
+      "expected": "ok 123500000"
+    },
+    {
+      "id": "round-amount-half-cent-down",
+      "operation": "round_amount",
+      "input": "derived:round_amount:123450000",
+      "expected": "ok 123400000"
+    },
+    {
+      "id": "round-amount-half-cent-up",
+      "operation": "round_amount",
+      "input": "derived:round_amount:123550000",
+      "expected": "ok 123600000"
+    },
+    {
+      "id": "round-amount-zero",
+      "operation": "round_amount",
+      "input": "derived:round_amount:0",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-amount-below-one-cent",
+      "operation": "round_amount",
+      "input": "derived:round_amount:49999",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-amount-five-stroops",
+      "operation": "round_amount",
+      "input": "derived:round_amount:50000",
+      "expected": "ok 0"
+    },
+    {
+      "id": "round-amount-i128-min",
+      "operation": "round_amount",
+      "input": "derived:round_amount:-170141183460469231731687303715884105728",
+      "expected": "ok -170141183460469231731687303715884100000"
+    }
+  ]
+}

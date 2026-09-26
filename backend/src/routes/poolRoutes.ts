@@ -15,6 +15,7 @@ import { requireLender, requireJwtAuth, requireScopes } from '../middleware/jwtA
 import { requireTenantAccess, requireRole } from '../middleware/rbac.js';
 import { validate, validateBody } from '../middleware/validation.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
+import { poolAnalyticsRateLimiter } from '../middleware/rateLimiter.js';
 import { addressParamSchema } from '../schemas/stellarSchemas.js';
 import {
   buildPoolTransactionSchema,
@@ -73,7 +74,7 @@ const router = Router();
  *       500:
  *         description: Internal server error.
  */
-router.get('/analytics', getAnalytics);
+router.get('/analytics', poolAnalyticsRateLimiter, getAnalytics);
 
 /**
  * @swagger

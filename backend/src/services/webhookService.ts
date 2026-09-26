@@ -159,10 +159,7 @@ export function computeWebhookSignature(
 ): string {
   const bodyHex = Buffer.from(body, 'utf8').toString('hex');
   const signedPayload = `${timestamp}.${nonce}.${bodyHex}`;
-  return crypto
-    .createHmac('sha256', secret)
-    .update(signedPayload)
-    .digest('hex');
+  return crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
 }
 
 // Verify a webhook signature.  Returns `true` when the provided signature
@@ -202,9 +199,7 @@ export function verifyWebhookSignature(
 
 // Parse the `x-dukapay-timestamp` header and return the Unix epoch seconds
 // as a number, or `undefined` when the header is absent / invalid.
-export function parseWebhookTimestamp(
-  header: string | undefined,
-): number | undefined {
+export function parseWebhookTimestamp(header: string | undefined): number | undefined {
   if (header === undefined) {
     return undefined;
   }
@@ -696,7 +691,13 @@ export class WebhookService {
       : undefined;
 
     try {
-      const response = await postWebhook(callbackUrl, body, signature, payload.timestamp, payload.nonce);
+      const response = await postWebhook(
+        callbackUrl,
+        body,
+        signature,
+        payload.timestamp,
+        payload.nonce,
+      );
 
       const successful = response.ok;
 

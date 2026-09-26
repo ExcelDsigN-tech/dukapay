@@ -1,6 +1,6 @@
 export { DukaPayClient, type DukaPayClientOptions } from './client.js';
 export { HttpClient, type HttpClientOptions, type RequestOptions } from './http.js';
-export { DukaPayError, WalletError } from './errors.js';
+export { DukaPayError, WalletError, ValidationError } from './errors.js';
 export { ContractHelpers, NETWORK_PASSPHRASE, DEFAULT_RPC_URL } from './contract.js';
 export {
   AuthResource,

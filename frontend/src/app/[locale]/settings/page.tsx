@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import {
   User,
   Wallet,
@@ -9,7 +10,6 @@ import {
   Monitor,
   Crown,
   LogOut,
-  Key,
   CheckCheck,
   Copy,
 } from "lucide-react";
@@ -25,9 +25,14 @@ import {
   selectWalletNetwork,
 } from "../../stores/useWalletStore";
 import { useUserStore, selectUser } from "../../stores/useUserStore";
-import { logoutUser } from "../../lib/session";
-import { useNotificationPreferences, useUpdateNotificationPreferences } from "../../hooks/useApi";
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+  useUpdateUserProfile,
+} from "../../hooks/useApi";
 import { COPY_FEEDBACK_RESET_MS } from "../../components/ui";
+import { useLocaleSwitcher } from "../../hooks/useLocaleSwitcher";
+import { LOCALES, LOCALE_LABELS } from "../../lib/locales";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface NotificationPrefs {
@@ -45,12 +50,12 @@ interface NotificationPrefs {
 // ─── Section navigation ───────────────────────────────────────────────────────
 
 const SECTIONS = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "wallet", label: "Wallet", icon: Wallet },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "security", label: "Security", icon: Shield },
-  { id: "display", label: "Display", icon: Monitor },
-  { id: "gamification", label: "Gamification", icon: Crown },
+  { id: "profile", icon: User },
+  { id: "wallet", icon: Wallet },
+  { id: "notifications", icon: Bell },
+  { id: "security", icon: Shield },
+  { id: "display", icon: Monitor },
+  { id: "gamification", icon: Crown },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -66,6 +71,7 @@ function settingsPanelId(id: SectionId) {
 // ─── Copy-to-clipboard helper ─────────────────────────────────────────────────
 
 function CopyButton({ value }: { value: string }) {
+  const t = useTranslations("Settings.copy");
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -79,8 +85,8 @@ function CopyButton({ value }: { value: string }) {
     <button
       onClick={handleCopy}
       className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-      title="Copy to clipboard"
-      aria-label={copied ? "Copied to clipboard" : "Copy to clipboard"}
+      title={t("title")}
+      aria-label={copied ? t("copied") : t("title")}
     >
       {copied ? <CheckCheck className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
     </button>
@@ -130,24 +136,31 @@ function Toggle({
 // ─── Profile section ──────────────────────────────────────────────────────────
 
 function ProfileSection() {
+  const t = useTranslations("Settings");
   const user = useUserStore(selectUser);
-  const [displayName, setDisplayName] = useState(user?.id ?? "");
+  const updateProfile = useUpdateUserProfile();
+  const [displayName, setDisplayName] = useState(user?.displayName ?? user?.id ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    // In real impl: call PATCH /api/user/profile
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaved(false);
+    updateProfile.mutate(
+      { displayName, email: email.trim() || null },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        },
+      },
+    );
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Manage your public display name and contact info.
-        </p>
+        <CardTitle>{t("profile.title")}</CardTitle>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("profile.description")}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Avatar */}
@@ -156,35 +169,47 @@ function ProfileSection() {
             <User className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Profile Picture</p>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              {t("profile.picture")}
+            </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Avatars are not supported yet — coming soon.
+              {t("profile.pictureSoon")}
             </p>
           </div>
         </div>
 
         <Input
-          label="Display Name"
-          placeholder="e.g. Alice"
+          label={t("profile.displayName")}
+          placeholder={t("profile.displayNamePlaceholder")}
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           required
         />
         <Input
-          label="Email (optional)"
+          label={t("profile.email")}
           type="email"
-          placeholder="you@example.com"
+          placeholder={t("profile.emailPlaceholder")}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          helperText="Used for email notifications only. Never shared publicly."
+          helperText={t("profile.emailHelper")}
         />
 
         <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-2">
-          <span className="text-red-600">*</span> Required field
+          <span className="text-red-600">*</span> {t("common.requiredField")}
         </p>
 
-        <Button variant="primary" onClick={handleSave} className="w-full sm:w-auto">
-          {saved ? "Saved!" : "Save Profile"}
+        <Button
+          variant="primary"
+          onClick={handleSave}
+          disabled={updateProfile.isPending}
+          aria-busy={updateProfile.isPending}
+          className="w-full sm:w-auto"
+        >
+          {updateProfile.isPending
+            ? t("common.saving")
+            : saved
+              ? t("common.saved")
+              : t("profile.save")}
         </Button>
       </CardContent>
     </Card>
@@ -194,6 +219,7 @@ function ProfileSection() {
 // ─── Wallet section ───────────────────────────────────────────────────────────
 
 function WalletSection() {
+  const t = useTranslations("Settings.wallet");
   const address = useWalletStore(selectWalletAddress);
   const network = useWalletStore(selectWalletNetwork);
   const disconnect = useWalletStore((s) => s.disconnect);
@@ -202,17 +228,15 @@ function WalletSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Wallet</CardTitle>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Your connected Stellar wallet and network settings.
-        </p>
+        <CardTitle>{t("title")}</CardTitle>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("description")}</p>
       </CardHeader>
       <CardContent className="space-y-6">
         {address ? (
           <>
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-                Connected Address
+                {t("connectedAddress")}
               </p>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-mono text-zinc-900 dark:text-zinc-50 break-all">
@@ -224,9 +248,11 @@ function WalletSection() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Network</p>
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  {t("network")}
+                </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {network?.name ?? "Unknown"}
+                  {network?.name ?? t("unknownNetwork")}
                 </p>
               </div>
               <span
@@ -237,7 +263,7 @@ function WalletSection() {
                 }`}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                {network?.isSupported ? "Supported" : "Unsupported"}
+                {network?.isSupported ? t("supported") : t("unsupported")}
               </span>
             </div>
 
@@ -248,7 +274,7 @@ function WalletSection() {
                 leftIcon={<LogOut className="h-4 w-4" />}
                 className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-900/50 dark:hover:bg-amber-950/20"
               >
-                Disconnect Wallet
+                {t("disconnect")}
               </Button>
               <Button
                 variant="outline"
@@ -256,14 +282,14 @@ function WalletSection() {
                 leftIcon={<LogOut className="h-4 w-4" />}
                 className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-950/20"
               >
-                Sign Out
+                {t("signOut")}
               </Button>
             </div>
           </>
         ) : (
           <div className="text-center py-6">
             <Wallet className="h-10 w-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">No wallet connected.</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("notConnected")}</p>
           </div>
         )}
       </CardContent>
@@ -274,6 +300,7 @@ function WalletSection() {
 // ─── Notifications section ────────────────────────────────────────────────────
 
 function NotificationsSection() {
+  const t = useTranslations("Settings");
   const { data, isLoading, error } = useNotificationPreferences();
   const updateNotificationPreferences = useUpdateNotificationPreferences();
   const [prefs, setPrefs] = useState<NotificationPrefs>({
@@ -329,7 +356,7 @@ function NotificationsSection() {
 
     if (prefs.sms) {
       if (!phone) {
-        setPhoneError("A phone number is required for SMS notifications.");
+        setPhoneError(t("notifications.phoneRequired"));
         return;
       }
 
@@ -337,7 +364,7 @@ function NotificationsSection() {
       const phoneRegex = /^\+?[1-9]\d{7,14}$/;
 
       if (!phoneRegex.test(phone)) {
-        setPhoneError("Please enter a valid phone number.");
+        setPhoneError(t("notifications.phoneInvalid"));
         return;
       }
     }
@@ -364,28 +391,28 @@ function NotificationsSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notifications</CardTitle>
+        <CardTitle>{t("notifications.title")}</CardTitle>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Choose which events you want to be notified about and how.
+          {t("notifications.description")}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 pb-2">
-            Delivery
+            {t("notifications.delivery")}
           </p>
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
             <Toggle
               checked={prefs.inApp}
               onChange={() => toggle("inApp")}
-              label="In-App Notifications"
-              description="Show notifications inside DukaPay"
+              label={t("notifications.inApp")}
+              description={t("notifications.inAppDescription")}
             />
             <Toggle
               checked={prefs.email}
               onChange={() => toggle("email")}
-              label="Email Notifications"
-              description="Requires a verified email address"
+              label={t("notifications.email")}
+              description={t("notifications.emailDescription")}
             />
             <Toggle
               checked={prefs.sms}
@@ -393,12 +420,12 @@ function NotificationsSection() {
                 setPhoneError(null);
                 toggle("sms");
               }}
-              label="SMS Notifications"
-              description="Requires a verified phone number"
+              label={t("notifications.sms")}
+              description={t("notifications.smsDescription")}
             />
           </div>
           <Input
-            label="Phone number"
+            label={t("notifications.phone")}
             placeholder="+14155552671"
             value={prefs.phone}
             onChange={(e) => {
@@ -406,9 +433,7 @@ function NotificationsSection() {
               setPrefs((p) => ({ ...p, phone: e.target.value }));
             }}
             helperText={
-              prefs.sms
-                ? "A phone number is required for SMS notifications."
-                : "Optional unless SMS notifications are enabled."
+              prefs.sms ? t("notifications.phoneRequired") : t("notifications.phoneOptional")
             }
           />
           {phoneError && (
@@ -418,46 +443,44 @@ function NotificationsSection() {
 
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 pb-2 pt-4">
-            Events
+            {t("notifications.events")}
           </p>
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
             <Toggle
               checked={prefs.loanApproved}
               onChange={() => toggle("loanApproved")}
-              label="Loan Approved"
-              description="When your loan application is approved"
+              label={t("notifications.loanApproved")}
+              description={t("notifications.loanApprovedDescription")}
             />
             <Toggle
               checked={prefs.repaymentDue}
               onChange={() => toggle("repaymentDue")}
-              label="Repayment Due"
-              description="Reminder before a payment is due"
+              label={t("notifications.repaymentDue")}
+              description={t("notifications.repaymentDueDescription")}
             />
             <Toggle
               checked={prefs.repaymentConfirmed}
               onChange={() => toggle("repaymentConfirmed")}
-              label="Repayment Confirmed"
-              description="When a repayment is recorded on-chain"
+              label={t("notifications.repaymentConfirmed")}
+              description={t("notifications.repaymentConfirmedDescription")}
             />
             <Toggle
               checked={prefs.loanDefaulted}
               onChange={() => toggle("loanDefaulted")}
-              label="Loan Defaulted"
-              description="When a loan is marked as defaulted"
+              label={t("notifications.loanDefaulted")}
+              description={t("notifications.loanDefaultedDescription")}
             />
             <Toggle
               checked={prefs.scoreChanged}
               onChange={() => toggle("scoreChanged")}
-              label="Credit Score Changed"
-              description="When your score goes up or down"
+              label={t("notifications.scoreChanged")}
+              description={t("notifications.scoreChangedDescription")}
             />
           </div>
         </div>
 
         {error && (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            Unable to load notification settings.
-          </p>
+          <p className="text-sm text-red-600 dark:text-red-400">{t("notifications.loadError")}</p>
         )}
         {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
         <Button
@@ -467,10 +490,10 @@ function NotificationsSection() {
           className="w-full sm:w-auto"
         >
           {updateNotificationPreferences.isPending
-            ? "Saving..."
+            ? t("common.saving")
             : saved
-              ? "Saved!"
-              : "Save Preferences"}
+              ? t("common.saved")
+              : t("notifications.save")}
         </Button>
       </CardContent>
     </Card>
@@ -480,33 +503,30 @@ function NotificationsSection() {
 // ─── Security section ─────────────────────────────────────────────────────────
 
 function SecuritySection() {
+  const t = useTranslations("Settings.security");
   const user = useUserStore(selectUser);
-  const authToken = useUserStore((s) => s.authToken);
-  const [showToken, setShowToken] = useState(false);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Security</CardTitle>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Session management and developer API access.
-        </p>
+        <CardTitle>{t("title")}</CardTitle>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("description")}</p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Session */}
         <div>
           <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-            Active Session
+            {t("activeSession")}
           </p>
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-500 dark:text-zinc-400">Started</span>
+              <span className="text-zinc-500 dark:text-zinc-400">{t("started")}</span>
               <span className="text-zinc-900 dark:text-zinc-100 font-medium">
                 {user?.sessionStartedAt ? new Date(user.sessionStartedAt).toLocaleString() : "—"}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-500 dark:text-zinc-400">KYC Status</span>
+              <span className="text-zinc-500 dark:text-zinc-400">{t("kycStatus")}</span>
               <span
                 className={`font-medium ${
                   user?.kycVerified
@@ -514,43 +534,11 @@ function SecuritySection() {
                     : "text-yellow-600 dark:text-yellow-400"
                 }`}
               >
-                {user?.kycVerified ? "Verified" : "Not Verified"}
+                {user?.kycVerified ? t("verified") : t("notVerified")}
               </span>
             </div>
           </div>
         </div>
-
-        {/* API Key */}
-        {authToken && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Key className="h-4 w-4 text-zinc-500" />
-                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  JWT Session Token
-                </p>
-              </div>
-              <button
-                onClick={() => setShowToken((v) => !v)}
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                aria-label={showToken ? "Hide session token" : "Show session token"}
-              >
-                {showToken ? "Hide" : "Show"}
-              </button>
-            </div>
-            <div className="relative rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="text-xs font-mono text-zinc-700 dark:text-zinc-300 break-all">
-                {showToken ? authToken : `${authToken.slice(0, 20)}${"•".repeat(30)}`}
-              </p>
-              <div className="absolute right-2 top-2">
-                <CopyButton value={authToken} />
-              </div>
-            </div>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1.5">
-              Valid for 24 hours. Keep this secret — it grants full API access.
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -559,15 +547,8 @@ function SecuritySection() {
 // ─── Display section ──────────────────────────────────────────────────────────
 
 function DisplaySection() {
-  const LANGUAGES = [
-    { code: "en", label: "English" },
-    { code: "es", label: "Español" },
-    { code: "fr", label: "Français" },
-    { code: "pt", label: "Português" },
-    { code: "hi", label: "हिन्दी" },
-  ];
-
-  const [language, setLanguage] = useState("en");
+  const t = useTranslations("Settings");
+  const { locale, switchLocale, isPending } = useLocaleSwitcher();
 
   const theme = useThemeStore((s) => s.theme);
   const hydrated = useThemeStore((s) => s.hydrated);
@@ -582,17 +563,17 @@ function DisplaySection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Display</CardTitle>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Appearance and language preferences.
-        </p>
+        <CardTitle>{t("display.title")}</CardTitle>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("display.description")}</p>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Theme</p>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              {t("display.theme")}
+            </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Choose a preference: Light / Dark / System
+              {t("display.themeHelper")}
             </p>
           </div>
           <div className="inline-flex items-center gap-2">
@@ -608,7 +589,7 @@ function DisplaySection() {
                       : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
                   }`}
                 >
-                  {opt[0].toUpperCase() + opt.slice(1)}
+                  {t(`display.themes.${opt}`)}
                 </button>
               );
             })}
@@ -616,22 +597,27 @@ function DisplaySection() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-zinc-900 dark:text-zinc-100 block mb-2">
-            Language
+          <label
+            htmlFor="settings-language"
+            className="text-sm font-medium text-zinc-900 dark:text-zinc-100 block mb-2"
+          >
+            {t("language")}
           </label>
           <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
+            id="settings-language"
+            value={locale}
+            disabled={isPending}
+            onChange={(e) => switchLocale(e.target.value)}
             className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-indigo-500 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
           >
-            {LANGUAGES.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.label}
+            {LOCALES.map((code) => (
+              <option key={code} value={code} lang={code}>
+                {LOCALE_LABELS[code]}
               </option>
             ))}
           </select>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1.5">
-            Full i18n support is coming soon. Only English is fully translated.
+            {t("display.languageHelper")}
           </p>
         </div>
       </CardContent>
@@ -642,8 +628,10 @@ function DisplaySection() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const t = useTranslations("Settings");
+  const { logout } = useLogout();
   const [activeSection, setActiveSection] = useState<SectionId>("profile");
-  const handleLogout = () => logoutUser("manual");
+  const handleLogout = () => logout();
 
   const activateSection = (id: SectionId) => {
     setActiveSection(id);
@@ -692,11 +680,11 @@ export default function SettingsPage() {
     <main className="space-y-8 min-h-screen p-8 lg:p-12 max-w-5xl mx-auto">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-indigo-600">Account</p>
-          <h1 className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">Settings</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Manage your profile, wallet, notifications, and preferences.
+          <p className="text-sm font-semibold uppercase tracking-widest text-indigo-600">
+            {t("eyebrow")}
           </p>
+          <h1 className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">{t("title")}</h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{t("description")}</p>
         </div>
         <Button
           variant="danger"
@@ -704,19 +692,19 @@ export default function SettingsPage() {
           leftIcon={<LogOut className="h-4 w-4" />}
           className="sm:mt-1"
         >
-          Log out
+          {t("logout")}
         </Button>
       </header>
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Side nav */}
-        <nav aria-label="Settings sections" className="lg:w-52 flex-shrink-0">
+        <nav aria-label={t("sectionsLabel")} className="lg:w-52 flex-shrink-0">
           <ul
             role="tablist"
             aria-orientation="vertical"
             className="flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0"
           >
-            {SECTIONS.map(({ id, label, icon: Icon }, index) => {
+            {SECTIONS.map(({ id, icon: Icon }, index) => {
               const isActive = activeSection === id;
 
               return (
@@ -737,7 +725,7 @@ export default function SettingsPage() {
                     }`}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                    {label}
+                    {t(`sections.${id}`)}
                   </button>
                 </li>
               );

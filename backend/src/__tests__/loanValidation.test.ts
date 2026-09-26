@@ -1,14 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
-import {
-  markLoanDefaultedSchema,
-  contestDefaultSchema,
-} from '../schemas/loanSchemas.js';
+import { describe, it, expect } from '@jest/globals';
+import { markLoanDefaultedSchema, contestDefaultSchema } from '../schemas/loanSchemas.js';
 
 describe('Loan Controller - Zod Validation', () => {
   describe('markLoanDefaultedSchema', () => {
     it('should validate valid Stellar address', () => {
       const input = {
-        borrower: 'GBPZ36ZCGN6GCR2UGPWBSGSQYV6L5JX4D33HQXQGFVP7IVQMJ6XCMKL4',
+        borrower: 'GBRPK3WI4NMLDW6BWZDTKKOGAXBC6T3PA5ZJZ527ZIMC726NVKBH5J4H',
       };
 
       expect(() => markLoanDefaultedSchema.parse(input)).not.toThrow();

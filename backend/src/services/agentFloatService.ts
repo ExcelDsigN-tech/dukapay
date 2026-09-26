@@ -307,6 +307,7 @@ export class AgentFloatService {
     // Threshold check (2-of-3)
     if (newCount >= transfer.required_approvals) {
       // Execute the float transfer on Soroban contract if configured
+      let onChainError: string | null = null;
       try {
         if (process.env.AGENT_VAULT_CONTRACT_ID) {
           const result = await sorobanService.buildTransferToAgentTx(
@@ -318,15 +319,25 @@ export class AgentFloatService {
         }
         executedOnChain = true;
       } catch (err) {
-        logger.warn('Soroban contract execution deferred or skipped', { err });
+        onChainError = err instanceof Error ? err.message : String(err);
+        logger.error('Soroban contract execution failed', {
+          err,
+          transferId,
+          fromAgent: transfer.from_agent,
+          toAgent: transfer.to_agent,
+          amount: transfer.amount,
+        });
       }
 
+      // Mark as FAILED if on-chain execution failed, COMPLETED otherwise
+      const transferStatus = onChainError ? 'FAILED' : 'COMPLETED';
       const updateRes = await query(
         `UPDATE agent_float_transfers
-         SET status = 'COMPLETED', approval_count = $2, updated_at = NOW()
+         SET status = $3, approval_count = $2, updated_at = NOW(),
+             error_message = $4
          WHERE id = $1
          RETURNING *`,
-        [transferId, newCount],
+        [transferId, newCount, transferStatus, onChainError],
       );
       updatedTransfer = updateRes.rows[0] as AgentFloatTransferRow;
 

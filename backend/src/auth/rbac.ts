@@ -1,8 +1,25 @@
-export const USER_ROLES = ['admin', 'agent', 'borrower', 'auditor', 'lender'] as const;
+export const USER_ROLES = [
+  'admin',
+  'super_admin',
+  'ops',
+  'support',
+  'agent',
+  'borrower',
+  'auditor',
+  'lender',
+] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 export const ROLE_SCOPES: Record<UserRole, string[]> = {
   admin: ['admin:all'],
+  super_admin: ['admin:all'],
+  /**
+   * Admin sub-roles (#427). Their admin-panel actions are gated by
+   * `requireRoles` in adminRoutes.ts; scopes stay read-only so they never
+   * inherit write access to user-facing routes.
+   */
+  ops: ['read:loans', 'read:pool', 'read:score', 'read:remittances', 'read:notifications'],
+  support: ['read:loans', 'read:score', 'read:remittances', 'read:notifications'],
   agent: [
     'read:loans',
     'write:loans',
@@ -47,6 +64,9 @@ export const ROLE_SCOPES: Record<UserRole, string[]> = {
 /** Privilege ordering used for read-level "at least" comparisons. */
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
   admin: 4,
+  super_admin: 4,
+  ops: 2,
+  support: 2,
   agent: 3,
   auditor: 2,
   lender: 3,

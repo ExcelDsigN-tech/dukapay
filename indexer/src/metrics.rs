@@ -62,6 +62,22 @@ pub static PROCESS_ERRORS: Lazy<IntCounter> = Lazy::new(|| {
     .unwrap()
 });
 
+pub static FAILED_EVENTS: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "indexer_failed_events_total",
+        "Events that exhausted processing retries"
+    )
+    .unwrap()
+});
+
+pub static DEAD_LETTER_EVENTS: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "indexer_dead_letter_events_total",
+        "Events durably recorded in the dead-letter queue"
+    )
+    .unwrap()
+});
+
 pub static SINK_WRITES: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!("indexer_sink_writes_total", "Successful sink writes").unwrap()
 });

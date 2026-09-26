@@ -2283,3 +2283,32 @@ fn test_admin_remint_rejects_bad_commitment() {
     let stored = client.get_recipient_commitment(&user);
     assert_eq!(stored, new_commitment);
 }
+
+#[test]
+fn test_configuration_functions_emit_events() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let user = Address::generate(&env);
+
+    let contract_id = env.register(RemittanceNFT, ());
+    let client = RemittanceNFTClient::new(&env, &contract_id);
+
+    client.initialize(&admin);
+
+    // 1. set_min_repayment_amount
+    client.set_min_repayment_amount(&500);
+    assert_eq!(client.get_min_repayment_amount(), 500);
+
+    // 2. set_default_burn_threshold
+    assert_eq!(client.set_default_burn_threshold(&5), Ok(()));
+    assert_eq!(client.get_default_burn_threshold(), 5);
+
+    // 3. approve_remint
+    assert_eq!(client.approve_remint(&user), Ok(()));
+
+    // Verify events are emitted
+    let events = env.events().all();
+    assert!(events.len() > 0);
+}

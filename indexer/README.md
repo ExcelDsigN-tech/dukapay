@@ -38,6 +38,8 @@ sink (Kafka topic `dukapay.contract-events`) instead of polling the RPC.
 | `INDEXER_POLL_INTERVAL_MS` | `3000` | |
 | `INDEXER_BATCH_SIZE` | `200` | `getEvents` page limit |
 | `INDEXER_WORKER_CONCURRENCY` | `8` | decode/emit parallelism |
+| `INDEXER_MAX_EVENT_RETRIES` | `3` | retries after the initial event processing attempt |
+| `INDEXER_DEAD_LETTER_FILE` | `./dead-letter.ndjson` | durable NDJSON queue for events that exhaust retries |
 | `INDEXER_CHANNEL_CAPACITY` | `10000` | fetch→worker backpressure buffer |
 | `INDEXER_SHARD_INDEX` | `0` | integer, or pod name ending `-<n>` |
 | `INDEXER_SHARD_TOTAL` | `1` | replica count |
@@ -60,6 +62,7 @@ Kafka support requires building with `--features kafka`.
 - `indexer_last_processed_ledger{contract_id}`
 - `indexer_events_processed_total{contract_id,event_type}` — throughput
 - `indexer_fetch_errors_total`, `indexer_process_errors_total` — error rate
+- `indexer_failed_events_total`, `indexer_dead_letter_events_total` — exhausted event retries and durable dead-letter writes
 - `indexer_sink_writes_total`
 - `indexer_lag_ok` — 1/0 against `INDEXER_LAG_ALERT_THRESHOLD`
 
@@ -72,5 +75,8 @@ HPA scaling on `indexer_ledger_lag`. Requires a `dukapay-indexer` Secret
 ## Delivery semantics
 
 At-least-once. A checkpoint for `(shard, contract)` only advances after every
-event in the range has been emitted to the sink. Consumers must dedupe on
-`(id)` — `shard` is included on each event to make cross-replica dedupe trivial.
+event in the range has been emitted to the sink. Exhausted events are stored in
+`INDEXER_DEAD_LETTER_FILE`, but the checkpoint remains held until the event can
+be emitted successfully. Dead-letter records are deduplicated by contract and
+event ID. Consumers must dedupe on `(id)` — `shard` is included on each event to
+make cross-replica dedupe trivial.
