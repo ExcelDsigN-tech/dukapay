@@ -79,6 +79,7 @@ pub enum LoanError {
     LoanNotPurgable = 28,
     /// A global, contract, or function-level circuit-breaker pause is active.
     CircuitBreakerTripped = 29,
+    ReentrancyGuardTriggered = 30,
 }
 
 #[contracttype]
@@ -379,7 +380,7 @@ impl LoanManager {
             .get(&DataKey::ReentrancyLock)
             .unwrap_or(false);
         if locked {
-            panic!("reentrancy guard triggered");
+            return Err(LoanError::ReentrancyGuardTriggered);
         }
         env.storage()
             .instance()
@@ -2330,9 +2331,9 @@ impl LoanManager {
         Self::max_loan_amount(&env)
     }
 
-    pub fn set_min_repayment_amount(env: Env, amount: i128) {
+    pub fn set_min_repayment_amount(env: Env, amount: i128) -> Result<(), LoanError> {
         if amount < 0 {
-            panic!("min repayment amount cannot be negative");
+            return Err(LoanError::InvalidAmount);
         }
 
         let admin: Address = env
@@ -2348,6 +2349,7 @@ impl LoanManager {
             .set(&DataKey::MinRepaymentAmount, &amount);
         Self::bump_instance_ttl(&env);
         events::min_repayment_updated(&env, admin, old_amount, amount);
+        Ok(())
     }
 
     pub fn get_min_repayment_amount(env: Env) -> i128 {
@@ -2400,9 +2402,7 @@ impl LoanManager {
             .expect("governance contract not set");
         governance_contract.require_auth();
 
-        env.storage()
-            .instance()
-            .set(&DataKey::Admin, &new_admin);
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
         env.storage().instance().remove(&DataKey::ProposedAdmin);
         Self::bump_instance_ttl(&env);
 

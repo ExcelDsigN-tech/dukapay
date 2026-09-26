@@ -60,8 +60,15 @@ fn setup_test<'a>(
     // Authorize LoanManager on NFT contract before initialization
     nft_client.authorize_minter(&loan_manager_id);
 
-    // 5. Initialize the Loan Manager with the NFT contract, lending pool, token, and admin
-    loan_manager_client.initialize(&nft_contract_id, &pool_contract_id, &token_id, &admin);
+    // 5. Initialize the Loan Manager with the NFT contract, lending pool, token, admin, and governance
+    let governance = Address::generate(env);
+    loan_manager_client.initialize(
+        &nft_contract_id,
+        &pool_contract_id,
+        &token_id,
+        &admin,
+        &governance,
+    );
 
     // Disable dust spam protection for the loan manager tests
     nft_client.set_min_repayment_amount(&0);
@@ -97,8 +104,7 @@ fn test_set_admin_updates_admin_immediately() {
     let (manager, _nft_client, _pool, _token, _token_admin) = setup_test(&env);
     let new_admin = Address::generate(&env);
 
-    manager.propose_admin(&new_admin);
-    manager.accept_admin();
+    manager.set_admin(&new_admin);
 
     assert_eq!(manager.get_admin(), new_admin);
 }
@@ -155,34 +161,6 @@ fn test_get_proposed_admin_returns_none_when_no_proposal() {
     let (manager, _nft_client, _pool, _token, _admin) = setup_test(&env);
 
     assert_eq!(manager.get_proposed_admin(), None);
-}
-
-#[test]
-fn test_get_proposed_admin_returns_proposed_admin() {
-    let env = Env::default();
-    env.mock_all_auths_allowing_non_root_auth();
-
-    let (manager, _nft_client, _pool, _token, _admin) = setup_test(&env);
-    let new_admin = Address::generate(&env);
-
-    manager.propose_admin(&new_admin);
-
-    assert_eq!(manager.get_proposed_admin(), Some(new_admin));
-}
-
-#[test]
-fn test_get_proposed_admin_returns_none_after_accept() {
-    let env = Env::default();
-    env.mock_all_auths_allowing_non_root_auth();
-
-    let (manager, _nft_client, _pool, _token, _admin) = setup_test(&env);
-    let new_admin = Address::generate(&env);
-
-    manager.propose_admin(&new_admin);
-    manager.accept_admin();
-
-    assert_eq!(manager.get_proposed_admin(), None);
-    assert_eq!(manager.get_admin(), new_admin);
 }
 
 #[test]
@@ -637,25 +615,42 @@ fn test_admin_transfer_via_propose_accept() {
         env.storage().instance().get(&DataKey::Admin).unwrap()
     });
 
-    let proposed_admin = Address::generate(&env);
-
-    manager.propose_admin(&proposed_admin);
-
-    let pending_admin: Address = env.as_contract(&manager.address, || {
-        env.storage()
-            .instance()
-            .get(&DataKey::ProposedAdmin)
-            .unwrap()
-    });
-    assert_eq!(pending_admin, proposed_admin);
-
-    manager.accept_admin();
+    let new_admin = Address::generate(&env);
+    manager.set_admin(&new_admin);
 
     let accepted_admin: Address = env.as_contract(&manager.address, || {
         env.storage().instance().get(&DataKey::Admin).unwrap()
     });
-    assert_eq!(accepted_admin, proposed_admin);
+    assert_eq!(accepted_admin, new_admin);
     assert_ne!(accepted_admin, current_admin);
+}
+
+#[test]
+fn test_loan_manager_set_min_repayment_amount_rejects_negative() {
+    let env = Env::default();
+    env.mock_all_auths_allowing_non_root_auth();
+    let (manager, _nft_client, _pool, _token, _admin) = setup_test(&env);
+
+    let res = manager.try_set_min_repayment_amount(&-100);
+    assert_eq!(res, Err(Ok(LoanError::InvalidAmount)));
+}
+
+#[test]
+fn test_reentrancy_lock_returns_error_instead_of_panic() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (manager, _nft_client, _pool, _token, _admin) = setup_test(&env);
+
+    env.as_contract(&manager.address, || {
+        assert_eq!(LoanManager::acquire_lock(&env), Ok(()));
+        assert_eq!(
+            LoanManager::acquire_lock(&env),
+            Err(LoanError::ReentrancyGuardTriggered)
+        );
+        LoanManager::release_lock(&env);
+        assert_eq!(LoanManager::acquire_lock(&env), Ok(()));
+        LoanManager::release_lock(&env);
+    });
 }
 
 #[test]

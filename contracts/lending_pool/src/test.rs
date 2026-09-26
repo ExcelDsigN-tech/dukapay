@@ -1,4 +1,4 @@
-use crate::{events, LendingPool, LendingPoolClient};
+use crate::{events, LendingPool, LendingPoolClient, PoolError};
 use circuit_breaker::{CircuitBreaker, CircuitBreakerClient};
 use soroban_sdk::testutils::{Address as _, Events as _, Ledger as _};
 use soroban_sdk::token::Client as TokenClient;
