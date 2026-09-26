@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { HttpClient } from './http.js';
-import type { Paginated, Remittance } from './types.js';
+import type { Paginated, PoolAnalyticsResponse, Remittance } from './types.js';
 import {
   AuthResource,
   LoansResource,
@@ -218,6 +218,31 @@ describe('LoansResource', () => {
 });
 
 describe('PoolResource', () => {
+  it('resolves the analytics envelope and preserves the snapshot payload', async () => {
+    const response: PoolAnalyticsResponse = {
+      success: true,
+      analytics: {
+        totalDeposits: 1000,
+        totalWithdrawals: 250,
+        totalYieldDistributed: 42.5,
+        totalLoansIssued: 7,
+        totalVolume: 5000,
+        activeAgents: 3,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      source: 'database',
+    };
+    const get = vi.fn().mockResolvedValue(response);
+    const resource = new PoolResource({ get } as unknown as HttpClient);
+
+    const result = await resource.analytics();
+
+    expect(result).toBe(response);
+    expect(result.analytics.totalLoansIssued).toBe(7);
+    expect(result.source).toBe('database');
+    expect(get).toHaveBeenCalledWith('/pool/analytics', { anonymous: true });
+  });
+
   it('throws ValidationError when address is invalid in depositor', () => {
     const resource = new PoolResource({ get: vi.fn() } as unknown as HttpClient);
 

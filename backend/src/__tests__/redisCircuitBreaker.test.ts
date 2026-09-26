@@ -1,14 +1,30 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { redisCircuitBreaker, withCache } from '../config/redis.js';
+import type { CircuitState } from '../config/redis.js';
+
+/**
+ * The circuit breaker keeps its counters `private`, but each test needs a clean
+ * slate. Reach them through a structural view of the singleton instead of
+ * casting to `any`, so a rename in `config/redis.ts` still breaks the build.
+ */
+type CircuitBreakerInternals = {
+  state: CircuitState;
+  failureCount: number;
+  hits: number;
+  misses: number;
+  totalOperations: number;
+};
+
+const internals = redisCircuitBreaker as unknown as CircuitBreakerInternals;
 
 describe('Redis Circuit Breaker & Caching Layer', () => {
   beforeEach(() => {
     // Reset circuit breaker metrics between tests
-    (redisCircuitBreaker as any).state = 'CLOSED';
-    (redisCircuitBreaker as any).failureCount = 0;
-    (redisCircuitBreaker as any).hits = 0;
-    (redisCircuitBreaker as any).misses = 0;
-    (redisCircuitBreaker as any).totalOperations = 0;
+    internals.state = 'CLOSED';
+    internals.failureCount = 0;
+    internals.hits = 0;
+    internals.misses = 0;
+    internals.totalOperations = 0;
   });
 
   it('starts in CLOSED state with 0 failures', () => {

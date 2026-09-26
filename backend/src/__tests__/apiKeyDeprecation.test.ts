@@ -1,7 +1,6 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import type { Request, Response, NextFunction } from 'express';
 import { requireApiKey } from '../middleware/auth.js';
-import { AppError } from '../errors/AppError.js';
 
 describe('API Key Middleware - Legacy Key Deprecation', () => {
   let req: Partial<Request>;
@@ -25,7 +24,7 @@ describe('API Key Middleware - Legacy Key Deprecation', () => {
     responseBody = null;
 
     res = {
-      status: jest.fn(() => res as any),
+      status: jest.fn(() => res as unknown as Response),
       json: jest.fn((data) => {
         responseBody = data;
       }),

@@ -5,6 +5,7 @@ import type {
   Loan,
   LoanConfig,
   Paginated,
+  PoolAnalyticsResponse,
   PoolStats,
   Remittance,
   Score,
@@ -91,7 +92,12 @@ export class PoolResource {
     return this.http.get('/pool/stats', { query: { token } });
   }
 
-  analytics(): Promise<unknown> {
+  /**
+   * Aggregate protocol analytics. Public endpoint, cached server-side for 5 minutes.
+   *
+   * Resolves to the response envelope — read the snapshot from `.analytics`.
+   */
+  analytics(): Promise<PoolAnalyticsResponse> {
     return this.http.get('/pool/analytics', { anonymous: true });
   }
 

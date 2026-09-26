@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { ConnectWalletButton } from "../../components/ui/ConnectWalletButton";
 import { Input } from "../../components/ui/Input";
 import { useLogout } from "../../hooks/useLogout";
 import { GamificationSettings } from "../../components/gamification/GamificationSettings";
@@ -290,6 +291,7 @@ function WalletSection() {
           <div className="text-center py-6">
             <Wallet className="h-10 w-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
             <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("notConnected")}</p>
+            <ConnectWalletButton className="mt-4 w-full sm:w-auto" />
           </div>
         )}
       </CardContent>

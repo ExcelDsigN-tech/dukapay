@@ -734,6 +734,11 @@
   },
   "RepayLoan": {
     "eyebrow": "Portal ng Nanghihiram",
+    "wallet": {
+      "connectedTitle": "Nakakonekta ang wallet",
+      "disconnectedTitle": "Kailangan ang wallet",
+      "disconnectedDescription": "Ikonekta ang iyong Stellar wallet upang aprubahan ang bayar na ito sa Freighter."
+    },
     "title": "Bayaran ang Loan #{id}",
     "description": "Real-time na settlement sa blockchain para sa iyong mga bayad sa loan.",
     "amountLabel": "Halaga ng bayad",
@@ -764,6 +769,13 @@
       "successTitle": "Naitala ang bayad",
       "successMessage": "Naipadala at nakumpirma ang iyong bayad."
     }
+  },
+  "WalletConnection": {
+    "connect": "Ikonekta ang Wallet",
+    "successTitle": "Nakakonekta ang wallet",
+    "successMessage": "Handa na ang iyong wallet. Maaari kang magpatuloy sa transaksyon sa chain.",
+    "errorTitle": "Nabigong ikonekta ang wallet",
+    "errorMessage": "Hindi makakonekta sa Freighter. Tiyaking naka-install at naka-unlock ang extension."
   },
   "WalletPage": {
     "eyebrow": "Aking Wallet",

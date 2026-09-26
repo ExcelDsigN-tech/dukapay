@@ -112,22 +112,31 @@ export interface LogContext {
   requestId?: string;
   userId?: string;
   loanId?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
+
+/** Metadata merged into every record emitted through `withContext()`. */
+export type LogMeta = Record<string, unknown>;
 
 const withContext = (context: LogContext = {}) => {
   const requestId = context.requestId || getRequestId();
-  const baseMeta: Record<string, any> = {};
+  const baseMeta: LogMeta = {};
 
   if (requestId) baseMeta.requestId = requestId;
   if (context.userId) baseMeta.userId = context.userId;
   if (context.loanId) baseMeta.loanId = context.loanId;
 
+  // Callers legitimately pass either a metadata object or a bare value (e.g. an
+  // `Error` straight out of a `catch`), so accept `unknown` and spread only what
+  // is actually an object instead of asserting a shape we cannot guarantee.
+  const mergeMeta = (meta?: unknown): LogMeta =>
+    meta !== null && typeof meta === 'object' ? { ...baseMeta, ...meta } : baseMeta;
+
   return {
-    info: (message: string, meta?: any) => logger.info(message, { ...baseMeta, ...meta }),
-    warn: (message: string, meta?: any) => logger.warn(message, { ...baseMeta, ...meta }),
-    error: (message: string, meta?: any) => logger.error(message, { ...baseMeta, ...meta }),
-    http: (message: string, meta?: any) => logger.http(message, { ...baseMeta, ...meta }),
+    info: (message: string, meta?: unknown) => logger.info(message, mergeMeta(meta)),
+    warn: (message: string, meta?: unknown) => logger.warn(message, mergeMeta(meta)),
+    error: (message: string, meta?: unknown) => logger.error(message, mergeMeta(meta)),
+    http: (message: string, meta?: unknown) => logger.http(message, mergeMeta(meta)),
   };
 };
 

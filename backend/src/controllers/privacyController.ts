@@ -9,7 +9,7 @@ import logger from '../utils/logger.js';
  * publicKey, or has admin:privacy scope. Throws 403 if unauthorized.
  */
 function authorizeDsar(req: Request, targetPublicKey: string): void {
-  const authedUser = (req as any).user;
+  const authedUser = req.user;
   if (!authedUser?.publicKey) {
     throw AppError.unauthorized('Authentication required');
   }
@@ -47,7 +47,7 @@ export const createDsarAccessRequest = asyncHandler(async (req: Request, res: Re
   logger.withContext().info('DSAR access request created', {
     dsarId: dsar.id,
     publicKey,
-    actor: (req as any).user?.publicKey,
+    actor: req.user?.publicKey,
   });
 
   res.status(201).json({
@@ -76,7 +76,7 @@ export const createDsarDeletionRequest = asyncHandler(async (req: Request, res: 
   logger.withContext().info('DSAR deletion request created', {
     dsarId: dsar.id,
     publicKey,
-    actor: (req as any).user?.publicKey,
+    actor: req.user?.publicKey,
   });
 
   // Start async deletion process

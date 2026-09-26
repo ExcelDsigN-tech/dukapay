@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { jest } from '@jest/globals';
 import type { KeyRotationAlert } from '../services/piiCrypto.js';
 
