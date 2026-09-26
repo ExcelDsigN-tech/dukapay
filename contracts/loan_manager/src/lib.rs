@@ -2201,10 +2201,12 @@ impl LoanManager {
     pub fn set_liquidation_threshold(env: Env, ratio_bps: u32) -> Result<(), LoanError> {
         Self::validate_liquidation_threshold(ratio_bps)?;
         Self::admin(&env).require_auth();
+        let old_threshold = Self::liquidation_threshold_bps(&env);
         env.storage()
             .instance()
             .set(&DataKey::LiquidationThresholdBps, &ratio_bps);
         Self::bump_instance_ttl(&env);
+        events::liquidation_threshold_updated(&env, old_threshold, ratio_bps);
         Ok(())
     }
 
@@ -2215,10 +2217,12 @@ impl LoanManager {
     pub fn set_liquidation_bonus_bps(env: Env, bonus_bps: u32) -> Result<(), LoanError> {
         Self::validate_liquidation_bonus_bps(bonus_bps)?;
         Self::admin(&env).require_auth();
+        let old_bonus = Self::liquidation_bonus_bps(&env);
         env.storage()
             .instance()
             .set(&DataKey::LiquidationBonusBps, &bonus_bps);
         Self::bump_instance_ttl(&env);
+        events::liquidation_bonus_bps_updated(&env, old_bonus, bonus_bps);
         Ok(())
     }
 
@@ -2510,10 +2514,12 @@ impl LoanManager {
     /// for. Without an oracle, liquidation uses raw on-chain amounts (legacy).
     pub fn set_collateral_token(env: Env, collateral_token: Address) {
         Self::admin(&env).require_auth();
+        let old_token: Option<Address> = env.storage().instance().get(&DataKey::CollateralToken);
         env.storage()
             .instance()
             .set(&DataKey::CollateralToken, &collateral_token);
         Self::bump_instance_ttl(&env);
+        events::collateral_token_updated(&env, old_token, collateral_token);
     }
 
     pub fn get_collateral_token(env: Env) -> Option<Address> {
