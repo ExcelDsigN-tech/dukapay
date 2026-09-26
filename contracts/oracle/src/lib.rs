@@ -16,11 +16,22 @@
 //! - **TWAP**: `get_price` returns the time-weighted average of accepted
 //!   aggregates over the trailing [`TWAP_WINDOW_SECS`] (30 min) window, so a
 //!   single short-lived blip cannot move the effective price.
+//! - **Admin controls**: the admin can `pause`/`unpause` the feed, `upgrade`
+//!   the contract in place, rotate the admin key in two steps with a timelock,
+//!   and point the feed at a `CircuitBreaker`. While paused, submissions and
+//!   reads are refused with [`OracleError::ContractPaused`].
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env, Symbol,
-    Vec,
+    contract, contractclient, contracterror, contractimpl, contracttype, panic_with_error, Address,
+    BytesN, Env, Symbol, Vec,
 };
+
+/// Interface exposed by the DukaPay `CircuitBreaker` contract. The oracle
+/// consults `is_blocked` before accepting a price submission.
+#[contractclient(name = "BreakerClient")]
+pub trait BreakerInterface {
+    fn is_blocked(env: Env, contract: Address, function: Symbol) -> bool;
+}
 
 /// Price scale (7 decimals). A USDC/USD price of 1.0000000 == 10_000_000.
 pub const PRICE_SCALE: i128 = 10_000_000;
@@ -32,6 +43,9 @@ pub const MAX_DEVIATION_BPS: u64 = 300;
 pub const MAX_SOURCE_AGE_SECS: u64 = 3_600;
 /// Minimum number of fresh sources for a median.
 pub const MIN_SOURCES: u32 = 2;
+/// Timelock between `propose_admin` and `accept_admin` (24h). A proposed key
+/// cannot take over until operators have had a full day to notice the change.
+pub const ADMIN_ROTATION_DELAY_SECS: u64 = 86_400;
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -42,6 +56,11 @@ pub enum OracleError {
     StalePrice = 4,
     CircuitBroken = 5,
     ZeroPrice = 6,
+    ContractPaused = 7,
+    CircuitBreakerTripped = 8,
+    Unauthorized = 9,
+    NoPendingAdmin = 10,
+    AdminTimelockNotElapsed = 11,
 }
 
 #[contracttype]
@@ -62,6 +81,10 @@ pub struct AggregateState {
 #[derive(Clone, Debug)]
 pub enum DataKey {
     Admin,
+    PendingAdmin,
+    AdminProposedAt,
+    Paused,
+    CircuitBreaker,
     Sources,
     Sample(Address, Symbol),
     SourceList(Address),
@@ -83,6 +106,174 @@ impl Oracle {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Sources, &sources);
+        env.storage().instance().set(&DataKey::Paused, &false);
+    }
+
+    // ── Admin / safety controls ─────────────────────────────────────────────
+
+    fn admin(env: &Env) -> Address {
+        env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(env, OracleError::NotInitialized))
+    }
+
+    /// Revert when the feed is paused. Used by every value-bearing entry point.
+    fn assert_not_paused(env: &Env) -> Result<(), OracleError> {
+        let paused = env
+            .storage()
+            .instance()
+            .get::<_, bool>(&DataKey::Paused)
+            .unwrap_or(false);
+        if paused {
+            return Err(OracleError::ContractPaused);
+        }
+        Ok(())
+    }
+
+    /// Consult the configured `CircuitBreaker`, if any. A tripped breaker for
+    /// this contract + function refuses the submission. No breaker configured
+    /// means the check is a no-op, keeping the oracle backward compatible.
+    fn assert_circuit_ok(env: &Env, fn_sym: Symbol) -> Result<(), OracleError> {
+        if let Some(breaker) = env
+            .storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
+        {
+            let client = BreakerClient::new(env, &breaker);
+            if client.is_blocked(&env.current_contract_address(), &fn_sym) {
+                return Err(OracleError::CircuitBreakerTripped);
+            }
+        }
+        Ok(())
+    }
+
+    /// The current admin address.
+    pub fn get_admin(env: Env) -> Address {
+        Self::admin(&env)
+    }
+
+    /// Whether the feed is currently paused.
+    pub fn is_paused(env: Env) -> bool {
+        env.storage()
+            .instance()
+            .get::<_, bool>(&DataKey::Paused)
+            .unwrap_or(false)
+    }
+
+    /// Halt submissions and reads. Admin-only. Use when a feed is compromised
+    /// or sources disagree so badly that downstream consumers must not act on
+    /// the price. Existing samples are preserved for inspection.
+    pub fn pause(env: Env) -> Result<(), OracleError> {
+        let admin = Self::admin(&env);
+        admin.require_auth();
+        env.storage().instance().set(&DataKey::Paused, &true);
+        env.events()
+            .publish((Symbol::new(&env, "oracle_paused"),), admin);
+        Ok(())
+    }
+
+    /// Resume submissions and reads. Admin-only.
+    pub fn unpause(env: Env) -> Result<(), OracleError> {
+        let admin = Self::admin(&env);
+        admin.require_auth();
+        env.storage().instance().set(&DataKey::Paused, &false);
+        env.events()
+            .publish((Symbol::new(&env, "oracle_unpaused"),), admin);
+        Ok(())
+    }
+
+    /// Upgrade the contract WASM in place. Admin-only. The stored admin, sources
+    /// and samples live in instance/persistent storage, so state survives.
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), OracleError> {
+        let admin = Self::admin(&env);
+        admin.require_auth();
+        env.deployer()
+            .update_current_contract_wasm(new_wasm_hash.clone());
+        env.events().publish(
+            (Symbol::new(&env, "oracle_upgraded"),),
+            (admin, new_wasm_hash),
+        );
+        Ok(())
+    }
+
+    /// Step 1 of a two-step admin handoff: nominate `new_admin`. Admin-only.
+    /// The nominee must call `accept_admin` after [`ADMIN_ROTATION_DELAY_SECS`].
+    pub fn propose_admin(env: Env, new_admin: Address) -> Result<(), OracleError> {
+        let admin = Self::admin(&env);
+        admin.require_auth();
+        let now = env.ledger().timestamp();
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingAdmin, &new_admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::AdminProposedAt, &now);
+        env.events().publish(
+            (Symbol::new(&env, "admin_proposed"),),
+            (admin, new_admin, now),
+        );
+        Ok(())
+    }
+
+    /// Step 2 of a two-step admin handoff: the nominee accepts. Requires the
+    /// nominee's auth and that the timelock has elapsed, so a compromised
+    /// admin key cannot rotate ownership silently.
+    pub fn accept_admin(env: Env) -> Result<(), OracleError> {
+        let pending: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::PendingAdmin)
+            .ok_or(OracleError::NoPendingAdmin)?;
+        let proposed_at: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::AdminProposedAt)
+            .unwrap_or(0);
+        let now = env.ledger().timestamp();
+        if now < proposed_at.saturating_add(ADMIN_ROTATION_DELAY_SECS) {
+            return Err(OracleError::AdminTimelockNotElapsed);
+        }
+        pending.require_auth();
+        env.storage().instance().set(&DataKey::Admin, &pending);
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+        env.storage().instance().remove(&DataKey::AdminProposedAt);
+        env.events()
+            .publish((Symbol::new(&env, "admin_accepted"),), pending);
+        Ok(())
+    }
+
+    /// The nominated-but-not-yet-accepted admin, if any.
+    pub fn get_pending_admin(env: Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::PendingAdmin)
+    }
+
+    /// Point the oracle at a `CircuitBreaker` contract (or clear it with
+    /// `None`). Admin-only.
+    pub fn set_circuit_breaker(env: Env, breaker: Option<Address>) -> Result<(), OracleError> {
+        let admin = Self::admin(&env);
+        admin.require_auth();
+        match breaker.clone() {
+            Some(address) => env
+                .storage()
+                .instance()
+                .set(&DataKey::CircuitBreaker, &Some(address)),
+            None => env.storage().instance().remove(&DataKey::CircuitBreaker),
+        }
+        env.events().publish(
+            (Symbol::new(&env, "circuit_breaker_set"),),
+            (admin, breaker),
+        );
+        Ok(())
+    }
+
+    /// The configured `CircuitBreaker` address, if any.
+    pub fn get_circuit_breaker(env: Env) -> Option<Address> {
+        env.storage()
+            .instance()
+            .get::<_, Option<Address>>(&DataKey::CircuitBreaker)
+            .flatten()
     }
 
     fn is_authorized_source(env: &Env, source: &Symbol) -> bool {
@@ -207,7 +398,8 @@ impl Oracle {
         asset: Address,
         price: i128,
     ) -> Result<(), OracleError> {
-        use soroban_sdk::Symbol;
+        Self::assert_not_paused(&env)?;
+        Self::assert_circuit_ok(&env, Symbol::new(&env, "submit_price"))?;
         if !Self::is_authorized_source(&env, &source) {
             return Err(OracleError::UnauthorizedSource);
         }
@@ -277,6 +469,7 @@ impl Oracle {
     /// The effective manipulation-resistant price for `asset` as a fallible
     /// result — useful for off-chain tools and tests.
     pub fn get_price_result(env: &Env, asset: Address) -> Result<i128, OracleError> {
+        Self::assert_not_paused(env)?;
         let now = env.ledger().timestamp();
 
         let agg_key = DataKey::Aggregate(asset.clone());
@@ -602,5 +795,184 @@ mod test {
             assert!(p > 0 && p < base * 2, "price runaway at {frac_bps}bps: {p}");
             bump(&env, 300);
         }
+    }
+
+    fn accept_admin(env: &Env, oracle_id: &Address) -> Result<(), OracleError> {
+        env.as_contract(oracle_id, || Oracle::accept_admin(env.clone()))
+    }
+
+    #[test]
+    fn pause_blocks_submissions_and_reads() {
+        let (env, oracle_id, asset) = setup();
+        let client = OracleClient::new(&env, &oracle_id);
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("pyth"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("chain"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+
+        client.pause();
+        assert!(client.is_paused());
+        assert_eq!(
+            submit(
+                &env,
+                &oracle_id,
+                symbol_short!("dex"),
+                asset.clone(),
+                10_000_000
+            ),
+            Err(OracleError::ContractPaused)
+        );
+        assert_eq!(
+            get_price_result(&env, &oracle_id, asset.clone()),
+            Err(OracleError::ContractPaused)
+        );
+
+        client.unpause();
+        assert!(!client.is_paused());
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("dex"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        assert_eq!(
+            get_price_result(&env, &oracle_id, asset.clone()).unwrap(),
+            10_000_000
+        );
+    }
+
+    #[test]
+    fn upgrade_requires_admin_auth() {
+        let (env, oracle_id, _asset) = setup();
+        env.mock_auths(&[]);
+        let hash = BytesN::from_array(&env, &[7u8; 32]);
+        let client = OracleClient::new(&env, &oracle_id);
+        assert!(client.try_upgrade(&hash).is_err());
+    }
+
+    #[test]
+    fn admin_rotation_respects_timelock() {
+        let (env, oracle_id, _asset) = setup();
+        let client = OracleClient::new(&env, &oracle_id);
+        let previous = client.get_admin();
+        let new_admin = Address::generate(&env);
+
+        client.propose_admin(&new_admin);
+        assert_eq!(client.get_pending_admin(), Some(new_admin.clone()));
+
+        // The nominee cannot take over before the 24h timelock elapses.
+        assert_eq!(
+            accept_admin(&env, &oracle_id),
+            Err(OracleError::AdminTimelockNotElapsed)
+        );
+
+        bump(&env, ADMIN_ROTATION_DELAY_SECS + 1);
+        assert_eq!(accept_admin(&env, &oracle_id), Ok(()));
+        assert_eq!(client.get_admin(), new_admin);
+        assert_ne!(client.get_admin(), previous);
+        assert_eq!(client.get_pending_admin(), None);
+    }
+
+    #[test]
+    fn accept_admin_without_proposal_fails() {
+        let (env, oracle_id, _asset) = setup();
+        assert_eq!(
+            accept_admin(&env, &oracle_id),
+            Err(OracleError::NoPendingAdmin)
+        );
+    }
+
+    #[contract]
+    pub struct MockBreaker;
+
+    #[contractimpl]
+    impl MockBreaker {
+        pub fn set_blocked(env: Env, blocked: bool) {
+            env.storage().instance().set(&symbol_short!("blk"), &blocked);
+        }
+
+        pub fn is_blocked(env: Env, _contract: Address, _function: Symbol) -> bool {
+            env.storage()
+                .instance()
+                .get(&symbol_short!("blk"))
+                .unwrap_or(false)
+        }
+    }
+
+    #[test]
+    fn circuit_breaker_blocks_submissions() {
+        let (env, oracle_id, asset) = setup();
+        let client = OracleClient::new(&env, &oracle_id);
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("pyth"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("chain"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+
+        let breaker_id = env.register(MockBreaker, ());
+        let breaker = MockBreakerClient::new(&env, &breaker_id);
+        breaker.set_blocked(&false);
+        client.set_circuit_breaker(&Some(breaker_id.clone()));
+        assert_eq!(client.get_circuit_breaker(), Some(breaker_id.clone()));
+
+        // Untripped breaker: submissions flow normally.
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("dex"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
+
+        // Tripped breaker: the oracle refuses new prices.
+        breaker.set_blocked(&true);
+        assert_eq!(
+            submit(
+                &env,
+                &oracle_id,
+                symbol_short!("dex"),
+                asset.clone(),
+                10_000_000
+            ),
+            Err(OracleError::CircuitBreakerTripped)
+        );
+
+        // Clearing the breaker restores submissions.
+        client.set_circuit_breaker(&None);
+        assert_eq!(client.get_circuit_breaker(), None);
+        submit(
+            &env,
+            &oracle_id,
+            symbol_short!("dex"),
+            asset.clone(),
+            10_000_000,
+        )
+        .unwrap();
     }
 }
