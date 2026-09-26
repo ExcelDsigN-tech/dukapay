@@ -6,7 +6,7 @@ import {
   RemittanceResource,
   ScoresResource,
 } from './resources.js';
-import type { Session } from './types.js';
+import type { Session, SimulationResult } from './types.js';
 import { assertWallet, type StellarNetwork, type WalletAdapter } from './wallet/index.js';
 
 export interface DukaPayClientOptions {
@@ -124,14 +124,31 @@ export class DukaPayClient {
   // ── Transactions ───────────────────────────────────────────────────────────
 
   /**
+   * Simulate a transaction before signing to catch errors early.
+   * Returns estimated fees and success status.
+   */
+  async simulate(unsigned: { xdr: string }): Promise<SimulationResult> {
+    const result = await this.http.post<SimulationResult>(
+      '/transactions/simulate',
+      { xdr: unsigned.xdr },
+    );
+    return result;
+  }
+
+  /**
    * Sign an unsigned XDR with the connected wallet and hand the signed XDR to a
    * submitter (typically one of the resource `submit*` calls).
+   * Optionally simulates the transaction first unless skipSimulation is true.
    */
   async signAndSubmit<T>(
     unsigned: { xdr: string },
     submit: (signedXdr: string) => Promise<T>,
+    opts?: { skipSimulation?: boolean },
   ): Promise<T> {
     assertWallet(this.wallet);
+    if (!opts?.skipSimulation) {
+      await this.simulate(unsigned);
+    }
     const signedXdr = await this.wallet.signTransaction(unsigned.xdr, { network: this.network });
     return submit(signedXdr);
   }
