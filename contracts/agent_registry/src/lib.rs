@@ -6,7 +6,7 @@
 //! operator (the DukaPay deployment backend) can register/activate/suspend;
 //! the agent must authorize their own registration.
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, Symbol};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, BytesN, Env, Symbol};
 
 mod events;
 
@@ -52,6 +52,8 @@ pub enum DataKey {
     Owner,
     Operator,
     Agent(Address),
+    /// Monotonic contract version, bumped by [`AgentRegistry::upgrade`].
+    Version,
 }
 
 #[contract]
@@ -59,12 +61,18 @@ pub struct AgentRegistry;
 
 #[contractimpl]
 impl AgentRegistry {
+    /// Contract version written at `init` and incremented on every upgrade.
+    const CURRENT_VERSION: u32 = 1;
+
     pub fn init(env: Env, owner: Address, operator: Address) -> Result<(), RegistryError> {
         if env.storage().instance().has(&DataKey::Owner) {
             return Err(RegistryError::AlreadyInitialized);
         }
         env.storage().instance().set(&DataKey::Owner, &owner);
         env.storage().instance().set(&DataKey::Operator, &operator);
+        env.storage()
+            .instance()
+            .set(&DataKey::Version, &Self::CURRENT_VERSION);
         Ok(())
     }
 
@@ -236,6 +244,31 @@ impl AgentRegistry {
 
     pub fn get_owner(env: Env) -> Result<Address, RegistryError> {
         Self::owner(&env)
+    }
+
+    /// Current contract version. Starts at [`Self::CURRENT_VERSION`] and is
+    /// bumped by each successful [`Self::upgrade`].
+    pub fn version(env: Env) -> u32 {
+        env.storage().instance().get(&DataKey::Version).unwrap_or(0)
+    }
+
+    /// Patch the contract in place, replacing the installed WASM with
+    /// `new_wasm_hash`. Owner-gated: state is preserved, so agent records,
+    /// bonds and KYC references survive the upgrade.
+    ///
+    /// Mirrors the lending-pool upgrade pattern: bump the stored version and
+    /// emit an event before handing control to the deployer, so the version a
+    /// reader sees always matches the WASM that will run next.
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), RegistryError> {
+        Self::owner(&env)?.require_auth();
+        let old_version = Self::version(env.clone());
+        let new_version = old_version.saturating_add(1);
+        env.storage()
+            .instance()
+            .set(&DataKey::Version, &new_version);
+        events::contract_upgraded(&env, old_version, new_version);
+        env.deployer().update_current_contract_wasm(new_wasm_hash);
+        Ok(())
     }
 }
 

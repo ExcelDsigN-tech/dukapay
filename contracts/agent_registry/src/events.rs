@@ -18,3 +18,9 @@ pub fn bond_updated(env: &Env, agent: &Address, new_bond: i128) {
     let topics = (Symbol::new(env, "BondUpdated"), agent.clone());
     env.events().publish(topics, new_bond);
 }
+
+/// Emitted when the contract is patched in place via `upgrade`.
+pub fn contract_upgraded(env: &Env, old_version: u32, new_version: u32) {
+    let topics = (Symbol::new(env, "ContractUpgraded"),);
+    env.events().publish(topics, (old_version, new_version));
+}
