@@ -40,12 +40,9 @@ import {
   formatAmountOnBlur,
   getAssetDecimals,
 } from "../../utils/amount";
+import { formatCurrency } from "../../utils/formatLocale";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-}
 
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(2)}%`;
@@ -233,7 +230,7 @@ export function LendPageClient() {
           {[
             {
               label: t("stats.poolSize"),
-              value: formatCurrency(poolStats?.totalDeposits ?? 0),
+              value: formatCurrency(poolStats?.totalDeposits ?? 0, locale),
               icon: CircleDollarSign,
             },
             {
@@ -301,7 +298,7 @@ export function LendPageClient() {
                   <Skeleton className="mt-2 h-7 w-24" />
                 ) : (
                   <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-                    {formatCurrency(depositor?.depositAmount ?? 0)}
+                    {formatCurrency(depositor?.depositAmount ?? 0, locale)}
                   </p>
                 )}
               </div>
@@ -321,7 +318,7 @@ export function LendPageClient() {
                   <Skeleton className="mt-2 h-7 w-24" />
                 ) : (
                   <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-                    {formatCurrency(depositor?.estimatedYield ?? 0)}
+                    {formatCurrency(depositor?.estimatedYield ?? 0, locale)}
                   </p>
                 )}
               </div>
@@ -498,7 +495,7 @@ export function LendPageClient() {
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
-                      <span>{formatCurrency(loan.amount)}</span>
+                      <span>{formatCurrency(loan.amount, locale)}</span>
                       <span>{t("portfolio.apr", { rate: loan.interestRate.toFixed(2) })}</span>
                       <span>{t("portfolio.termDays", { days: loan.termDays })}</span>
                       <LoanStatusBadge status={loan.status} />

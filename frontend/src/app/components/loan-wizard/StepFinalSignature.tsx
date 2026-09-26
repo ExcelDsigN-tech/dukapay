@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import { PenLine, CircleAlert, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
@@ -19,17 +20,9 @@ import {
   type TransactionErrorDetails,
 } from "../../utils/transactionErrors";
 import type { LoanWizardData } from "./LoanApplicationWizard";
+import { formatCurrency, formatDateObj } from "../../utils/formatLocale";
 
 const ANNUAL_RATE_PERCENT = 12;
-
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 function addDays(date: Date, days: number): Date {
   const result = new Date(date);
@@ -50,6 +43,7 @@ export function StepFinalSignature({
   onBack,
   onSuccess,
 }: StepFinalSignatureProps) {
+  const locale = useLocale();
   const [unsignedXdr, setUnsignedXdr] = useState<string>("");
   const [xdrError, setXdrError] = useState<string | null>(null);
   const [isBuildingXdr, setIsBuildingXdr] = useState(false);
@@ -150,7 +144,7 @@ export function StepFinalSignature({
         operations: [
           {
             type: "request_loan",
-            description: `Request ${formatMoney(principal)} for ${data.termDays} days`,
+            description: `Request ${formatCurrency(principal, locale)} for ${data.termDays} days`,
             amount: principal.toString(),
             token: data.asset,
             details: {
@@ -318,18 +312,18 @@ export function StepFinalSignature({
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {[
                 { label: "Asset", value: data.asset },
-                { label: "Principal", value: formatMoney(principal) },
+                { label: "Principal", value: formatCurrency(principal, locale) },
                 { label: "Term", value: `${data.termDays} days` },
                 { label: "APR", value: `${ANNUAL_RATE_PERCENT}%` },
-                { label: "Estimated Interest", value: formatMoney(estimatedInterest) },
+                { label: "Estimated Interest", value: formatCurrency(estimatedInterest, locale) },
                 {
                   label: "Total Repayment",
-                  value: formatMoney(totalRepayment),
+                  value: formatCurrency(totalRepayment, locale),
                   highlight: true,
                 },
                 {
                   label: "Due Date",
-                  value: dueDate.toLocaleDateString("en-US", {
+                  value: formatDateObj(dueDate, locale, {
                     month: "long",
                     day: "numeric",
                     year: "numeric",

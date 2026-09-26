@@ -1,17 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { useUserStore } from "../../../stores/useUserStore";
 import { useAgentDashboard } from "../../../hooks/useApi";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+import { formatCurrency } from "../../../utils/formatLocale";
 
 function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`;
@@ -24,6 +17,7 @@ function shortAddress(value: string | null | undefined) {
 
 export default function AgentDashboardPage() {
   const t = useTranslations("AgentDashboard");
+  const locale = useLocale();
   const role = useUserStore((state) => state.user?.role);
   const { data, isLoading, isError, refetch } = useAgentDashboard();
 
@@ -61,24 +55,24 @@ export default function AgentDashboardPage() {
                 {formatPercent(data.floatUtilization.utilizationPct)}
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                {formatCurrency(data.floatUtilization.allocated)} /{" "}
-                {formatCurrency(data.floatUtilization.totalFloat)}
+                {formatCurrency(data.floatUtilization.allocated, locale)} /{" "}
+                {formatCurrency(data.floatUtilization.totalFloat, locale)}
               </p>
             </div>
             <div className="rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800">
               <p className="text-xs uppercase tracking-wide text-zinc-500">{t("totalEarnings")}</p>
               <p className="mt-2 text-3xl font-semibold text-zinc-950 dark:text-zinc-50">
-                {formatCurrency(data.earnings.total)}
+                {formatCurrency(data.earnings.total, locale)}
               </p>
               <div className="mt-2 flex gap-4 text-xs text-zinc-500">
                 <span>
-                  {t("daily")}: {formatCurrency(data.earnings.daily)}
+                  {t("daily")}: {formatCurrency(data.earnings.daily, locale)}
                 </span>
                 <span>
-                  {t("weekly")}: {formatCurrency(data.earnings.weekly)}
+                  {t("weekly")}: {formatCurrency(data.earnings.weekly, locale)}
                 </span>
                 <span>
-                  {t("monthly")}: {formatCurrency(data.earnings.monthly)}
+                  {t("monthly")}: {formatCurrency(data.earnings.monthly, locale)}
                 </span>
               </div>
             </div>
@@ -90,8 +84,8 @@ export default function AgentDashboardPage() {
                 {formatPercent(data.collateralRatio.ratio * 100)}
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                {formatCurrency(data.collateralRatio.totalCollateral)} /{" "}
-                {formatCurrency(data.collateralRatio.totalDebt)}
+                {formatCurrency(data.collateralRatio.totalCollateral, locale)} /{" "}
+                {formatCurrency(data.collateralRatio.totalDebt, locale)}
               </p>
             </div>
           </section>
@@ -153,7 +147,7 @@ export default function AgentDashboardPage() {
                       )}
                     </div>
                     <span className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                      {formatCurrency(tx.amount)}
+                      {formatCurrency(tx.amount, locale)}
                     </span>
                   </div>
                 ))}

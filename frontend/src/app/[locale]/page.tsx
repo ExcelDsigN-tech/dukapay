@@ -26,6 +26,7 @@ import { ErrorBoundary } from "../components/global_ui/ErrorBoundary";
 import { Tooltip } from "../components/ui/Tooltip";
 import React, { useMemo, useState, useEffect } from "react";
 import type { Loan } from "../hooks/useApi";
+import { formatCurrency } from "../utils/formatLocale";
 
 const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
 const SESSION_BANNER_KEY = "repayment_banner_dismissed";
@@ -100,7 +101,7 @@ function RepaymentReminderBanner({
           </p>
           <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
             {t("reminder.details", {
-              amount: formatCurrency(mostUrgent.amount),
+              amount: formatCurrency(mostUrgent.amount, locale),
               date: dueDate.toLocaleDateString(locale, {
                 month: "short",
                 day: "numeric",
@@ -128,10 +129,6 @@ function RepaymentReminderBanner({
       </div>
     </div>
   );
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 }
 
 export default function Home() {
@@ -171,10 +168,10 @@ export default function Home() {
   const stats = useMemo(() => {
     if (!isConnected) {
       return {
-        netWorth: formatCurrency(0),
+        netWorth: formatCurrency(0, locale),
         activeLoans: "0",
         activeLoansSub: t("stats.pending", { count: 0 }),
-        totalRemitted: formatCurrency(0),
+        totalRemitted: formatCurrency(0, locale),
         yieldApy: "0.0%",
       };
     }
@@ -195,10 +192,10 @@ export default function Home() {
         : 0;
 
     return {
-      netWorth: formatCurrency(netWorth),
+      netWorth: formatCurrency(netWorth, locale),
       activeLoans: String(activeCount),
       activeLoansSub: t("stats.pending", { count: pendingCount }),
-      totalRemitted: formatCurrency(totalRemitted),
+      totalRemitted: formatCurrency(totalRemitted, locale),
       yieldApy: `${avgRate.toFixed(1)}%`,
     };
   }, [loans, remittances, balance, isConnected, t]);
@@ -212,8 +209,8 @@ export default function Home() {
             : l.status === "repaid"
               ? t("activity.loanRepaid")
               : t("activity.loanRequest"),
-        desc: t("activity.loanDesc", { id: l.id, amount: formatCurrency(l.amount) }),
-        amount: l.status === "repaid" ? `+${formatCurrency(l.amount)}` : formatCurrency(l.amount),
+        desc: t("activity.loanDesc", { id: l.id, amount: formatCurrency(l.amount, locale) }),
+        amount: l.status === "repaid" ? `+${formatCurrency(l.amount, locale)}` : formatCurrency(l.amount, locale),
         timestamp: new Date(l.createdAt).getTime(),
         time: new Date(l.createdAt).toLocaleDateString(locale),
         status: l.status === "repaid" ? "completed" : l.status,
@@ -225,7 +222,7 @@ export default function Home() {
         desc: t("activity.remittanceDesc", {
           recipient: `${r.recipientAddress.slice(0, 6)}...${r.recipientAddress.slice(-4)}`,
         }),
-        amount: `-${formatCurrency(r.amount)}`,
+        amount: `-${formatCurrency(r.amount, locale)}`,
         timestamp: new Date(r.createdAt).getTime(),
         time: new Date(r.createdAt).toLocaleDateString(locale),
         status: r.status,
@@ -280,7 +277,7 @@ export default function Home() {
               label: t("stats.netWorth"),
               value: stats.netWorth,
               change: balance
-                ? t("stats.available", { amount: formatCurrency(balance.available) })
+                ? t("stats.available", { amount: formatCurrency(balance.available, locale) })
                 : "",
               icon: Activity,
               trend: "up" as const,

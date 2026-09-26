@@ -11,13 +11,10 @@ import { PaginationControls } from "../../components/ui/PaginationControls";
 import { useWalletStore, selectWalletAddress } from "../../stores/useWalletStore";
 import { useTranslations, useLocale } from "next-intl";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { formatCurrency } from "../../utils/formatLocale";
 
 const PAGE_SIZE = 20;
 const LOAN_TABS = ["all", "active", "repaid", "defaulted"] as const;
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-}
 
 function getLoanDisplayStatus(status: string, nextPaymentDeadline: string, now: number) {
   if (status !== "active") {
@@ -137,7 +134,7 @@ export function LoansPageClient() {
           {[
             {
               label: t("outstanding"),
-              value: formatCurrency(totalOwed),
+              value: formatCurrency(totalOwed, locale),
               icon: CircleDollarSign,
             },
             {
@@ -226,7 +223,7 @@ export function LoansPageClient() {
                     <div className="flex flex-wrap items-center gap-3 text-sm">
                       <LoanStatusBadge status={loan.displayStatus} />
                       <span className="text-zinc-600 dark:text-zinc-400">
-                        {formatCurrency(loan.totalOwed)}
+                        {formatCurrency(loan.totalOwed, locale)}
                       </span>
                       <span className="text-zinc-600 dark:text-zinc-400">
                         {t("due", {

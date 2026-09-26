@@ -1,14 +1,12 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { TxHashLink } from "./TxHashLink";
 import type { LoanEvent } from "../../hooks/useApi";
+import { formatCurrency } from "../../utils/formatLocale";
 
 interface LoanTimelineProps {
   events: LoanEvent[];
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 }
 
 const EVENT_LABELS: Record<string, string> = {
@@ -20,6 +18,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 export function LoanTimeline({ events }: LoanTimelineProps) {
+  const locale = useLocale();
   if (events.length === 0) {
     return <p className="text-sm text-zinc-500 dark:text-zinc-400">No events yet.</p>;
   }
@@ -49,7 +48,7 @@ export function LoanTimeline({ events }: LoanTimelineProps) {
                 </div>
                 {Number(event.amount) > 0 && (
                   <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                    Amount: {formatCurrency(Number(event.amount))}
+                    Amount: {formatCurrency(Number(event.amount), locale)}
                   </p>
                 )}
                 {event.txHash && (

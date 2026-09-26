@@ -1,6 +1,7 @@
 "use client";
 
 import { HandCoins, CircleAlert } from "lucide-react";
+import { useLocale } from "next-intl";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
@@ -12,6 +13,7 @@ import {
   formatAmountOnBlur,
   getAssetDecimals,
 } from "../../utils/amount";
+import { formatCurrency } from "../../utils/formatLocale";
 
 const TERM_OPTIONS = [
   { label: "30 days", days: 30 as const },
@@ -31,12 +33,8 @@ function getScoreBandLabel(score: number): string {
   return "Below minimum";
 }
 
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
+function formatMoney(value: number, locale: string): string {
+  return formatCurrency(value, locale);
 }
 
 interface StepAmountAssetProps {
@@ -48,6 +46,7 @@ interface StepAmountAssetProps {
 }
 
 export function StepAmountAsset({ data, onChange, onNext, error, onError }: StepAmountAssetProps) {
+  const locale = useLocale();
   const amountNumber = Number(data.amount || "0");
   const minAmount = 100;
   const asset = data.asset || "USDC";
@@ -69,11 +68,11 @@ export function StepAmountAsset({ data, onChange, onNext, error, onError }: Step
       return false;
     }
     if (amountNumber < minAmount) {
-      onError(`Minimum request amount is ${formatMoney(minAmount)}.`);
+      onError(`Minimum request amount is ${formatMoney(minAmount, locale)}.`);
       return false;
     }
     if (amountNumber > data.maxAmount) {
-      onError(`Maximum eligible amount for your score is ${formatMoney(data.maxAmount)}.`);
+      onError(`Maximum eligible amount for your score is ${formatMoney(data.maxAmount, locale)}.`);
       return false;
     }
     onError(null);
@@ -152,7 +151,7 @@ export function StepAmountAsset({ data, onChange, onNext, error, onError }: Step
                 helperText ||
                 (data.maxAmount === 0
                   ? "Not eligible"
-                  : `Eligible range: ${formatMoney(minAmount)} – ${formatMoney(
+                  : `Eligible range: ${formatMoney(minAmount, locale)} – ${formatMoney(
                       data.maxAmount,
                     )} • Max ${decimals} decimal places`)
               }
@@ -222,7 +221,7 @@ export function StepAmountAsset({ data, onChange, onNext, error, onError }: Step
               <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
                 <p className="text-zinc-500 dark:text-zinc-400">Max Eligible</p>
                 <p className="font-semibold text-zinc-900 dark:text-zinc-50">
-                  {data.maxAmount === 0 ? "Ineligible" : formatMoney(data.maxAmount)}
+                  {data.maxAmount === 0 ? "Ineligible" : formatMoney(data.maxAmount, locale)}
                 </p>
               </div>
               <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">

@@ -1,6 +1,8 @@
 "use client";
 
 import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { useLocale } from "next-intl";
+import { formatCurrency } from "../../utils/formatLocale";
 
 export interface LoanHealthData {
   collateralLocked?: number;
@@ -54,15 +56,12 @@ function normalizeRatio(value: number | undefined): number | null {
   return value > 10 ? value / 100 : value;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-}
-
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
 export function LoanHealth({ loan, isLoading, isError, topUpHref, labels }: LoanHealthProps) {
+  const locale = useLocale();
   if (isLoading) {
     return (
       <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
@@ -150,13 +149,13 @@ export function LoanHealth({ loan, isLoading, isError, topUpHref, labels }: Loan
         <div className="rounded-2xl bg-zinc-50 p-3 dark:bg-zinc-900">
           <dt className="text-xs text-zinc-500 dark:text-zinc-400">{labels.collateral}</dt>
           <dd className="mt-1 font-semibold text-zinc-900 dark:text-zinc-50">
-            {formatCurrency(collateral)}
+            {formatCurrency(collateral, locale)}
           </dd>
         </div>
         <div className="rounded-2xl bg-zinc-50 p-3 dark:bg-zinc-900">
           <dt className="text-xs text-zinc-500 dark:text-zinc-400">{labels.totalDebt}</dt>
           <dd className="mt-1 font-semibold text-zinc-900 dark:text-zinc-50">
-            {formatCurrency(totalDebt)}
+            {formatCurrency(totalDebt, locale)}
           </dd>
         </div>
       </dl>

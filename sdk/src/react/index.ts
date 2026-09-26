@@ -109,7 +109,14 @@ export function useWallet(wallet?: WalletAdapter): UseWalletResult {
   }, [client, wallet]);
 
   useEffect(() => {
-    (wallet ?? undefined)?.getAddress().then(setAddress).catch(() => {});
+    // Guard against state updates on an unmounted component (same cancelled
+    // flag pattern used by useAsync above — fixes #534).
+    let cancelled = false;
+    (wallet ?? undefined)
+      ?.getAddress()
+      .then((addr) => { if (!cancelled) setAddress(addr); })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [wallet]);
 
   const run = useCallback(
