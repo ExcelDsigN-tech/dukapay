@@ -98,12 +98,18 @@ export class DukaPayClient {
   /** Full wallet login: connect → challenge → sign → login. Idempotent-ish. */
   async loginWithWallet(): Promise<Session> {
     assertWallet(this.wallet);
-    const address = (await this.wallet.getAddress()) ?? (await this.wallet.connect());
-    const { message } = await this.auth.challenge(address);
-    const { signature } = await this.wallet.signMessage(message);
-    const session = await this.auth.login({ publicKey: address, message, signature });
-    this.setSession(session);
-    return session;
+    try {
+      const address = (await this.wallet.getAddress()) ?? (await this.wallet.connect());
+      const { message } = await this.auth.challenge(address);
+      const { signature } = await this.wallet.signMessage(message);
+      const session = await this.auth.login({ publicKey: address, message, signature });
+      this.setSession(session);
+      return session;
+    } catch (error) {
+      this.setSession(null);
+      await this.wallet.disconnect().catch(() => {});
+      throw error;
+    }
   }
 
   async logout(): Promise<void> {
