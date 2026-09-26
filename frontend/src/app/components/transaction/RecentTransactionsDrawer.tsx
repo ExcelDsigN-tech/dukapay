@@ -17,10 +17,10 @@ function formatDate(value: string) {
 export function RecentTransactionsDrawer() {
   const t = useTranslations("RecentTransactions");
   const [open, setOpen] = useState(false);
-  const authToken = useUserStore((state) => state.authToken);
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   const { data, isLoading, isError } = useMyTransactions({
     limit: 20,
-    enabled: open && Boolean(authToken),
+    enabled: open && isAuthenticated,
   });
   const transactions = data?.items ?? [];
 
