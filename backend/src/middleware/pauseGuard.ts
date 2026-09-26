@@ -79,6 +79,13 @@ let globalPauseState: PauseState = {
   verifiedAt: null,
 };
 
+/**
+ * A pause that could not be written to the database (it was enforced from
+ * memory instead). While set, a database refresh that still reads "not paused"
+ * must not lift it: the pause is written to the database first.
+ */
+let pendingPause: { reason: string | null; contracts: string[] } | null = null;
+
 /** Source we last raised an alert for, so a long outage alerts once, not every refresh. */
 let alertedSource: PauseStateSource | null = null;
 
@@ -224,6 +231,20 @@ export async function updatePauseStateFromDatabase(): Promise<void> {
       'SELECT is_paused, paused_at, reason, contracts FROM pause_state LIMIT 1',
     );
 
+    const stored = result.rows[0] as { is_paused?: boolean } | undefined;
+    if (pendingPause && !stored?.is_paused) {
+      // The database still says "not paused" for a pause it never received.
+      // Persist that pause now rather than letting the stale row lift it.
+      const { contracts, reason } = pendingPause;
+      try {
+        await setPauseState(true, contracts, reason ?? undefined);
+      } catch {
+        // Still cannot persist; the in-memory pause stays enforced (and alerted on).
+      }
+      return;
+    }
+    pendingPause = null;
+
     if (result.rows.length > 0) {
       const row = result.rows[0] as {
         is_paused: boolean;
@@ -345,6 +366,7 @@ export async function setPauseState(
       [isPaused, now, reason || null, JSON.stringify(contracts)],
     );
 
+    pendingPause = null;
     // Update in-memory state
     applyState({ isPaused, pausedAt: now, reason: reason || null, contracts, source: 'database' });
     await mirrorToCache(globalPauseState);
@@ -360,6 +382,7 @@ export async function setPauseState(
       // A pause must be enforced even if it could not be persisted. Lifting one
       // that could not be persisted is not applied: the guard stays as it was.
       const pausedAt = new Date();
+      pendingPause = { reason: reason || null, contracts };
       applyState({ isPaused, pausedAt, reason: reason || null, contracts, source: 'memory' });
       await mirrorToCache(globalPauseState);
     }

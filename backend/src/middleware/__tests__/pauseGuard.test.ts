@@ -33,15 +33,8 @@ jest.unstable_mockModule('../../utils/logger.js', () => ({
   default: mockLogger,
 }));
 
-const {
-  pauseGuard,
-  setPauseState,
-  getCurrentPauseState,
-  updatePauseStateFromDatabase,
-  getPauseGuardHealth,
-  getPauseState,
-  PAUSE_STATE_CACHE_KEY,
-} = await import('../pauseGuard.js');
+const { pauseGuard, setPauseState, getCurrentPauseState, PAUSE_STATE_CACHE_KEY } =
+  await import('../pauseGuard.js');
 const { AppError } = await import('../../errors/AppError.js');
 
 describe('pauseGuard middleware (#1521)', () => {
@@ -460,6 +453,61 @@ describe('pauseGuard middleware (#1521)', () => {
           expect.objectContaining({ isPaused: true }),
           expect.any(Number),
         );
+      });
+
+      it('persists a pause that could not be saved once the database recovers, instead of lifting it', async () => {
+        const guard = await freshGuard();
+        await expect(guard.setPauseState(true, ['CONTRACT_A'], 'Incident')).rejects.toThrow();
+
+        // Database is back, but its row still says "not paused".
+        mockQuery.mockReset();
+        mockQuery.mockImplementation(async (sql: string) =>
+          sql.includes('SELECT')
+            ? { rows: [{ is_paused: false, paused_at: null, reason: null, contracts: [] }] }
+            : { rows: [] },
+        );
+        await guard.updatePauseStateFromDatabase();
+
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('INSERT INTO pause_state'),
+          expect.arrayContaining([true, 'Incident']),
+        );
+        expect(guard.getCurrentPauseState()).toEqual(
+          expect.objectContaining({ isPaused: true, source: 'database', reason: 'Incident' }),
+        );
+        expect(fakeCache.get(PAUSE_STATE_CACHE_KEY)).toEqual(
+          expect.objectContaining({ isPaused: true }),
+        );
+      });
+
+      it('keeps enforcing an unsaved pause when the database is reachable but the write still fails', async () => {
+        const guard = await freshGuard();
+        await expect(guard.setPauseState(true, ['CONTRACT_A'], 'Incident')).rejects.toThrow();
+
+        mockQuery.mockReset();
+        mockQuery.mockImplementation(async (sql: string) => {
+          if (sql.includes('SELECT')) {
+            return { rows: [{ is_paused: false, paused_at: null, reason: null, contracts: [] }] };
+          }
+          throw new Error('read-only replica');
+        });
+        await guard.updatePauseStateFromDatabase();
+
+        expect(guard.getCurrentPauseState().isPaused).toBe(true);
+      });
+
+      it('stops retrying once the database itself records the pause', async () => {
+        const guard = await freshGuard();
+        await expect(guard.setPauseState(true, ['CONTRACT_A'], 'Incident')).rejects.toThrow();
+
+        mockQuery.mockReset();
+        mockQuery.mockResolvedValue({
+          rows: [{ is_paused: true, paused_at: null, reason: 'Incident', contracts: [] }],
+        });
+        await guard.updatePauseStateFromDatabase();
+
+        expect(mockQuery).toHaveBeenCalledTimes(1); // just the SELECT, no re-write
+        expect(guard.getCurrentPauseState().source).toBe('database');
       });
 
       it('does not lift a pause it could not persist', async () => {
