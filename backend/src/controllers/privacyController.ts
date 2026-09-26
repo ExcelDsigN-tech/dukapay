@@ -4,10 +4,51 @@ import { AppError } from '../errors/AppError.js';
 import { privacyService } from '../services/privacyService.js';
 import logger from '../utils/logger.js';
 
+/**
+ * Authorization helper: checks that the authenticated user owns the target
+ * publicKey, or has admin:privacy scope. Throws 403 if unauthorized.
+ */
+function authorizeDsar(req: Request, targetPublicKey: string): void {
+  const authedUser = (req as any).user;
+  if (!authedUser?.publicKey) {
+    throw AppError.unauthorized('Authentication required');
+  }
+
+  // Admin with privacy scope can access any user's data
+  if (authedUser.scopes?.includes('admin:privacy')) {
+    logger.withContext().info('DSAR authorized via admin:privacy scope', {
+      actor: authedUser.publicKey,
+      target: targetPublicKey,
+    });
+    return;
+  }
+
+  // Regular users can only access their own data
+  if (authedUser.publicKey !== targetPublicKey) {
+    logger.withContext().warn('DSAR unauthorized: cross-user access attempt', {
+      actor: authedUser.publicKey,
+      target: targetPublicKey,
+    });
+    throw AppError.forbidden('You can only submit DSAR requests for your own data');
+  }
+}
+
 export const createDsarAccessRequest = asyncHandler(async (req: Request, res: Response) => {
   const { publicKey, reason } = req.body;
 
+  if (!publicKey) {
+    throw AppError.badRequest('publicKey is required');
+  }
+
+  authorizeDsar(req, publicKey);
+
   const dsar = await privacyService.createDsarRequest(publicKey, 'access', reason);
+
+  logger.withContext().info('DSAR access request created', {
+    dsarId: dsar.id,
+    publicKey,
+    actor: (req as any).user?.publicKey,
+  });
 
   res.status(201).json({
     success: true,
@@ -24,7 +65,19 @@ export const createDsarAccessRequest = asyncHandler(async (req: Request, res: Re
 export const createDsarDeletionRequest = asyncHandler(async (req: Request, res: Response) => {
   const { publicKey, reason } = req.body;
 
+  if (!publicKey) {
+    throw AppError.badRequest('publicKey is required');
+  }
+
+  authorizeDsar(req, publicKey);
+
   const dsar = await privacyService.createDsarRequest(publicKey, 'deletion', reason);
+
+  logger.withContext().info('DSAR deletion request created', {
+    dsarId: dsar.id,
+    publicKey,
+    actor: (req as any).user?.publicKey,
+  });
 
   // Start async deletion process
   privacyService
@@ -91,6 +144,8 @@ export const exportUserData = asyncHandler(async (req: Request, res: Response) =
   if (!publicKey) {
     throw AppError.badRequest('publicKey parameter is required');
   }
+
+  authorizeDsar(req, publicKey);
 
   const data = await privacyService.exportUserData(publicKey);
 
