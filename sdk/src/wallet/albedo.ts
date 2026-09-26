@@ -1,5 +1,6 @@
 import { WalletError } from '../errors.js';
 import type { SignedMessage, StellarNetwork, WalletAdapter } from './index.js';
+import { withTimeoutAndRetry } from './utils.js';
 
 interface AlbedoIntent {
   publicKey(params: { token?: string }): Promise<{ pubkey: string }>;
@@ -76,7 +77,10 @@ export class AlbedoAdapter implements WalletAdapter {
 
   async connect(): Promise<string> {
     const albedo = await this.intent();
-    const { pubkey } = await albedo.publicKey({});
+    const { pubkey } = await withTimeoutAndRetry(
+      () => albedo.publicKey({}),
+      { timeout: 10000, retryable: false }
+    );
     this.cachedAddress = pubkey;
     return pubkey;
   }
@@ -95,21 +99,27 @@ export class AlbedoAdapter implements WalletAdapter {
 
   async signMessage(message: string): Promise<SignedMessage> {
     const albedo = await this.intent();
-    const res = await albedo.signMessage({
-      message,
-      pubkey: this.cachedAddress ?? undefined,
-    });
+    const res = await withTimeoutAndRetry(
+      () => albedo.signMessage({
+        message,
+        pubkey: this.cachedAddress ?? undefined,
+      }),
+      { timeout: 10000, retryable: false }
+    );
     this.cachedAddress = res.pubkey;
     return { signature: res.signature, address: res.pubkey };
   }
 
   async signTransaction(xdr: string, opts?: { network?: StellarNetwork }): Promise<string> {
     const albedo = await this.intent();
-    const res = await albedo.tx({
-      xdr,
-      network: (opts?.network ?? this.network) === 'mainnet' ? 'public' : 'testnet',
-      pubkey: this.cachedAddress ?? undefined,
-    });
+    const res = await withTimeoutAndRetry(
+      () => albedo.tx({
+        xdr,
+        network: (opts?.network ?? this.network) === 'mainnet' ? 'public' : 'testnet',
+        pubkey: this.cachedAddress ?? undefined,
+      }),
+      { timeout: 10000, retryable: false }
+    );
     return res.signed_envelope_xdr;
   }
 }
