@@ -1,5 +1,5 @@
 import { Request, Response, type NextFunction } from 'express';
-import { Registry, Counter, Histogram, collectDefaultMetrics } from 'prom-client';
+import { Registry, Counter, Gauge, Histogram, collectDefaultMetrics } from 'prom-client';
 
 export const register = new Registry();
 
@@ -33,6 +33,20 @@ export const blockchainTransactionDuration = new Histogram({
   help: 'Blockchain transaction duration in seconds',
   labelNames: ['network', 'operation'],
   buckets: [1, 5, 10, 30, 60, 120],
+  registers: [register],
+});
+
+export const pauseGuardSource = new Gauge({
+  name: 'dukapay_pause_guard_source',
+  help: 'Where the pause guard is reading its state from (1 for the current source)',
+  labelNames: ['source'],
+  registers: [register],
+});
+
+export const pauseGuardFallbackTotal = new Counter({
+  name: 'dukapay_pause_guard_fallback_total',
+  help: 'Times the pause guard fell back from the database to another state source',
+  labelNames: ['source'],
   registers: [register],
 });
 

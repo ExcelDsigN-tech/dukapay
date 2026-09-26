@@ -33,7 +33,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { metricsHandler, metricsMiddleware } from './middleware/metrics.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
-import { pauseGuard } from './middleware/pauseGuard.js';
+import { pauseGuard, getPauseGuardHealth } from './middleware/pauseGuard.js';
 import { csrfProtection, hasAuthCookie } from './middleware/csrf.js';
 import { asyncHandler } from './utils/asyncHandler.js';
 import { AppError } from './errors/AppError.js';
@@ -346,12 +346,17 @@ app.get(
     const anyDown = db === 'down' || redis === 'down' || stellarRpc === 'down';
     const overallStatus = anyDown ? 'down' : indexerStatus === 'degraded' ? 'degraded' : 'ok';
 
+    const pauseGuardHealth = getPauseGuardHealth();
     res.status(anyDown ? 503 : 200).json({
-      status: overallStatus,
+      status:
+        overallStatus === 'ok' && pauseGuardHealth.status === 'degraded'
+          ? 'degraded'
+          : overallStatus,
       checks: {
         db,
         redis,
         stellarRpc,
+        pauseGuard: pauseGuardHealth,
         indexer: {
           status: indexerStatus,
           lagLedgers,

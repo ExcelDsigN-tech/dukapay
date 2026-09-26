@@ -5,6 +5,7 @@ import { requireRole, requireScopes } from './rbac.js';
 import {
   verifyJwtToken,
   extractBearerToken,
+  isFamilyRevoked,
   isTokenRevoked,
   type JwtPayload,
 } from '../services/authService.js';
@@ -64,6 +65,20 @@ function capPayloadToCurrentRole(payload: JwtPayload): JwtPayload {
   return { ...payload, role: currentRole, scopes: cappedScopes };
 }
 
+/**
+ * Whether a verified token must be refused because it, or the session family it
+ * belongs to, has been revoked. A whole family is revoked when refresh-token
+ * replay is detected or on a bulk "log out everywhere", so any access token
+ * minted in that family must stop working immediately rather than at expiry.
+ * Shared by `requireJwtAuth` and `optionalJwtAuth` so the two cannot disagree.
+ */
+async function isSessionRevoked(payload: JwtPayload): Promise<boolean> {
+  if (payload.jti && (await isTokenRevoked(payload.jti))) {
+    return true;
+  }
+  return Boolean(payload.familyId && (await isFamilyRevoked(payload.familyId)));
+}
+
 export const requireJwtAuth = async (
   req: Request,
   _res: Response,
@@ -84,7 +99,7 @@ export const requireJwtAuth = async (
     throw AppError.unauthorized('Invalid or expired token');
   }
 
-  if (payload.jti && (await isTokenRevoked(payload.jti))) {
+  if (await isSessionRevoked(payload)) {
     throw AppError.unauthorized('Token has been revoked');
   }
 
@@ -105,7 +120,7 @@ export const optionalJwtAuth = async (
   }
 
   const payload = verifyJwtToken(token);
-  if (payload && !(payload.jti && (await isTokenRevoked(payload.jti)))) {
+  if (payload && !(await isSessionRevoked(payload))) {
     req.user = capPayloadToCurrentRole(payload);
   }
 

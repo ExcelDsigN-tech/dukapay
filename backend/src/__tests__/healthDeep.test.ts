@@ -156,6 +156,66 @@ describe('GET /health/deep', () => {
   });
 });
 
+describe('GET /health/deep – pause guard source (#504)', () => {
+  const healthyDb = async (sql: unknown) => {
+    if (typeof sql === 'string' && sql.includes('indexer_state')) {
+      return { rows: [{ last_indexed_ledger: 1000 }], rowCount: 1 };
+    }
+    return { rows: [{ '?column?': 1 }], rowCount: 1 };
+  };
+
+  beforeEach(() => {
+    // An earlier describe lowers this and never restores it; lag here is 50.
+    process.env.INDEXER_HEALTH_LAG_LIMIT = '100';
+    mockDbQuery.mockReset();
+    mockHealthCheck.mockReset();
+    mockHealthCheck.mockResolvedValue({ connected: true, latestLedger: 1050 });
+    mockDbQuery.mockImplementation(healthyDb);
+  });
+
+  it('reports the pause guard as ok while it reads from the database', async () => {
+    const { updatePauseStateFromDatabase } = await import('../middleware/pauseGuard.js');
+    mockDbQuery.mockImplementation(async (sql: unknown) =>
+      typeof sql === 'string' && sql.includes('pause_state')
+        ? {
+            rows: [{ is_paused: false, paused_at: null, reason: null, contracts: [] }],
+            rowCount: 1,
+          }
+        : healthyDb(sql),
+    );
+    await updatePauseStateFromDatabase();
+
+    const res = await request(app).get('/health/deep');
+
+    expect(res.body.checks.pauseGuard).toEqual(
+      expect.objectContaining({ status: 'ok', source: 'database', isPaused: false }),
+    );
+    expect(res.body.status).toBe('ok');
+  });
+
+  it('degrades overall status when the pause guard has fallen back from the database', async () => {
+    const { updatePauseStateFromDatabase } = await import('../middleware/pauseGuard.js');
+    mockDbQuery.mockImplementation(async (sql: unknown) => {
+      if (typeof sql === 'string' && sql.includes('pause_state')) {
+        throw new Error('pause_state unreachable');
+      }
+      return healthyDb(sql);
+    });
+    await updatePauseStateFromDatabase();
+
+    const res = await request(app).get('/health/deep');
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('degraded');
+    expect(res.body.checks.pauseGuard).toEqual(
+      expect.objectContaining({
+        status: 'degraded',
+        source: expect.stringMatching(/cache|memory|fail-closed/),
+      }),
+    );
+  });
+});
+
 describe('GET /health/indexer', () => {
   beforeEach(() => {
     delete process.env.INDEXER_LAG_ALERT_THRESHOLD;

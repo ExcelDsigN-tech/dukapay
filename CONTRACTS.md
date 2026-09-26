@@ -111,6 +111,14 @@ For this to work, **every managed contract must set its `admin` to the
 `set_admin` / admin-transfer flow). Until migrated, a contract's upgrades are
 still gated only by its raw admin key.
 
+`agent_vault` exposes the same `upgrade(new_wasm_hash)` entry point, gated by
+its **owner** (the vault's admin role; the operator cannot upgrade). It keeps
+all storage in place, bumps `version()` (1 for a new or pre-versioning vault,
++1 per upgrade), and emits `ContractUpgraded (old_version, new_version)` like the
+other contracts. The vault has no owner-transfer function, so to put it under
+the timelock, initialise it (`init`) with the `multisig_governance` contract
+address as `owner`; an already-initialised vault keeps its current owner.
+
 ---
 
 ## Fuzz Testing

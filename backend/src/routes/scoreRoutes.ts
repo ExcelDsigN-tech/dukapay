@@ -16,6 +16,7 @@ import {
 } from '../schemas/scoreSchemas.js';
 import { requireApiKey } from '../middleware/auth.js';
 import { scoreUpdateRateLimit } from '../middleware/rateLimitMiddleware.js';
+import { scoreReadRateLimiter } from '../middleware/rateLimiter.js';
 import { requireJwtAuth, requireScopes } from '../middleware/jwtAuth.js';
 import { requireTenantAccess } from '../middleware/rbac.js';
 
@@ -64,7 +65,7 @@ const router = Router();
  *       500:
  *         description: Internal server error.
  */
-router.get('/leaderboard', getLeaderboard);
+router.get('/leaderboard', scoreReadRateLimiter, getLeaderboard);
 
 /**
  * @swagger
@@ -106,6 +107,7 @@ router.get('/leaderboard', getLeaderboard);
 router.get(
   '/:userId',
   requireJwtAuth,
+  scoreReadRateLimiter,
   requireScopes('read:score'),
   requireTenantAccess,
   validate(getScoreSchema),
@@ -143,6 +145,7 @@ router.get(
 router.get(
   '/:walletAddress/history',
   requireJwtAuth,
+  scoreReadRateLimiter,
   requireScopes('read:score'),
   requireTenantAccess,
   validate(getScoreHistorySchema),
@@ -212,6 +215,7 @@ router.get(
 router.get(
   '/:walletAddress/nft',
   requireJwtAuth,
+  scoreReadRateLimiter,
   requireScopes('read:score'),
   requireTenantAccess,
   validate(getRemittanceNftSchema),
@@ -254,6 +258,7 @@ router.get(
 router.get(
   '/:userId/breakdown',
   requireJwtAuth,
+  scoreReadRateLimiter,
   requireScopes('read:score'),
   requireTenantAccess,
   validate(getScoreSchema),

@@ -96,3 +96,77 @@ export const simulationRateLimiter = rateLimit({
     res.status(429).json(options.message);
   },
 });
+
+/**
+ * Identity a request is limited under: the authenticated wallet when there is
+ * one (so one user cannot dodge the limit by rotating IPs, and users behind a
+ * shared NAT do not throttle each other), otherwise the client IP.
+ *
+ * Mount user-keyed limiters AFTER the JWT middleware so `req.user` is set.
+ */
+export const userOrIpKey = (req: {
+  user?: { publicKey?: string } | undefined;
+  ip?: string | undefined;
+}): string => {
+  const publicKey = req.user?.publicKey;
+  return publicKey ? `user:${publicKey}` : `ip:${ipKeyGenerator(req.ip ?? 'unknown')}`;
+};
+
+interface ReadLimiterOptions {
+  /** Requests allowed per window, per identity. */
+  max: number;
+  /** Message returned with the 429. */
+  message: string;
+  /** Window length; defaults to one minute. */
+  windowMs?: number;
+}
+
+/**
+ * Per-identity limiter for read endpoints that are sensitive to enumeration or
+ * scraping. Each call returns an independent counter, so a busy endpoint cannot
+ * exhaust the budget of another. Not skipped under test: enforcement is part
+ * of the contract these limiters make.
+ */
+const createReadRateLimiter = ({ max, message, windowMs = 60 * 1000 }: ReadLimiterOptions) =>
+  rateLimit({
+    windowMs,
+    max,
+    keyGenerator: (req) => userOrIpKey(req as Parameters<typeof userOrIpKey>[0]),
+    message: { success: false, message },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res, _next, options) => {
+      res.setHeader('Retry-After', Math.ceil(options.windowMs / 1000));
+      res.status(429).json(options.message);
+    },
+  });
+
+/** Admin audit log listing: the most sensitive read, so the tightest limit (30/min per admin). */
+export const auditLogsRateLimiter = createReadRateLimiter({
+  max: 30,
+  message: 'Too many audit log requests, please try again later.',
+});
+
+/** Admin dispute list and detail reads (60/min per admin). */
+export const adminDisputesRateLimiter = createReadRateLimiter({
+  max: 60,
+  message: 'Too many dispute requests, please try again later.',
+});
+
+/** Admin pending-governance listing (60/min per admin). */
+export const governancePendingRateLimiter = createReadRateLimiter({
+  max: 60,
+  message: 'Too many governance requests, please try again later.',
+});
+
+/** Public pool analytics (60/min per IP). */
+export const poolAnalyticsRateLimiter = createReadRateLimiter({
+  max: 60,
+  message: 'Too many analytics requests, please try again later.',
+});
+
+/** Credit score reads: per wallet when authenticated, per IP for the public leaderboard (60/min). */
+export const scoreReadRateLimiter = createReadRateLimiter({
+  max: 60,
+  message: 'Too many score requests, please try again later.',
+});
