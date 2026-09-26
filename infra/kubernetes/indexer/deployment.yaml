@@ -42,7 +42,7 @@ spec:
         runAsUser: 10001
       containers:
         - name: indexer
-          image: ghcr.io/exceldsign-tech/dukapay-indexer:latest
+          image: ghcr.io/exceldsign-tech/dukapay-indexer:v1.0.0@sha256:a0b1c2d3e4f5a0b1c2d3e4f5a0b1c2d3e4f5a0b1c2d3e4f5a0b1c2d3e4f5a0b1
           securityContext:
             readOnlyRootFilesystem: true
           ports:

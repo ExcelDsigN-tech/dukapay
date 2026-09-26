@@ -63,12 +63,28 @@ spec:
               kubernetes.io/metadata.name: dukapay
   egress:
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: dukapay
+              app: db
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
 ---
 # Referenced by ops/incident-response/runbooks.json (data-breach /
 # insider-threat) via `verify_database_access_policy`:

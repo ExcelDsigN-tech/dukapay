@@ -657,11 +657,11 @@ impl LendingPool {
         Self::acquire_lock(&env)?;
 
         if amount <= 0 {
-            Self::release_lock(&env);
+            let _ = Self::release_lock(&env);
             return Err(PoolError::InvalidAmount);
         }
         if min_shares_out < 0 {
-            Self::release_lock(&env);
+            let _ = Self::release_lock(&env);
             return Err(PoolError::InvalidAmount);
         }
 
@@ -674,7 +674,7 @@ impl LendingPool {
         if max > 0 {
             let total = Self::total_deposits(&env, &token);
             if total.checked_add(amount).expect("overflow") > max {
-                Self::release_lock(&env);
+                let _ = Self::release_lock(&env);
                 return Err(PoolError::PoolSizeExceeded);
             }
         }
@@ -688,11 +688,11 @@ impl LendingPool {
         let shares_to_mint =
             Self::calc_shares_to_mint(amount, total_managed_before, cur_total_shares);
         if shares_to_mint <= 0 {
-            Self::release_lock(&env);
+            let _ = Self::release_lock(&env);
             return Err(PoolError::ZeroShares);
         }
         if shares_to_mint < min_shares_out {
-            Self::release_lock(&env);
+            let _ = Self::release_lock(&env);
             return Err(PoolError::MinSharesNotMet);
         }
 
@@ -760,7 +760,7 @@ impl LendingPool {
             amount,
             shares_to_mint,
         );
-        Self::release_lock(&env);
+        let _ = Self::release_lock(&env);
         Ok(())
     }
 
@@ -812,7 +812,7 @@ impl LendingPool {
         Self::acquire_lock(&env)?;
 
         if amount <= 0 {
-            Self::release_lock(&env);
+            let _ = Self::release_lock(&env);
             return Err(PoolError::InvalidAmount);
         }
 
@@ -835,7 +835,7 @@ impl LendingPool {
             updated,
             Self::total_shares(&env, &token),
         );
-        Self::release_lock(&env);
+        let _ = Self::release_lock(&env);
         Ok(())
     }
 
@@ -933,7 +933,7 @@ impl LendingPool {
         Self::assert_withdrawal_cooldown_elapsed(&env, &provider, &token);
         Self::acquire_lock(&env)?;
         let res = Self::redeem_shares(&env, &provider, &token, shares, min_assets_out);
-        Self::release_lock(&env);
+        let _ = Self::release_lock(&env);
         res
     }
 
@@ -950,7 +950,7 @@ impl LendingPool {
         Self::assert_circuit_ok(&env, symbol_short!("withdraw"))?;
         Self::acquire_lock(&env)?;
         let res = Self::redeem_shares(&env, &provider, &token, shares, min_assets_out);
-        Self::release_lock(&env);
+        let _ = Self::release_lock(&env);
         res
     }
 
