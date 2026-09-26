@@ -10,6 +10,7 @@
 
 mod checkpoint;
 mod config;
+mod dead_letter;
 mod metrics;
 mod pipeline;
 mod rpc;

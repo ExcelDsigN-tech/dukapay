@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarRange, CircleDollarSign, HandCoins, ShieldCheck } from "lucide-react";
 import { ErrorBoundary } from "../../components/global_ui/ErrorBoundary";
@@ -13,6 +13,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { EmptyState } from "../../components/ui/EmptyState";
 
 const PAGE_SIZE = 20;
+const LOAN_TABS = ["all", "active", "repaid", "defaulted"] as const;
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
@@ -29,11 +30,42 @@ function getLoanDisplayStatus(status: string, nextPaymentDeadline: string, now: 
 export function LoansPageClient() {
   const t = useTranslations("Loans");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "repaid" | "defaulted">("all");
+  const [activeTab, setActiveTab] = useState<(typeof LOAN_TABS)[number]>("all");
   const [page, setPage] = useState(1);
   const [pageCursors, setPageCursors] = useState<Record<number, string | null>>({ 1: null });
   const [now] = useState(() => Date.now());
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const address = useWalletStore(selectWalletAddress);
+
+  const activateTab = (tab: (typeof LOAN_TABS)[number]) => {
+    setActiveTab(tab);
+    setPage(1);
+    setPageCursors({ 1: null });
+  };
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | undefined;
+    switch (event.key) {
+      case "ArrowRight":
+        nextIndex = (index + 1) % LOAN_TABS.length;
+        break;
+      case "ArrowLeft":
+        nextIndex = (index - 1 + LOAN_TABS.length) % LOAN_TABS.length;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = LOAN_TABS.length - 1;
+        break;
+    }
+
+    if (nextIndex !== undefined) {
+      event.preventDefault();
+      activateTab(LOAN_TABS[nextIndex]);
+      tabRefs.current[nextIndex]?.focus();
+    }
+  };
 
   const {
     data: loansPage,
@@ -137,109 +169,117 @@ export function LoansPageClient() {
 
       <ErrorBoundary scope="loan list" variant="section">
         <div className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: "all", label: t("tabs.all") },
-              { key: "active", label: t("tabs.active") },
-              { key: "repaid", label: t("tabs.repaid") },
-              { key: "defaulted", label: t("tabs.defaulted") },
-            ].map((tab) => (
+          <div role="tablist" aria-label={t("title")} className="flex flex-wrap gap-2">
+            {LOAN_TABS.map((tab, index) => (
               <button
-                key={tab.key}
-                onClick={() => {
-                  setActiveTab(tab.key as typeof activeTab);
-                  setPage(1);
-                  setPageCursors({ 1: null });
+                key={tab}
+                ref={(element) => {
+                  tabRefs.current[index] = element;
                 }}
+                type="button"
+                role="tab"
+                id={`loan-status-tab-${tab}`}
+                aria-controls="loan-status-panel"
+                aria-selected={activeTab === tab}
+                tabIndex={activeTab === tab ? 0 : -1}
+                onClick={() => activateTab(tab)}
+                onKeyDown={(event) => handleTabKeyDown(event, index)}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  activeTab === tab.key
+                  activeTab === tab
                     ? "bg-indigo-600 text-white"
                     : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 }`}
               >
-                {tab.label}
+                {t(`tabs.${tab}`)}
               </button>
             ))}
           </div>
 
-          {displayedLoans.length === 0 ? (
-            <EmptyState
-              icon={HandCoins}
-              title={t("empty.title")}
-              description={t("empty.description")}
-              actionLabel={t("empty.action")}
-              actionHref={`/${locale}/request-loan`}
-              actionIcon={<ArrowRight className="h-4 w-4" />}
-            />
-          ) : (
-            <div className="space-y-3">
-              {displayedLoans.map((loan) => (
-                <article
-                  key={loan.id}
-                  className="flex flex-col gap-4 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800 md:flex-row md:items-center md:justify-between"
-                >
-                  <div>
-                    <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                      {t("loanNumber", { id: loan.id })}
-                    </p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{loan.borrower}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <LoanStatusBadge status={loan.displayStatus} />
-                    <span className="text-zinc-600 dark:text-zinc-400">
-                      {formatCurrency(loan.totalOwed)}
-                    </span>
-                    <span className="text-zinc-600 dark:text-zinc-400">
-                      {t("due", {
-                        date: new Date(loan.nextPaymentDeadline).toLocaleDateString(locale),
-                      })}
-                    </span>
-                  </div>
-                  <Link
-                    href={`/${locale}/loans/${loan.id}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          <div
+            role="tabpanel"
+            id="loan-status-panel"
+            aria-labelledby={`loan-status-tab-${activeTab}`}
+            tabIndex={0}
+          >
+            {displayedLoans.length === 0 ? (
+              <EmptyState
+                icon={HandCoins}
+                title={t("empty.title")}
+                description={t("empty.description")}
+                actionLabel={t("empty.action")}
+                actionHref={`/${locale}/request-loan`}
+                actionIcon={<ArrowRight className="h-4 w-4" />}
+              />
+            ) : (
+              <div className="space-y-3">
+                {displayedLoans.map((loan) => (
+                  <article
+                    key={loan.id}
+                    className="flex flex-col gap-4 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800 md:flex-row md:items-center md:justify-between"
                   >
-                    {t("viewDetails")}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </article>
-              ))}
-            </div>
-          )}
+                    <div>
+                      <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                        {t("loanNumber", { id: loan.id })}
+                      </p>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">{loan.borrower}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <LoanStatusBadge status={loan.displayStatus} />
+                      <span className="text-zinc-600 dark:text-zinc-400">
+                        {formatCurrency(loan.totalOwed)}
+                      </span>
+                      <span className="text-zinc-600 dark:text-zinc-400">
+                        {t("due", {
+                          date: new Date(loan.nextPaymentDeadline).toLocaleDateString(locale),
+                        })}
+                      </span>
+                    </div>
+                    <Link
+                      href={`/${locale}/loans/${loan.id}`}
+                      className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    >
+                      {t("viewDetails")}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            )}
 
-          {displayedLoans.length > 0 && (
-            <PaginationControls
-              currentPage={page}
-              totalPages={totalPages}
-              hasPrevious={page > 1}
-              hasNext={Boolean(loansPage?.pageInfo.hasNext)}
-              onPageChange={(nextPage) => {
-                if (pageCursors[nextPage] !== undefined) {
-                  setPage(nextPage);
-                  return;
-                }
+            {displayedLoans.length > 0 && (
+              <PaginationControls
+                currentPage={page}
+                totalPages={totalPages}
+                hasPrevious={page > 1}
+                hasNext={Boolean(loansPage?.pageInfo.hasNext)}
+                onPageChange={(nextPage) => {
+                  if (pageCursors[nextPage] !== undefined) {
+                    setPage(nextPage);
+                    return;
+                  }
 
-                if (nextPage === page + 1 && loansPage?.pageInfo.nextCursor) {
-                  setPageCursors((current) => ({
-                    ...current,
-                    [nextPage]: loansPage.pageInfo.nextCursor,
-                  }));
-                  setPage(nextPage);
-                }
-              }}
-              onPrevious={() => setPage((previous) => Math.max(1, previous - 1))}
-              onNext={() => {
-                if (loansPage?.pageInfo.nextCursor) {
-                  setPageCursors((current) => ({
-                    ...current,
-                    [page + 1]: loansPage.pageInfo.nextCursor,
-                  }));
-                  setPage(page + 1);
-                }
-              }}
-              summary={t("summary", { count: displayedLoans.length, page })}
-            />
-          )}
+                  if (nextPage === page + 1 && loansPage?.pageInfo.nextCursor) {
+                    setPageCursors((current) => ({
+                      ...current,
+                      [nextPage]: loansPage.pageInfo.nextCursor,
+                    }));
+                    setPage(nextPage);
+                  }
+                }}
+                onPrevious={() => setPage((previous) => Math.max(1, previous - 1))}
+                onNext={() => {
+                  if (loansPage?.pageInfo.nextCursor) {
+                    setPageCursors((current) => ({
+                      ...current,
+                      [page + 1]: loansPage.pageInfo.nextCursor,
+                    }));
+                    setPage(page + 1);
+                  }
+                }}
+                summary={t("summary", { count: displayedLoans.length, page })}
+              />
+            )}
+          </div>
         </div>
       </ErrorBoundary>
     </section>

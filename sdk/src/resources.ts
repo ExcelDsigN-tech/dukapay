@@ -114,8 +114,12 @@ export class ScoresResource {
 export class RemittanceResource {
   constructor(private http: HttpClient) {}
 
-  list(params: { sender?: string; recipient?: string } = {}): Promise<Paginated<Remittance>> {
-    return this.http.get('/remittance', { query: params });
+  list(
+    params: { sender?: string; recipient?: string; page?: number; pageSize?: number } = {},
+  ): Promise<Paginated<Remittance>> {
+    return this.http.get('/remittance', {
+      query: { ...params, page: params.page ?? 1, pageSize: params.pageSize ?? 20 },
+    });
   }
 
   get(id: string): Promise<Remittance> {

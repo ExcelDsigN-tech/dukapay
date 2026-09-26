@@ -4,6 +4,7 @@ import SettingsPage from "./page";
 import { IntlWrapper, renderWithIntl } from "../../../test-utils/intl";
 
 const mockReplace = jest.fn();
+const mockUpdateUserProfile = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace, push: jest.fn() }),
@@ -49,6 +50,7 @@ jest.mock("../../stores/useThemeStore", () => ({
 jest.mock("../../hooks/useApi", () => ({
   useNotificationPreferences: () => ({ data: undefined, isLoading: false, error: null }),
   useUpdateNotificationPreferences: () => ({ mutate: jest.fn(), isPending: false }),
+  useUpdateUserProfile: () => ({ mutate: mockUpdateUserProfile, isPending: false }),
 }));
 
 jest.mock("../../components/gamification/GamificationSettings", () => ({
@@ -86,6 +88,22 @@ describe("SettingsPage section navigation", () => {
     const panel = screen.getByRole("tabpanel");
     expect(panel).toHaveAttribute("id", panelId);
     expect(panel).toHaveAttribute("aria-labelledby", "settings-tab-profile");
+  });
+});
+
+describe("SettingsPage profile saving", () => {
+  beforeEach(() => mockUpdateUserProfile.mockClear());
+
+  it("submits display name and email through the profile mutation", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<SettingsPage />);
+
+    await user.click(screen.getByRole("button", { name: "Save Profile" }));
+
+    expect(mockUpdateUserProfile).toHaveBeenCalledWith(
+      { displayName: "user1", email: "test@example.com" },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
   });
 });
 

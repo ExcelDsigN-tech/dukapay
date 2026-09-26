@@ -22,6 +22,7 @@ import { useGamificationStore } from "./useGamificationStore";
 export interface User {
   id: string;
   email: string;
+  displayName?: string;
   walletAddress?: string;
   role?: "admin" | "super_admin" | "ops" | "support" | "borrower" | "lender";
   scopes?: string[];

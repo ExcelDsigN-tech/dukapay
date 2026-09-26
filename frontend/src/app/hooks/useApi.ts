@@ -224,6 +224,7 @@ export interface Remittance {
 export interface UserProfile {
   id: string;
   email: string;
+  displayName: string;
   walletAddress?: string;
   kycVerified: boolean;
 }
@@ -1023,6 +1024,64 @@ export function useUserProfile(
     queryKey: queryKeys.user.profile(),
     queryFn: () => apiFetch<UserProfile>("/user/profile"),
     ...options,
+  });
+}
+
+export function useUpdateUserProfile() {
+  const queryClient = useQueryClient();
+  const toast = useContractToast();
+
+  type UpdateProfileContext = {
+    previousProfile: UserProfile | undefined;
+    previousUser: ReturnType<typeof useUserStore.getState>["user"];
+  };
+
+  return useMutation<
+    UserProfile,
+    Error,
+    { displayName: string; email: string | null },
+    UpdateProfileContext
+  >({
+    mutationFn: (profile) =>
+      apiFetch<UserProfile>("/user/profile", {
+        method: "PATCH",
+        body: JSON.stringify(profile),
+      }),
+    onMutate: async (profile) => {
+      const profileKey = queryKeys.user.profile();
+      const optimisticProfile = { displayName: profile.displayName, email: profile.email ?? "" };
+      await queryClient.cancelQueries({ queryKey: profileKey });
+
+      const previousProfile = queryClient.getQueryData<UserProfile>(profileKey);
+      const previousUser = useUserStore.getState().user;
+
+      queryClient.setQueryData<UserProfile | undefined>(profileKey, (current) =>
+        current ? { ...current, ...optimisticProfile } : current,
+      );
+      useUserStore.getState().updateUser(optimisticProfile);
+
+      return { previousProfile, previousUser };
+    },
+    onError: (error, _profile, context) => {
+      const profileKey = queryKeys.user.profile();
+      if (context?.previousProfile !== undefined) {
+        queryClient.setQueryData(profileKey, context.previousProfile);
+      }
+      if (context?.previousUser) {
+        useUserStore.getState().updateUser({
+          displayName: context.previousUser.displayName,
+          email: context.previousUser.email,
+        });
+      }
+      toast.error("Failed to save profile", error.message);
+    },
+    onSuccess: (profile) => {
+      queryClient.setQueryData(queryKeys.user.profile(), profile);
+      useUserStore.getState().updateUser({
+        displayName: profile.displayName,
+        email: profile.email,
+      });
+    },
   });
 }
 

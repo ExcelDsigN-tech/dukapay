@@ -110,6 +110,15 @@ groups:
   - name: indexer
     interval: 30s
     rules:
+      - alert: IndexerDeadLetteredEvents
+        expr: increase(indexer_dead_letter_events_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Indexer events were dead-lettered"
+          description: "{{ $value }} event(s) exhausted processing retries. Check the indexer dead-letter file and resolve the blocked checkpoint."
+
       - alert: IndexerLagHigh
         expr: indexer_lag_ledgers > 100
         for: 5m
