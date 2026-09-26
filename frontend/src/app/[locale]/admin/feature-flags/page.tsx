@@ -9,6 +9,7 @@ export default function AdminFeatureFlagsPage() {
   const t = useTranslations("AdminFeatureFlags");
   const role = useUserStore((state) => state.user?.role);
   const { data, isLoading, isError } = useFeatureFlags();
+  const { mutateAsync: updateFlag } = useUpdateFeatureFlag();
   const updateFlag = useUpdateFeatureFlag();
 
   if (role && role !== "admin" && role !== "super_admin") {
@@ -22,7 +23,7 @@ export default function AdminFeatureFlagsPage() {
   }
 
   const handleToggle = async (flagKey: string, current: boolean) => {
-    await updateFlag.mutateAsync({ key: flagKey, enabled: !current });
+    await updateFlag({ key: flagKey, enabled: !current });
   };
 
   return (

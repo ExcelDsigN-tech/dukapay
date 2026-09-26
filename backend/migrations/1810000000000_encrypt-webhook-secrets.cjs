@@ -8,8 +8,8 @@ exports.shorthands = undefined;
  * @returns {Promise<void> | void}
  */
 exports.up = (pgm) => {
-  pgm.addColumn('audit_logs', {
-    status: { type: 'integer', notNull: false },
+  pgm.alterColumn('webhook_subscriptions', 'secret', {
+    type: 'text',
   });
 };
 
@@ -18,5 +18,7 @@ exports.up = (pgm) => {
  * @returns {Promise<void> | void}
  */
 exports.down = (pgm) => {
-  pgm.dropColumn('audit_logs', 'status');
+  pgm.alterColumn('webhook_subscriptions', 'secret', {
+    type: 'varchar(255)',
+  });
 };

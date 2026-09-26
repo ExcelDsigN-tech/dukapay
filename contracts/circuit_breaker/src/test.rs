@@ -223,3 +223,60 @@ fn function_override_lifts_only_that_function() {
     // The other paused function remains blocked.
     assert!(client.is_function_paused(&target, &wit));
 }
+
+#[test]
+fn expired_pauses_are_cleaned_up_on_is_blocked() {
+    let (env, contract_id, _admin, signers) = setup();
+    let client = CircuitBreakerClient::new(&env, &contract_id);
+    let target = Address::generate(&env);
+    let func = Symbol::new(&env, "deposit");
+
+    client.pause_function(&signers.get(0).unwrap(), &target, &func.clone());
+    assert!(client.is_blocked(&target, &func.clone()));
+
+    // Advance past 72h auto-expiry.
+    env.ledger().set_timestamp(PAUSE_DURATION_SECONDS + 1);
+
+    // is_blocked cleans up the expired entry.
+    assert!(!client.is_blocked(&target, &func));
+}
+
+#[test]
+fn active_pauses_preserved_during_cleanup() {
+    let (env, contract_id, _admin, signers) = setup();
+    let client = CircuitBreakerClient::new(&env, &contract_id);
+    let target = Address::generate(&env);
+    let deposit = Symbol::new(&env, "deposit");
+    let withdraw = Symbol::new(&env, "withdraw");
+
+    // Pause both functions.
+    client.pause_function(&signers.get(0).unwrap(), &target, &deposit.clone());
+    client.pause_function(&signers.get(0).unwrap(), &target, &withdraw.clone());
+
+    assert!(client.is_blocked(&target, &deposit.clone()));
+    assert!(client.is_blocked(&target, &withdraw.clone()));
+
+    // Advance part way through the pause duration (half of 72h).
+    env.ledger().set_timestamp(PAUSE_DURATION_SECONDS / 2);
+
+    // Both should still be active.
+    assert!(client.is_blocked(&target, &deposit));
+    assert!(client.is_blocked(&target, &withdraw));
+}
+
+#[test]
+fn global_pause_cleanup_on_is_blocked() {
+    let (env, contract_id, _admin, signers) = setup();
+    let client = CircuitBreakerClient::new(&env, &contract_id);
+    let target = Address::generate(&env);
+
+    client.pause_all(&signers.get(0).unwrap());
+    assert!(client.is_globally_paused());
+
+    // Advance past expiry.
+    env.ledger().set_timestamp(PAUSE_DURATION_SECONDS + 1);
+
+    // Cleanup happens in is_blocked.
+    assert!(!client.is_blocked(&target, &Symbol::new(&env, "any_function")));
+    assert!(!client.is_globally_paused());
+}

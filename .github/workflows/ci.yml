@@ -526,6 +526,34 @@ jobs:
         run: cargo test
         working-directory: indexer
 
+  image-digest-check:
+    needs: supply-chain-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify all Kubernetes images are pinned to SHA256 digests
+        run: |
+          set -euo pipefail
+          FAIL=0
+          while IFS= read -r file; do
+            while IFS= read -r line; do
+              if echo "$line" | grep -qE '^\s+image:'; then
+                image=$(echo "$line" | sed 's/.*image:\s*//')
+                if echo "$image" | grep -q ':latest'; then
+                  echo "::error file=$file::Unpinned :latest tag found: $image"
+                  FAIL=1
+                elif ! echo "$image" | grep -qE '@sha256:[a-f0-9]{64}'; then
+                  echo "::error file=$file::Image not pinned to SHA256 digest: $image"
+                  FAIL=1
+                fi
+              fi
+            done < "$file"
+          done < <(find infra/kubernetes -name "*.yaml" -o -name "*.yml")
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "All Kubernetes images are pinned to SHA256 digests."
+
   sdk:
     needs: supply-chain-audit
     runs-on: ubuntu-latest

@@ -29,7 +29,7 @@ function connectedWalletState(usdc: string) {
   };
 }
 
-test.describe.skip("Borrower Repayment Flow", () => {
+test.describe("Borrower Repayment Flow", () => {
   test.beforeEach(async ({ page }: { page: Page }) => {
     const walletStateJson = JSON.stringify(connectedWalletState("5000.00"));
     await page.addInitScript((stateJson: string) => {

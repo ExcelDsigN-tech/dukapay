@@ -1,5 +1,6 @@
 import { WalletError } from '../errors.js';
 import type { SignedMessage, StellarNetwork, WalletAdapter } from './index.js';
+import { withTimeoutAndRetry } from './utils.js';
 
 type FreighterApi = typeof import('@stellar/freighter-api');
 
@@ -25,7 +26,10 @@ export class FreighterAdapter implements WalletAdapter {
   async isAvailable(): Promise<boolean> {
     try {
       const { isConnected } = await this.lib();
-      const res = await isConnected();
+      const res = await withTimeoutAndRetry(
+        () => isConnected(),
+        { timeout: 10000, retryable: true }
+      );
       return typeof res === 'boolean' ? res : Boolean(res?.isConnected);
     } catch {
       return false;
@@ -34,7 +38,10 @@ export class FreighterAdapter implements WalletAdapter {
 
   async connect(): Promise<string> {
     const api = await this.lib();
-    const access = await api.requestAccess();
+    const access = await withTimeoutAndRetry(
+      () => api.requestAccess(),
+      { timeout: 10000, retryable: false }
+    );
     const address = typeof access === 'string' ? access : access?.address;
     if (!address) throw new WalletError('Freighter access denied');
     return address;
@@ -47,7 +54,10 @@ export class FreighterAdapter implements WalletAdapter {
   async getAddress(): Promise<string | null> {
     try {
       const api = await this.lib();
-      const res = await api.getAddress();
+      const res = await withTimeoutAndRetry(
+        () => api.getAddress(),
+        { timeout: 10000, retryable: true }
+      );
       const address = typeof res === 'string' ? res : res?.address;
       return address || null;
     } catch {
@@ -57,7 +67,10 @@ export class FreighterAdapter implements WalletAdapter {
 
   async getNetwork(): Promise<StellarNetwork> {
     const api = await this.lib();
-    const res = await api.getNetwork();
+    const res = await withTimeoutAndRetry(
+      () => api.getNetwork(),
+      { timeout: 10000, retryable: true }
+    );
     const network = typeof res === 'string' ? res : res?.network;
     return /public|mainnet/i.test(network ?? '') ? 'mainnet' : 'testnet';
   }
@@ -66,7 +79,10 @@ export class FreighterAdapter implements WalletAdapter {
     const api = await this.lib();
     const signer = (api as unknown as { signMessage?: Function }).signMessage;
     if (!signer) throw new WalletError('This Freighter version does not support signMessage');
-    const res = await signer(message);
+    const res = await withTimeoutAndRetry(
+      () => signer(message),
+      { timeout: 10000, retryable: false }
+    );
     const signature =
       typeof res === 'string'
         ? res
@@ -82,12 +98,15 @@ export class FreighterAdapter implements WalletAdapter {
   async signTransaction(xdr: string, opts?: { network?: StellarNetwork }): Promise<string> {
     const api = await this.lib();
     const network = opts?.network ?? (await this.getNetwork());
-    const res = await api.signTransaction(xdr, {
-      networkPassphrase:
-        network === 'mainnet'
-          ? 'Public Global Stellar Network ; September 2015'
-          : 'Test SDF Network ; September 2015',
-    });
+    const res = await withTimeoutAndRetry(
+      () => api.signTransaction(xdr, {
+        networkPassphrase:
+          network === 'mainnet'
+            ? 'Public Global Stellar Network ; September 2015'
+            : 'Test SDF Network ; September 2015',
+      }),
+      { timeout: 10000, retryable: false }
+    );
     const signed = typeof res === 'string' ? res : res?.signedTxXdr;
     if (!signed) throw new WalletError('Freighter did not return a signed transaction');
     return signed;

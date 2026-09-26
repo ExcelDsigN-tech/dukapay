@@ -9,6 +9,7 @@ export default function AdminKycPage() {
   const t = useTranslations("AdminKyc");
   const role = useUserStore((state) => state.user?.role);
   const { data, isLoading } = useAdminUsers({ limit: 100 });
+  const { mutateAsync: overrideKyc, isPending } = useKycOverride();
   const overrideKyc = useKycOverride();
   const [targetKey, setTargetKey] = useState("");
   const [verified, setVerified] = useState(true);
@@ -26,12 +27,12 @@ export default function AdminKycPage() {
 
   const handleSubmit = async () => {
     if (!targetKey) return;
-    await overrideKyc.mutateAsync({ publicKey: targetKey, verified, level });
+    await overrideKyc({ publicKey: targetKey, verified, level });
     setTargetKey("");
   };
 
   const handleUserOverride = async (publicKey: string, newVerified: boolean) => {
-    await overrideKyc.mutateAsync({ publicKey, verified: newVerified, level: "basic" });
+    await overrideKyc({ publicKey, verified: newVerified, level: "basic" });
   };
 
   return (

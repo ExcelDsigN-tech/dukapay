@@ -74,7 +74,7 @@ test.beforeEach(async ({ page }: { page: Page }) => {
 
 // ─── Flow 2: Lending Pool ──────────────────────────────────────────────────────
 
-test.skip("Lend: Deposit funds → View updated pool stats", async ({ page }: { page: Page }) => {
+test("Lend: Deposit funds → View updated pool stats", async ({ page }: { page: Page }) => {
   await page.goto("/en/lend");
 
   // Initial stats verification
@@ -119,7 +119,7 @@ test.skip("Lend: Deposit funds → View updated pool stats", async ({ page }: { 
 
 // ─── Flow 4: Remittance History ────────────────────────────────────────────────
 
-test.skip("Remittance: View history", async ({ page }: { page: Page }) => {
+test("Remittance: View history", async ({ page }: { page: Page }) => {
   // Mock remittances list
   await page.route("**/api/remittances", async (route: Route) => {
     await route.fulfill({
@@ -149,11 +149,7 @@ test.skip("Remittance: View history", async ({ page }: { page: Page }) => {
 
 // ─── Flow 5: Settings & Logout ────────────────────────────────────────────────
 
-test.skip("Account: Settings update → logout → redirect to login", async ({
-  page,
-}: {
-  page: Page;
-}) => {
+test("Account: Settings update → logout → redirect to login", async ({ page }: { page: Page }) => {
   await page.goto("/en/settings");
 
   // Profile update check (resolve strict mode by using heading)

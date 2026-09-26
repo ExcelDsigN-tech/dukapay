@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useUserStore } from "../../stores/useUserStore";
 
 export default function AdminDashboardPage() {

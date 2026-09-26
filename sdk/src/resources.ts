@@ -12,17 +12,31 @@ import type {
   UnsignedTransaction,
   YieldHistoryPoint,
 } from './types.js';
+import { ValidationError } from './errors.js';
+import {
+  validateStellarAddress,
+  validateAmount,
+  validatePositiveInt,
+} from './validation.js';
 
 export class AuthResource {
   constructor(private http: HttpClient) {}
 
   /** Step 1 of wallet login: get a message for the wallet to sign. */
   challenge(publicKey: string): Promise<Challenge> {
+    validateStellarAddress(publicKey, 'publicKey');
     return this.http.post('/auth/challenge', { publicKey }, { anonymous: true });
   }
 
   /** Step 2: exchange the signed challenge for a session token. */
   login(params: { publicKey: string; message: string; signature: string }): Promise<Session> {
+    validateStellarAddress(params.publicKey, 'publicKey');
+    if (!params.message || typeof params.message !== 'string') {
+      throw new ValidationError('Invalid message: must be a non-empty string');
+    }
+    if (!params.signature || typeof params.signature !== 'string') {
+      throw new ValidationError('Invalid signature: must be a non-empty string');
+    }
     return this.http.post('/auth/login', params, { anonymous: true });
   }
 
@@ -49,11 +63,14 @@ export class LoansResource {
   }
 
   get(loanId: number | string): Promise<Loan> {
+    validatePositiveInt(loanId, 'loanId');
     return this.http.get(`/loans/${loanId}`);
   }
 
   /** Returns an unsigned XDR to be signed by the borrower's wallet. */
   buildRepay(loanId: number | string, amount: string): Promise<UnsignedTransaction> {
+    validatePositiveInt(loanId, 'loanId');
+    validateAmount(amount, 'amount');
     return this.http.post(`/loans/${loanId}/build-repay`, { amount });
   }
 
@@ -79,10 +96,12 @@ export class PoolResource {
   }
 
   depositor(address: string): Promise<DepositorPortfolio> {
+    validateStellarAddress(address, 'address');
     return this.http.get(`/pool/depositor/${address}`);
   }
 
   yieldHistory(address: string, days: 7 | 30 | 90 = 30, token?: string): Promise<YieldHistoryPoint[]> {
+    validateStellarAddress(address, 'address');
     return this.http.get(`/pool/depositor/${address}/yield-history`, { query: { days, token } });
   }
 
@@ -91,10 +110,16 @@ export class PoolResource {
   }
 
   buildDeposit(params: { token: string; amount: string; from: string }): Promise<UnsignedTransaction> {
+    validateStellarAddress(params.token, 'token');
+    validateAmount(params.amount, 'amount');
+    validateStellarAddress(params.from, 'from');
     return this.http.post('/pool/build-deposit', params);
   }
 
   buildWithdraw(params: { token: string; shares: string; from: string }): Promise<UnsignedTransaction> {
+    validateStellarAddress(params.token, 'token');
+    validateAmount(params.shares, 'shares');
+    validateStellarAddress(params.from, 'from');
     return this.http.post('/pool/build-withdraw', params);
   }
 }
@@ -103,6 +128,7 @@ export class ScoresResource {
   constructor(private http: HttpClient) {}
 
   get(address: string): Promise<Score> {
+    validateStellarAddress(address, 'address');
     return this.http.get(`/scores/${address}`);
   }
 
@@ -127,6 +153,9 @@ export class RemittanceResource {
   }
 
   buildSend(params: { recipient: string; amount: string; from: string }): Promise<UnsignedTransaction> {
+    validateStellarAddress(params.recipient, 'recipient');
+    validateAmount(params.amount, 'amount');
+    validateStellarAddress(params.from, 'from');
     return this.http.post('/remittance/build-send', params);
   }
 }

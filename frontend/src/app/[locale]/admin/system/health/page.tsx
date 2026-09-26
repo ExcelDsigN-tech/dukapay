@@ -51,7 +51,7 @@ export default function SystemHealthPage() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              {data?.checks.map((check) => (
+              {data?.checks.map((check: any) => (
                 <div
                   key={check.name}
                   className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800"

@@ -14,6 +14,32 @@ jest.unstable_mockModule('../db/connection.js', () => ({
   closePool: jest.fn(),
 }));
 
+const FAKE_TOKEN = 'pii:v1:test-kek:aabbcc:ddeeff:001122:74657374';
+
+const mockEncryptField = jest.fn<() => Promise<object>>().mockResolvedValue({
+  ciphertext: Buffer.from('ct'),
+  gcm_nonce: Buffer.from('nonce'),
+  dek_wrapped: Buffer.from('wrapped'),
+  dek_kek_id: 'test-kek',
+  key_version: 1,
+  created_at: new Date().toISOString(),
+});
+const mockSerialize = jest.fn<(f: object) => string>().mockReturnValue(FAKE_TOKEN);
+const mockDeserialize = jest.fn<(s: string) => object>().mockReturnValue({
+  ciphertext: Buffer.from('ct'),
+  gcm_nonce: Buffer.from('nonce'),
+  dek_wrapped: Buffer.from('wrapped'),
+  dek_kek_id: 'test-kek',
+});
+const mockDecryptField = jest.fn<() => Promise<string>>().mockResolvedValue('plain-secret');
+
+jest.unstable_mockModule('../services/piiCrypto.js', () => ({
+  encryptField: mockEncryptField,
+  serializeEncryptedField: mockSerialize,
+  deserializeEncryptedField: mockDeserialize,
+  decryptField: mockDecryptField,
+}));
+
 const {
   WebhookService,
   getRetryDelayMs,
@@ -666,6 +692,76 @@ describe('WebhookService', () => {
         JSON.stringify(['LoanRepaid']),
       ]);
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('webhook secret encryption', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('encrypts the secret before inserting into the database', async () => {
+      mockQuery.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 5,
+            callback_url: 'https://consumer.example',
+            event_types: ['LoanApproved'],
+            secret: FAKE_TOKEN,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        rowCount: 1,
+      });
+
+      const service = new WebhookService();
+      await service.registerSubscription({
+        callbackUrl: 'https://consumer.example',
+        eventTypes: ['LoanApproved'],
+        secret: 'my-signing-secret',
+      });
+
+      expect(mockEncryptField).toHaveBeenCalledWith('my-signing-secret');
+      expect(mockSerialize).toHaveBeenCalled();
+
+      const insertCall = mockQuery.mock.calls[0]!;
+      const params = insertCall[1] as unknown[];
+      expect(params[2]).toBe(FAKE_TOKEN);
+    });
+
+    it('decrypts the stored token before computing the HMAC signature on dispatch', async () => {
+      const fetchMock = jest.fn<(...args: unknown[]) => Promise<{ ok: boolean; status: number }>>();
+      fetchMock.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      mockQuery
+        .mockResolvedValueOnce({
+          rows: [{ id: 3, callback_url: 'https://consumer.example', secret: FAKE_TOKEN }],
+        })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+      const service = new WebhookService();
+      await service.dispatch({
+        eventId: 'evt-signed',
+        eventType: 'LoanApproved',
+        loanId: 7,
+        address: 'GBORROWER123',
+        ledger: 200,
+        ledgerClosedAt: new Date('2025-06-01T00:00:00.000Z'),
+        txHash: 'tx-signed',
+        contractId: 'contract-456',
+        topics: [],
+        value: 'value-xdr',
+      });
+
+      expect(mockDeserialize).toHaveBeenCalledWith(FAKE_TOKEN);
+      expect(mockDecryptField).toHaveBeenCalled();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const callHeaders = (fetchMock.mock.calls[0]![1] as RequestInit).headers as Record<string, string>;
+      expect(callHeaders['x-webhook-signature']).toMatch(/^[0-9a-f]{64}$/);
     });
   });
 });

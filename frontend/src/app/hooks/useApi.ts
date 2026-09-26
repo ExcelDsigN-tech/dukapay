@@ -119,6 +119,17 @@ export const queryKeys = {
   agent: {
     dashboard: () => ["agent", "dashboard"] as const,
   },
+  adminUsers: {
+    all: () => ["admin", "users"] as const,
+    list: (params: Record<string, unknown>) => ["admin", "users", params] as const,
+    detail: (userId: string) => ["admin", "users", userId] as const,
+  },
+  adminSystemHealth: {
+    all: () => ["admin", "system", "health"] as const,
+  },
+  adminFeatureFlags: {
+    all: () => ["admin", "featureFlags"] as const,
+  },
 } as const;
 
 // ─── Base fetch helper ────────────────────────────────────────────────────────

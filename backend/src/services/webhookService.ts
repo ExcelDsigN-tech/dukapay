@@ -1,6 +1,12 @@
 import crypto from 'node:crypto';
 import { query } from '../db/connection.js';
 import logger from '../utils/logger.js';
+import {
+  encryptField,
+  serializeEncryptedField,
+  deserializeEncryptedField,
+  decryptField,
+} from './piiCrypto.js';
 
 // #1520 — this array is the single source of truth for which event types
 // external webhook subscribers can register for. docs/webhooks.md's
@@ -141,6 +147,24 @@ export const WEBHOOK_NONCE_RETENTION_SECONDS = 600;
 
 function generateNonce(): string {
   return crypto.randomBytes(16).toString('hex');
+}
+
+async function decryptWebhookSecret(token: string, subscriptionId: string): Promise<string> {
+  if (!token.startsWith('pii:v')) {
+    return token;
+  }
+  const encrypted = deserializeEncryptedField(token);
+  return decryptField(
+    subscriptionId,
+    'webhook_secret',
+    encrypted.ciphertext,
+    encrypted.gcm_nonce,
+    encrypted.dek_wrapped,
+    encrypted.dek_kek_id,
+    'webhook_service',
+    'sign_delivery',
+    crypto.randomUUID(),
+  );
 }
 
 // Compute the HMAC-SHA256 signature for a webhook delivery.
@@ -443,11 +467,15 @@ export class WebhookService {
         if (delivery.attempt_count >= MAX_RETRY_ATTEMPTS) {
           continue;
         }
+        const encryptedSecret = delivery.secret || undefined;
+        const plainSecret = encryptedSecret
+          ? await decryptWebhookSecret(encryptedSecret, String(delivery.subscription_id))
+          : undefined;
         await WebhookService.retryWebhookDelivery(
           delivery.id,
           delivery.subscription_id,
           delivery.callback_url,
-          delivery.secret || undefined,
+          plainSecret,
           delivery.event_id,
           delivery.event_type as WebhookEventType,
           delivery.payload,
@@ -593,14 +621,29 @@ export class WebhookService {
   }
 
   async registerSubscription(input: RegisterWebhookInput): Promise<WebhookSubscription> {
+    let encryptedSecret: string | null = null;
+    if (input.secret) {
+      const encrypted = await encryptField(input.secret);
+      encryptedSecret = serializeEncryptedField(encrypted);
+    }
+
     const result = await query(
       `INSERT INTO webhook_subscriptions (callback_url, event_types, secret, is_active)
        VALUES ($1, $2::jsonb, $3, true)
        RETURNING id, callback_url, event_types, secret, is_active, created_at, updated_at`,
-      [input.callbackUrl, JSON.stringify(input.eventTypes), input.secret ?? null],
+      [input.callbackUrl, JSON.stringify(input.eventTypes), encryptedSecret],
     );
 
     return this.mapSubscriptionRow(result.rows[0] as Record<string, unknown>);
+  }
+
+  async rotateWebhookSecret(id: number, newSecret: string): Promise<void> {
+    const encrypted = await encryptField(newSecret);
+    const token = serializeEncryptedField(encrypted);
+    await query(
+      `UPDATE webhook_subscriptions SET secret = $1, updated_at = NOW() WHERE id = $2`,
+      [token, id],
+    );
   }
 
   async listSubscriptions(): Promise<WebhookSubscription[]> {
@@ -660,14 +703,16 @@ export class WebhookService {
       );
 
       await Promise.all(
-        webhooksResult.rows.map((hook) =>
-          this.sendToWebhook(
+        webhooksResult.rows.map(async (hook) => {
+          const rawSecret = (hook as { secret?: string | null }).secret ?? undefined;
+          const plainSecret = rawSecret ? await decryptWebhookSecret(rawSecret, String((hook as { id: number }).id)) : undefined;
+          return this.sendToWebhook(
             Number((hook as { id: number }).id),
             String((hook as { callback_url: string }).callback_url),
-            ((hook as { secret?: string | null }).secret ?? undefined) || undefined,
+            plainSecret,
             preparedPayload,
-          ),
-        ),
+          );
+        }),
       );
     } catch (error) {
       logger.withContext().error('Error during webhook dispatch', {
@@ -793,13 +838,10 @@ export class WebhookService {
   }
 
   private mapSubscriptionRow(row: Record<string, unknown>): WebhookSubscription {
-    const secret = typeof row.secret === 'string' && row.secret.length > 0 ? row.secret : undefined;
-
     return {
       id: Number(row.id),
       callbackUrl: String(row.callback_url),
       eventTypes: (row.event_types as WebhookEventType[]) ?? [],
-      ...(secret ? { secret } : {}),
       isActive: Boolean(row.is_active),
       createdAt: new Date(String(row.created_at)),
       updatedAt: new Date(String(row.updated_at)),
