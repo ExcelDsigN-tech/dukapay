@@ -175,8 +175,10 @@ impl AgentRegistry {
     pub fn set_reputation(env: Env, agent: Address, reputation: i128) -> Result<(), RegistryError> {
         Self::require_operator(&env)?;
         let mut info = Self::get_info(&env, &agent)?;
+        let old_reputation = info.reputation;
         info.reputation = reputation;
         Self::set_info(&env, &agent, &info);
+        events::reputation_updated(&env, &agent, old_reputation, reputation);
         Ok(())
     }
 
@@ -188,8 +190,10 @@ impl AgentRegistry {
     ) -> Result<(), RegistryError> {
         Self::require_operator(&env)?;
         let mut info = Self::get_info(&env, &agent)?;
+        let old_expiry = info.license_expiry;
         info.license_expiry = license_expiry;
         Self::set_info(&env, &agent, &info);
+        events::license_renewed(&env, &agent, old_expiry, license_expiry);
         Ok(())
     }
 
