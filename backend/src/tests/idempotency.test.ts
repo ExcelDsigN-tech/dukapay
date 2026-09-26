@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { idempotencyMiddleware } from '../middleware/idempotency.js';
+import { idempotencyMiddleware, idempotencyCircuitBreaker } from '../middleware/idempotency.js';
 import { cacheService } from '../services/cacheService.js';
 import { jest } from '@jest/globals';
 
@@ -12,6 +12,7 @@ describe('Idempotency Middleware', () => {
   let next: NextFunction;
 
   beforeEach(() => {
+    idempotencyCircuitBreaker.reset();
     req = {
       header: jest.fn() as unknown as Request['header'],
       method: 'POST',
@@ -27,9 +28,6 @@ describe('Idempotency Middleware', () => {
     };
     next = jest.fn();
 
-    // Mock cacheService explicitly for each test if needed
-    // In ESM with Jest, mocking can be tricky, so we rely on manual mocks of the singleton instance if possible
-    // or use jest.spyOn if the instance is exported.
     jest.spyOn(cacheService, 'get').mockReset();
     jest.spyOn(cacheService, 'set').mockReset();
   });
@@ -94,5 +92,43 @@ describe('Idempotency Middleware', () => {
 
     expect(next).toHaveBeenCalled();
     expect(res.on).toHaveBeenCalledWith('finish', expect.any(Function));
+  });
+
+  it('should return 503 Service Unavailable when Redis fails on get', async () => {
+    const key = 'error-key';
+    asMock(req.header).mockReturnValue(key);
+    (cacheService.get as jest.Mock<() => Promise<unknown>>).mockRejectedValue(
+      new Error('Redis connection error'),
+    );
+
+    await idempotencyMiddleware(req as Request, res as Response, next);
+
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Service Unavailable',
+      message: 'Idempotency service temporarily unavailable. Please retry later.',
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('should reject with 503 when circuit breaker is open', async () => {
+    const key = 'circuit-key';
+    asMock(req.header).mockReturnValue(key);
+
+    // Trip the circuit breaker by recording failures
+    idempotencyCircuitBreaker.recordFailure();
+    idempotencyCircuitBreaker.recordFailure();
+    idempotencyCircuitBreaker.recordFailure();
+    expect(idempotencyCircuitBreaker.isOpen()).toBe(true);
+
+    await idempotencyMiddleware(req as Request, res as Response, next);
+
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Service Unavailable',
+      message: 'Idempotency service temporarily unavailable. Please retry later.',
+    });
+    expect(cacheService.get).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
   });
 });
