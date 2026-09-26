@@ -1,4 +1,5 @@
 use crate::{AgentRegistry, AgentRegistryClient, AgentStatus, RegistryError};
+use proptest::prelude::*;
 use soroban_sdk::testutils::{Address as _, Events as _};
 use soroban_sdk::{Address, BytesN, Env, FromVal, IntoVal, Symbol};
 
@@ -152,6 +153,17 @@ fn test_bond_updated_event() {
     assert_eq!(last_event_topic0(&env), Symbol::new(&env, "BondUpdated"));
 }
 
+proptest! {
+    #[test]
+    fn proptest_valid_bond_always_accepted(
+        bond in 1i128..1_000_000,
+        cap in 100_000u64..10_000_000u64
+    ) {
+        let (env, client, _owner, _op) = setup();
+        let a = agent(&env);
+        client.register(&a, &kycs(&env), &region(&env), &bond, &cap);
+        prop_assert_eq!(client.get_agent(&a).bond_amount, bond);
+    }
 // ── Upgrade (issue #501) ─────────────────────────────────────────────────────
 
 fn create_upgrade_hash(env: &Env) -> BytesN<32> {

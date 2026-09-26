@@ -12,7 +12,10 @@ exports.up = (pgm) => {
   // Extend state check to include new saga states (if not already inclusive)
   // Drop old constraint and add new one that includes PENDING/PARTIAL/COMPLETED/FAILED
   try {
-    pgm.dropConstraint('cross_contract_reconciliation', 'cross_contract_reconciliation_state_check');
+    pgm.dropConstraint(
+      'cross_contract_reconciliation',
+      'cross_contract_reconciliation_state_check',
+    );
   } catch {}
 
   // Add settlement-specific columns
@@ -54,7 +57,8 @@ exports.up = (pgm) => {
 
   // Extend legacy state check to be permissive (keep both)
   pgm.addConstraint('cross_contract_reconciliation', 'cross_contract_reconciliation_state_check2', {
-    check: "state IN ('pending', 'half_applied', 'reconciled', 'failed', 'PENDING', 'PARTIAL', 'COMPLETED', 'FAILED')",
+    check:
+      "state IN ('pending', 'half_applied', 'reconciled', 'failed', 'PENDING', 'PARTIAL', 'COMPLETED', 'FAILED')",
   });
 };
 
@@ -66,7 +70,10 @@ exports.down = (pgm) => {
     pgm.dropConstraint('cross_contract_reconciliation', 'settlement_state_check');
   } catch {}
   try {
-    pgm.dropConstraint('cross_contract_reconciliation', 'cross_contract_reconciliation_state_check2');
+    pgm.dropConstraint(
+      'cross_contract_reconciliation',
+      'cross_contract_reconciliation_state_check2',
+    );
   } catch {}
   pgm.dropColumn('cross_contract_reconciliation', 'settlement_state');
   pgm.dropColumn('cross_contract_reconciliation', 'compensation_attempts');

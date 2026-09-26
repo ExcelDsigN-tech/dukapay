@@ -1969,6 +1969,35 @@
           "success",
           "error"
         ]
+      },
+      "AgentDashboard": {
+        "type": "object",
+        "properties": {
+          "agentPublicKey": {
+            "type": "string"
+          },
+          "floatUtilization": {
+            "type": "object"
+          },
+          "earnings": {
+            "type": "object"
+          },
+          "borrowerPortfolio": {
+            "type": "object"
+          },
+          "pendingSettlements": {
+            "type": "object"
+          },
+          "collateralRatio": {
+            "type": "object"
+          },
+          "recentTransactions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
       }
     }
   },
@@ -3181,12 +3210,11 @@
         }
       }
     },
-    "/agents/my-assignments": {
+    "/agents/dashboard": {
       "get": {
-        "summary": "List borrower wallets assigned to the authenticated agent",
-        "description": "Returns the borrowers the authenticated agent (or admin) is scoped to under tenant isolation (the `agents:view-assigned` scope). Agents can read but not modify the data of these borrowers on the loan, score and remittance endpoints, enforced both by the RBAC middleware and by RLS.\n",
+        "summary": "Get agent dashboard metrics",
         "tags": [
-          "Agents"
+          "Agent"
         ],
         "security": [
           {
@@ -3195,168 +3223,32 @@
         ],
         "responses": {
           "200": {
-            "description": "Assignments retrieved successfully.",
+            "description": "Agent dashboard data",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "agentPublicKey",
-                        "assignments"
-                      ],
-                      "properties": {
-                        "agentPublicKey": {
-                          "type": "string"
-                        },
-                        "assignments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "borrowerPublicKey",
-                              "createdAt"
-                            ],
-                            "properties": {
-                              "borrowerPublicKey": {
-                                "type": "string"
-                              },
-                              "createdAt": {
-                                "type": "string",
-                                "format": "date-time"
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid Bearer token."
-          },
-          "403": {
-            "description": "Requires the agent role."
-          }
-        }
-      }
-    },
-    "/agents/{agentPublicKey}/assignees": {
-      "post": {
-        "summary": "Assign a borrower to an agent (admin only)",
-        "description": "Grants an agent read access to a borrower's data. Idempotent: assigning the same pair twice returns the existing assignment. Admin only.\n",
-        "tags": [
-          "Agents"
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "agentPublicKey",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Agent's Stellar public key receiving the assignment"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "borrowerPublicKey"
-                ],
-                "properties": {
-                  "borrowerPublicKey": {
-                    "type": "string",
-                    "description": "Borrower's Stellar public key to assign"
-                  }
+                  "$ref": "#/components/schemas/AgentDashboard"
                 }
               }
             }
           }
-        },
-        "responses": {
-          "201": {
-            "description": "Assignment created (or already present)."
-          },
-          "400": {
-            "description": "Invalid public key."
-          },
-          "401": {
-            "description": "Missing or invalid Bearer token."
-          },
-          "403": {
-            "description": "Requires the admin role."
-          }
         }
       }
     },
-    "/agents/{agentPublicKey}/assignees/{borrowerPublicKey}": {
+    "/agents/dashboard/cache": {
       "delete": {
-        "summary": "Revoke a borrower assignment from an agent (admin only)",
-        "description": "Removes the agent's read access to the borrower. Admin only.\n",
+        "summary": "Clear agent dashboard cache",
         "tags": [
-          "Agents"
+          "Agent"
         ],
         "security": [
           {
             "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "agentPublicKey",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "borrowerPublicKey",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Assignment revoked."
-          },
-          "400": {
-            "description": "Invalid public key."
-          },
-          "401": {
-            "description": "Missing or invalid Bearer token."
-          },
-          "403": {
-            "description": "Requires the admin role."
-          },
-          "404": {
-            "description": "Assignment not found."
+            "description": "Cache cleared"
           }
         }
       }

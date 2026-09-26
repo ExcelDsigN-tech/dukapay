@@ -51,7 +51,7 @@ async function setupMocks(page: Page) {
   });
 }
 
-test.describe.skip("Send Remittance Flow", () => {
+test.describe("Send Remittance Flow", () => {
   test("shows connect-wallet warning when wallet is not connected", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem(
