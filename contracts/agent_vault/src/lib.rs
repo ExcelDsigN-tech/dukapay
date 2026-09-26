@@ -14,7 +14,8 @@
 
 use soroban_sdk::token::Client as TokenClient;
 use soroban_sdk::{
-    contract, contractclient, contracterror, contractimpl, contracttype, Address, Env, Symbol, Vec,
+    contract, contractclient, contracterror, contractimpl, contracttype, Address, BytesN, Env,
+    Symbol, Vec,
 };
 
 mod events;
@@ -75,6 +76,8 @@ pub enum DataKey {
     CircuitBreaker,
     Vault(Address),
     ReentrancyLock,
+    /// Contract code version, bumped by every `upgrade`.
+    Version,
 }
 
 #[contract]
@@ -88,6 +91,9 @@ impl AgentVault {
     const PERSISTENT_TTL_THRESHOLD: u32 = 17_280;
     const PERSISTENT_TTL_BUMP: u32 = 518_400;
     const BATCH_MAX: u32 = 100;
+    /// Version of the code a freshly initialised vault runs. Vaults deployed
+    /// before versioning existed have no stored version and read as this too.
+    const INITIAL_VERSION: u32 = 1;
 
     // ── TTL helpers ───────────────────────────────────────────────────────
 
@@ -242,8 +248,46 @@ impl AgentVault {
                 min_collateral,
             },
         );
+        env.storage()
+            .instance()
+            .set(&DataKey::Version, &Self::INITIAL_VERSION);
         Self::bump_instance_ttl(&env);
         Ok(())
+    }
+
+    // ── Upgrades ──────────────────────────────────────────────────────────
+
+    /// Contract code version: starts at 1 and increases by one on every
+    /// `upgrade`. Lets operators and indexers tell which code a vault runs.
+    pub fn version(env: Env) -> u32 {
+        Self::bump_instance_ttl(&env);
+        env.storage()
+            .instance()
+            .get(&DataKey::Version)
+            .unwrap_or(Self::INITIAL_VERSION)
+    }
+
+    /// Replace the vault's code with the uploaded WASM `new_wasm_hash`,
+    /// keeping all storage (collateral, float, params) in place. Owner only.
+    ///
+    /// Emits `ContractUpgraded (old_version, new_version)`, the same event the
+    /// other DukaPay contracts emit, so the upgrade is auditable on-chain.
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), VaultError> {
+        Self::owner(&env)?.require_auth();
+        Self::record_upgrade(&env);
+        env.deployer().update_current_contract_wasm(new_wasm_hash);
+        Ok(())
+    }
+
+    /// Bump the stored version and announce it. Returns `(old, new)`.
+    fn record_upgrade(env: &Env) -> (u32, u32) {
+        let old_version = Self::version(env.clone());
+        let new_version = old_version.saturating_add(1);
+        env.storage()
+            .instance()
+            .set(&DataKey::Version, &new_version);
+        events::contract_upgraded(env, old_version, new_version);
+        (old_version, new_version)
     }
 
     // ── Collateral ────────────────────────────────────────────────────────

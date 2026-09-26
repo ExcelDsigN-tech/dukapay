@@ -14,6 +14,7 @@ export function useReveal() {
     mutationFn: async (options: RevealOptions): Promise<string> => {
       const res = await fetch(`/api/recipients/${options.recipientId}/reveal`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           field: options.field,

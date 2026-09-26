@@ -2,7 +2,12 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireApiKey } from '../middleware/auth.js';
 import { requireJwtAuth, requireRoles } from '../middleware/jwtAuth.js';
-import { strictRateLimiter } from '../middleware/rateLimiter.js';
+import {
+  strictRateLimiter,
+  auditLogsRateLimiter,
+  adminDisputesRateLimiter,
+  governancePendingRateLimiter,
+} from '../middleware/rateLimiter.js';
 import { validateBody } from '../middleware/validation.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { auditLog } from '../middleware/auditLog.js';
@@ -44,7 +49,13 @@ import { listAuditLogs } from '../controllers/authController.js';
 
 const router = Router();
 
-router.get('/audit-logs', requireJwtAuth, requireRoles('admin'), listAuditLogs);
+router.get(
+  '/audit-logs',
+  requireJwtAuth,
+  auditLogsRateLimiter,
+  requireRoles('admin'),
+  listAuditLogs,
+);
 
 router.post(
   '/loans/:loanId/build-reject',
@@ -188,7 +199,13 @@ router.post(
  *       403:
  *         description: Requires the admin role.
  */
-router.get('/disputes', requireJwtAuth, requireRoles('admin'), listLoanDisputes);
+router.get(
+  '/disputes',
+  requireJwtAuth,
+  adminDisputesRateLimiter,
+  requireRoles('admin'),
+  listLoanDisputes,
+);
 
 /**
  * @swagger
@@ -235,7 +252,13 @@ router.get('/disputes', requireJwtAuth, requireRoles('admin'), listLoanDisputes)
  *       404:
  *         description: Dispute not found.
  */
-router.get('/disputes/:disputeId', requireJwtAuth, requireRoles('admin'), getLoanDispute);
+router.get(
+  '/disputes/:disputeId',
+  requireJwtAuth,
+  adminDisputesRateLimiter,
+  requireRoles('admin'),
+  getLoanDispute,
+);
 /**
  * @swagger
  * /admin/disputes/{disputeId}/resolve:
@@ -421,7 +444,13 @@ router.post(
  *       403:
  *         description: Requires the admin role.
  */
-router.get('/governance/pending', requireJwtAuth, requireRoles('admin'), getPendingGovernance);
+router.get(
+  '/governance/pending',
+  requireJwtAuth,
+  governancePendingRateLimiter,
+  requireRoles('admin'),
+  getPendingGovernance,
+);
 
 const checkDefaultsBodySchema = z.object({
   loanIds: z

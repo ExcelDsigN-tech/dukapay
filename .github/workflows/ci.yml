@@ -58,6 +58,57 @@ jobs:
         run: npx ts-node gen-money.ts --check
         working-directory: scripts
 
+  # Issue #432: the stroop-integer money kernel exists twice on purpose — once in
+  # Rust (`contracts/money`, what the chain executes) and once in TypeScript
+  # (`backend/src/money/decimal.ts`, the off-chain settlement path) — and the two
+  # must agree bit-for-bit for the same amount, or an off-chain confirmation can
+  # disagree with what actually settles. This job runs both halves of the parity
+  # harness and fails the build the moment they diverge: the shared vectors in
+  # `contracts/money/tests/parity_vectors.rs` and `parity-vectors.test.ts`, then
+  # `scripts/money-parity.ts`, which replays every vector in
+  # `tests/money-parity/vectors.json` plus a randomized batch through both
+  # implementations and diffs the outputs.
+  money-parity:
+    needs: money-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable # not SHA-pinned: rolling channel branch (stable/beta/nightly track new Rust releases); pinning would freeze the toolchain version
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: contracts
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Rust shared money vectors and properties
+        # `--test-threads=1` matches the contracts job: soroban's test host
+        # meters a budget per `Env`, and the randomized split test allocates one
+        # per iteration.
+        run: cargo test -p money -- --test-threads=1
+        working-directory: contracts
+
+      - name: Backend money vectors and properties
+        run: npm test -- src/money/__tests__/parity-vectors.test.ts
+        working-directory: backend
+        env:
+          NODE_ENV: test
+
+      - name: Cross-language money parity (shared vectors + randomized)
+        run: npx tsx money-parity.ts --randomized 5000
+        working-directory: scripts
+
   backend:
     needs: [supply-chain-audit, money-policy]
     runs-on: ubuntu-latest

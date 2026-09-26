@@ -68,6 +68,16 @@ export interface UnsignedTransaction {
   network: 'testnet' | 'mainnet';
 }
 
+/** Simulation result from transaction simulation before signing. */
+export interface SimulationResult {
+  /** Estimated fees in stroops. */
+  estimatedFee: Stroops;
+  /** Whether the transaction would succeed on-chain. */
+  success: boolean;
+  /** Error message if simulation failed. */
+  error?: string;
+}
+
 // ── Pool / float ──────────────────────────────────────────────────────────────
 
 export interface PoolStats {

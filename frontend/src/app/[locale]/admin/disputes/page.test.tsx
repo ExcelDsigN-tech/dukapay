@@ -63,7 +63,6 @@ describe("AdminDisputesPage", () => {
     replace.mockClear();
     useUserStore.setState({
       user: null,
-      authToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -88,7 +87,6 @@ describe("AdminDisputesPage", () => {
         kycVerified: true,
         role: "admin",
       },
-      authToken: "token",
       isAuthenticated: true,
     });
 
@@ -107,7 +105,6 @@ describe("AdminDisputesPage", () => {
         kycVerified: true,
         role: "borrower",
       },
-      authToken: "token",
       isAuthenticated: true,
     });
 

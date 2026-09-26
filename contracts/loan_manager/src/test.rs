@@ -1134,6 +1134,40 @@ fn test_borrower_max_active_loans_blocks_new_requests() {
 }
 
 #[test]
+fn test_borrower_loan_list_is_bounded_by_configured_cap() {
+    let env = Env::default();
+    env.mock_all_auths_allowing_non_root_auth();
+
+    let (manager, nft_client, pool_client, token_id, _token_admin) = setup_test(&env);
+    let borrower = Address::generate(&env);
+
+    let history_hash = soroban_sdk::BytesN::from_array(&env, &[0u8; 32]);
+    nft_client.mint(
+        &borrower,
+        &700,
+        &history_hash,
+        &String::from_str(&env, "ipfs://QmTest"),
+        &create_test_commitment(&env, 1),
+        &None,
+    );
+
+    let stellar_token = StellarAssetClient::new(&env, &token_id);
+    stellar_token.mint(&pool_client, &50_000);
+
+    manager.set_max_loans_per_borrower(&2);
+
+    let loan_1 = manager.request_loan(&borrower, &1000, &17280);
+    let loan_2 = manager.request_loan(&borrower, &1500, &17280);
+    assert_eq!(manager.get_borrower_loans(&borrower).len(), 2);
+
+    let blocked = manager.try_request_loan(&borrower, &500, &17280);
+    assert_eq!(blocked, Err(Ok(LoanError::MaxLoansReached)));
+    assert_eq!(manager.get_borrower_loans(&borrower).len(), 2);
+    assert_eq!(manager.get_borrower_loans(&borrower).get(0), Some(loan_1));
+    assert_eq!(manager.get_borrower_loans(&borrower).get(1), Some(loan_2));
+}
+
+#[test]
 #[should_panic]
 fn test_request_loan_negative_amount() {
     let env = Env::default();

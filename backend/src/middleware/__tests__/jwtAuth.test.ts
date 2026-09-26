@@ -5,6 +5,7 @@ jest.unstable_mockModule('../../services/authService.js', () => ({
   verifyJwtToken: jest.fn(),
   extractBearerToken: jest.fn(),
   isTokenRevoked: jest.fn(),
+  isFamilyRevoked: jest.fn(),
 }));
 
 jest.unstable_mockModule('../../auth/rbac.js', () => ({
@@ -27,15 +28,21 @@ jest.unstable_mockModule('../../errors/AppError.js', () => ({
   },
 }));
 
-const { requireJwtAuth, requireScopes, requireWalletParamMatchesJwt, requireWalletOwnership } =
-  await import('../jwtAuth.js');
-const { verifyJwtToken, extractBearerToken, isTokenRevoked } =
+const {
+  requireJwtAuth,
+  optionalJwtAuth,
+  requireScopes,
+  requireWalletParamMatchesJwt,
+  requireWalletOwnership,
+} = await import('../jwtAuth.js');
+const { verifyJwtToken, extractBearerToken, isTokenRevoked, isFamilyRevoked } =
   await import('../../services/authService.js');
 const { resolveRoleForWallet, resolveScopesForRole } = await import('../../auth/rbac.js');
 
 const mockVerifyJwtToken = verifyJwtToken as jest.MockedFunction<typeof verifyJwtToken>;
 const mockExtractBearerToken = extractBearerToken as jest.MockedFunction<typeof extractBearerToken>;
 const mockIsTokenRevoked = isTokenRevoked as jest.MockedFunction<typeof isTokenRevoked>;
+const mockIsFamilyRevoked = isFamilyRevoked as jest.MockedFunction<typeof isFamilyRevoked>;
 const mockResolveRoleForWallet = resolveRoleForWallet as jest.MockedFunction<
   typeof resolveRoleForWallet
 >;
@@ -83,6 +90,8 @@ describe('jwtAuth middleware', () => {
 
     mockResolveRoleForWallet.mockReturnValue('borrower');
     mockResolveScopesForRole.mockReturnValue(['read:loans', 'read:score']);
+    mockIsTokenRevoked.mockResolvedValue(false);
+    mockIsFamilyRevoked.mockResolvedValue(false);
   });
 
   describe('requireJwtAuth', () => {
@@ -239,6 +248,78 @@ describe('jwtAuth middleware', () => {
           statusCode: 401,
         }),
       );
+    });
+  });
+
+  describe('token family revocation', () => {
+    const familyPayload = {
+      publicKey: 'GABCDEF123',
+      role: 'borrower' as const,
+      scopes: ['read:loans'],
+      jti: 'family-jti',
+      familyId: 'family-1',
+      iat: 1000,
+      exp: 2000,
+    };
+
+    beforeEach(() => {
+      mockExtractBearerToken.mockReturnValue('valid-token');
+      mockVerifyJwtToken.mockReturnValue(familyPayload);
+    });
+
+    it('requireJwtAuth rejects a token whose family was revoked', async () => {
+      mockIsFamilyRevoked.mockResolvedValue(true);
+
+      await expect(() =>
+        requireJwtAuth(mockRequest as Request, mockResponse as Response, mockNext),
+      ).rejects.toThrow(expect.objectContaining({ statusCode: 401 }));
+      expect(mockIsFamilyRevoked).toHaveBeenCalledWith('family-1');
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('optionalJwtAuth does not authenticate a token whose family was revoked', async () => {
+      mockIsFamilyRevoked.mockResolvedValue(true);
+
+      await optionalJwtAuth(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockRequest.user).toBeUndefined();
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it('optionalJwtAuth authenticates a token whose family is intact', async () => {
+      await optionalJwtAuth(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockIsFamilyRevoked).toHaveBeenCalledWith('family-1');
+      expect(mockRequest.user?.publicKey).toBe('GABCDEF123');
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it('optionalJwtAuth does not authenticate a revoked token id either', async () => {
+      mockIsTokenRevoked.mockResolvedValue(true);
+
+      await optionalJwtAuth(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockRequest.user).toBeUndefined();
+    });
+
+    it('skips the family lookup for a token without a family', async () => {
+      const { familyId: _omit, ...withoutFamily } = familyPayload;
+      mockVerifyJwtToken.mockReturnValue(withoutFamily);
+
+      await optionalJwtAuth(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockIsFamilyRevoked).not.toHaveBeenCalled();
+      expect(mockRequest.user?.publicKey).toBe('GABCDEF123');
+    });
+
+    it('optionalJwtAuth ignores a request with no token', async () => {
+      mockExtractBearerToken.mockReturnValue(null);
+
+      await optionalJwtAuth(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockRequest.user).toBeUndefined();
+      expect(mockIsFamilyRevoked).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith();
     });
   });
 

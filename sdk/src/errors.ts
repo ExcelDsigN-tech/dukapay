@@ -32,3 +32,10 @@ export class WalletError extends DukaPayError {
     this.name = 'WalletError';
   }
 }
+
+export class ValidationError extends DukaPayError {
+  constructor(message: string) {
+    super(message, { status: 400 });
+    this.name = 'ValidationError';
+  }
+}

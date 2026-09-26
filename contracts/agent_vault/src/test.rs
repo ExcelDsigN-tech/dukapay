@@ -617,3 +617,139 @@ fn test_transfer_float_underflow_rejected_and_both_sides_unchanged() {
     assert_eq!(s.client.get_vault(&a).float, 0);
     assert_eq!(s.client.get_vault(&b).float, 700);
 }
+
+// ── Upgrade path (#500) ───────────────────────────────────────────────────────
+
+mod upgrade {
+    use super::*;
+    use soroban_sdk::testutils::{MockAuth, MockAuthInvoke};
+    use soroban_sdk::{BytesN, IntoVal};
+
+    fn hash(env: &Env) -> BytesN<32> {
+        BytesN::from_array(env, &[7u8; 32])
+    }
+
+    #[test]
+    fn version_starts_at_one() {
+        let s = setup();
+        assert_eq!(s.client.version(), 1);
+    }
+
+    #[test]
+    fn version_reads_as_one_for_a_vault_deployed_before_versioning() {
+        let s = setup();
+        s.env.as_contract(&s.vault, || {
+            s.env.storage().instance().remove(&crate::DataKey::Version);
+        });
+        assert_eq!(s.client.version(), 1);
+    }
+
+    #[test]
+    fn upgrade_fails_without_owner_auth() {
+        let s = setup();
+        s.env.mock_auths(&[]);
+
+        assert!(s.client.try_upgrade(&hash(&s.env)).is_err());
+        assert_eq!(s.client.version(), 1);
+    }
+
+    #[test]
+    fn the_operator_cannot_upgrade() {
+        let s = setup();
+        let new_hash = hash(&s.env);
+        s.env.mock_auths(&[MockAuth {
+            address: &s.operator,
+            invoke: &MockAuthInvoke {
+                contract: &s.vault,
+                fn_name: "upgrade",
+                args: (new_hash.clone(),).into_val(&s.env),
+                sub_invokes: &[],
+            },
+        }]);
+
+        assert!(s.client.try_upgrade(&new_hash).is_err());
+        assert_eq!(s.client.version(), 1);
+    }
+
+    #[test]
+    fn an_arbitrary_address_cannot_upgrade() {
+        let s = setup();
+        let stranger = agent(&s.env);
+        let new_hash = hash(&s.env);
+        s.env.mock_auths(&[MockAuth {
+            address: &stranger,
+            invoke: &MockAuthInvoke {
+                contract: &s.vault,
+                fn_name: "upgrade",
+                args: (new_hash.clone(),).into_val(&s.env),
+                sub_invokes: &[],
+            },
+        }]);
+
+        assert!(s.client.try_upgrade(&new_hash).is_err());
+    }
+
+    #[test]
+    fn upgrade_before_init_reports_not_initialized() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let id = env.register(AgentVault, ());
+        let client = AgentVaultClient::new(&env, &id);
+
+        assert_eq!(
+            client.try_upgrade(&hash(&env)),
+            Err(Ok(VaultError::NotInitialized))
+        );
+    }
+
+    #[test]
+    fn recording_an_upgrade_bumps_the_version_and_emits_the_audit_event() {
+        let s = setup();
+
+        let (old, new) = s
+            .env
+            .as_contract(&s.vault, || AgentVault::record_upgrade(&s.env));
+
+        // Events are only visible from the invocation that emitted them, so read
+        // them before making any other call.
+        let events = s.env.events().all();
+        let event = events.get(events.len() - 1).unwrap();
+        assert_eq!(event.0, s.vault);
+        assert_eq!(
+            Symbol::from_val(&s.env, &event.1.get(0).unwrap()),
+            Symbol::new(&s.env, "ContractUpgraded")
+        );
+        let (old_v, new_v): (u32, u32) = FromVal::from_val(&s.env, &event.2);
+        assert_eq!((old_v, new_v), (1, 2));
+
+        assert_eq!((old, new), (1, 2));
+        assert_eq!(s.client.version(), 2);
+    }
+
+    #[test]
+    fn each_recorded_upgrade_increments_the_version_by_one() {
+        let s = setup();
+        for expected in 2..=5u32 {
+            let (_, new) = s
+                .env
+                .as_contract(&s.vault, || AgentVault::record_upgrade(&s.env));
+            assert_eq!(new, expected);
+        }
+        assert_eq!(s.client.version(), 5);
+    }
+
+    #[test]
+    fn a_failed_upgrade_leaves_version_and_balances_untouched() {
+        let s = setup();
+        let a = agent(&s.env);
+        fund(&s, &a, 1_000);
+        s.client.mint_float(&a, &100);
+
+        // Un-uploaded wasm: the code swap fails and the whole call rolls back.
+        assert!(s.client.try_upgrade(&hash(&s.env)).is_err());
+
+        assert_eq!(s.client.version(), 1);
+        let vault = s.client.get_vault(&a);
+        assert_eq!((vault.collateral, vault.float), (1_000, 100));
+    }
+}

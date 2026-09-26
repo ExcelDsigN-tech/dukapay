@@ -14,7 +14,7 @@ Applied in this order for every request:
 6. **`requestIdMiddleware`** (`requestId.ts`) — assigns/propagates `x-request-id`.
 7. **`requestLogger`** (`requestLogger.ts`) — structured request/response logging.
 8. **`metricsMiddleware`** (`metrics.ts`) — records Prometheus HTTP metrics.
-9. **`pauseGuard`** (`pauseGuard.ts`) — rejects state-mutating requests while contracts are paused.
+9. **`pauseGuard`** (`pauseGuard.ts`) — rejects state-mutating requests while contracts are paused. It fails closed: if the pause state cannot be read from the database it falls back to the Redis copy, then to the last known state, and otherwise blocks writes. Any fallback raises an alert, and `/api/status/pause` and `/health/deep` report the state's `source` (`database`, `cache`, `memory`, `fail-closed`). `PAUSE_STATE_REFRESH_MS` (default 30000, `0` disables) sets how often it re-reads the database.
 10. _(routes mounted here)_
 11. **`Sentry.setupExpressErrorHandler`** — captures forwarded errors for Sentry.
 12. **`errorHandler`** (`errorHandler.ts`) — final centralized error handler, must stay last.

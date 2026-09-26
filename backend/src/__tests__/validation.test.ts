@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { jest } from '@jest/globals';
-import { Keypair } from '@stellar/stellar-sdk';
+import { Keypair, StrKey } from '@stellar/stellar-sdk';
 import { generateJwtToken } from '../services/authService.js';
 
 process.env.JWT_SECRET = 'test-jwt-secret-min-32-chars-long!!';
@@ -147,6 +147,64 @@ describe('Input Validation', () => {
       const response = await request(app).get('/api/history/');
 
       expect(response.status).toBe(404);
+    });
+  });
+
+  describe('POST /api/simulate/transaction', () => {
+    const validContractId = StrKey.encodeContract(Buffer.alloc(32, 1));
+
+    it('should reject malformed contract IDs before simulation', async () => {
+      const response = await request(app)
+        .post('/api/simulate/transaction')
+        .set('Authorization', authHeader)
+        .send({
+          contractId: TEST_WALLET,
+          function: 'request_loan',
+          sourceAccount: TEST_WALLET,
+          args: [],
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.errors).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: 'body.contractId' })]),
+      );
+    });
+
+    it('should reject invalid Soroban function symbols', async () => {
+      const response = await request(app)
+        .post('/api/simulate/transaction')
+        .set('Authorization', authHeader)
+        .send({
+          contractId: validContractId,
+          function: '../upgrade',
+          sourceAccount: TEST_WALLET,
+          args: [],
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.errors).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: 'body.function' })]),
+      );
+    });
+
+    it('should reject out-of-range typed arguments', async () => {
+      const response = await request(app)
+        .post('/api/simulate/transaction')
+        .set('Authorization', authHeader)
+        .send({
+          contractId: validContractId,
+          function: 'set_limit',
+          sourceAccount: TEST_WALLET,
+          args: [{ type: 'u32', value: '-1' }],
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.errors).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: 'body.args.0.value' })]),
+      );
     });
   });
 });
