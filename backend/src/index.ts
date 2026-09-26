@@ -43,7 +43,7 @@ import { validateLoanConfigOnStartup } from './config/loanConfig.js';
 import { startLoanDueCheckCron, stopLoanDueCheckCron } from './cron/loanCheckCron.js';
 // Imported the score decay scheduler initialization wrapper
 import { startScoreDecayScheduler } from './cron/scoreDecayJob.js';
-import { initializePauseState } from './middleware/pauseGuard.js';
+import { initializePauseState, startPauseStateRefresh } from './middleware/pauseGuard.js';
 import { startAuditAnchorJob, stopAuditAnchorJob } from './cron/auditAnchorJob.js';
 
 const port = process.env.PORT || 3001;
@@ -77,6 +77,8 @@ try {
   logger.error('Failed to initialize pause state', { err });
   process.exit(1);
 }
+// Keep re-reading it so a database outage is noticed and alerted on promptly.
+startPauseStateRefresh(Number.parseInt(process.env.PAUSE_STATE_REFRESH_MS ?? '30000', 10));
 
 const server = app.listen(port, () => {
   logger.info(`Server is running on port ${port}`);
