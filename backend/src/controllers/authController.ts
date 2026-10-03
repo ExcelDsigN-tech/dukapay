@@ -65,38 +65,36 @@ export const submitKyc = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-export const requestChallenge = asyncHandler(
-  async (req: Request, res: Response): Promise<void> => {
-    const { publicKey } = req.body;
+export const requestChallenge = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { publicKey } = req.body;
 
-    if (!publicKey || typeof publicKey !== 'string') {
-      logAuthFailure(req, publicKey, 'missing_public_key');
-      throw AppError.badRequest('Public key is required', ErrorCode.MISSING_FIELD, 'publicKey');
+  if (!publicKey || typeof publicKey !== 'string') {
+    logAuthFailure(req, publicKey, 'missing_public_key');
+    throw AppError.badRequest('Public key is required', ErrorCode.MISSING_FIELD, 'publicKey');
+  }
+
+  let challenge;
+  try {
+    challenge = generateChallenge(publicKey);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid Stellar public key') {
+      logAuthFailure(req, publicKey, 'invalid_public_key');
+      throw AppError.badRequest(
+        'Invalid Stellar public key',
+        ErrorCode.INVALID_PUBLIC_KEY,
+        'publicKey',
+      );
     }
+    throw error;
+  }
 
-    let challenge;
-    try {
-      challenge = generateChallenge(publicKey);
-    } catch (error) {
-      if (error instanceof Error && error.message === 'Invalid Stellar public key') {
-        logAuthFailure(req, publicKey, 'invalid_public_key');
-        throw AppError.badRequest(
-          'Invalid Stellar public key',
-          ErrorCode.INVALID_PUBLIC_KEY,
-          'publicKey',
-        );
-      }
-      throw error;
-    }
+  await storeChallenge(publicKey, challenge);
 
-    await storeChallenge(publicKey, challenge);
-
-    res.status(200).json({
-      success: true,
-      data: challenge,
-    });
-  },
-);
+  res.status(200).json({
+    success: true,
+    data: challenge,
+  });
+});
 
 export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { publicKey, message, signature } = req.body;

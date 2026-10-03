@@ -41,10 +41,7 @@
             "example": "Public key is required"
           }
         },
-        "required": [
-          "path",
-          "message"
-        ]
+        "required": ["path", "message"]
       },
       "ErrorResponse": {
         "type": "object",
@@ -67,10 +64,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "success",
-          "message"
-        ]
+        "required": ["success", "message"]
       },
       "AgentDashboard": {
         "type": "object",
@@ -189,9 +183,7 @@
             "example": true
           }
         },
-        "required": [
-          "success"
-        ]
+        "required": ["success"]
       },
       "SuccessMessageResponse": {
         "type": "object",
@@ -205,10 +197,7 @@
             "example": "Webhook subscription deleted"
           }
         },
-        "required": [
-          "success",
-          "message"
-        ]
+        "required": ["success", "message"]
       },
       "ServerSentEventStream": {
         "type": "string",
@@ -234,12 +223,7 @@
             "example": 300000
           }
         },
-        "required": [
-          "message",
-          "nonce",
-          "timestamp",
-          "expiresIn"
-        ]
+        "required": ["message", "nonce", "timestamp", "expiresIn"]
       },
       "AuthChallengeResponse": {
         "type": "object",
@@ -252,10 +236,7 @@
             "$ref": "#/components/schemas/ChallengeMessage"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "AuthLoginData": {
         "type": "object",
@@ -267,10 +248,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "token",
-          "publicKey"
-        ]
+        "required": ["token", "publicKey"]
       },
       "AuthLoginResponse": {
         "type": "object",
@@ -283,10 +261,7 @@
             "$ref": "#/components/schemas/AuthLoginData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "AuthVerifyData": {
         "type": "object",
@@ -297,13 +272,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "admin",
-              "agent",
-              "borrower",
-              "auditor",
-              "lender"
-            ],
+            "enum": ["admin", "agent", "borrower", "auditor", "lender"],
             "nullable": true
           },
           "scopes": {
@@ -317,9 +286,7 @@
             "example": true
           }
         },
-        "required": [
-          "valid"
-        ]
+        "required": ["valid"]
       },
       "AuthVerifyResponse": {
         "type": "object",
@@ -332,10 +299,7 @@
             "$ref": "#/components/schemas/AuthVerifyData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "BorrowerLoan": {
         "type": "object",
@@ -361,11 +325,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "repaid",
-              "defaulted"
-            ]
+            "enum": ["active", "repaid", "defaulted"]
           },
           "borrower": {
             "type": "string"
@@ -404,11 +364,7 @@
             }
           }
         },
-        "required": [
-          "success",
-          "borrower",
-          "loans"
-        ]
+        "required": ["success", "borrower", "loans"]
       },
       "LoanSummaryEvent": {
         "type": "object",
@@ -430,9 +386,7 @@
             "nullable": true
           }
         },
-        "required": [
-          "type"
-        ]
+        "required": ["type"]
       },
       "LoanDetailsSummary": {
         "type": "object",
@@ -460,11 +414,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "repaid",
-              "defaulted"
-            ]
+            "enum": ["active", "repaid", "defaulted"]
           },
           "requestedAt": {
             "type": "string",
@@ -509,11 +459,7 @@
             "$ref": "#/components/schemas/LoanDetailsSummary"
           }
         },
-        "required": [
-          "success",
-          "loanId",
-          "summary"
-        ]
+        "required": ["success", "loanId", "summary"]
       },
       "UnsignedTransactionResponse": {
         "type": "object",
@@ -529,11 +475,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "success",
-          "unsignedTxXdr",
-          "networkPassphrase"
-        ]
+        "required": ["success", "unsignedTxXdr", "networkPassphrase"]
       },
       "RepayTransactionResponse": {
         "type": "object",
@@ -552,12 +494,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "success",
-          "loanId",
-          "unsignedTxXdr",
-          "networkPassphrase"
-        ]
+        "required": ["success", "loanId", "unsignedTxXdr", "networkPassphrase"]
       },
       "SubmittedTransactionResponse": {
         "type": "object",
@@ -576,11 +513,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "success",
-          "txHash",
-          "status"
-        ]
+        "required": ["success", "txHash", "status"]
       },
       "PoolStats": {
         "type": "object",
@@ -620,10 +553,7 @@
             "$ref": "#/components/schemas/PoolStats"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "DepositorPortfolio": {
         "type": "object",
@@ -649,13 +579,7 @@
             "nullable": true
           }
         },
-        "required": [
-          "address",
-          "depositAmount",
-          "sharePercent",
-          "estimatedYield",
-          "apy"
-        ]
+        "required": ["address", "depositAmount", "sharePercent", "estimatedYield", "apy"]
       },
       "DepositorPortfolioResponse": {
         "type": "object",
@@ -668,10 +592,7 @@
             "$ref": "#/components/schemas/DepositorPortfolio"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "UserScoreFactors": {
         "type": "object",
@@ -686,11 +607,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "repaymentHistory",
-          "latePaymentPenalty",
-          "range"
-        ]
+        "required": ["repaymentHistory", "latePaymentPenalty", "range"]
       },
       "UserScore": {
         "type": "object",
@@ -708,24 +625,13 @@
           },
           "band": {
             "type": "string",
-            "enum": [
-              "Excellent",
-              "Good",
-              "Fair",
-              "Poor"
-            ]
+            "enum": ["Excellent", "Good", "Fair", "Poor"]
           },
           "factors": {
             "$ref": "#/components/schemas/UserScoreFactors"
           }
         },
-        "required": [
-          "success",
-          "userId",
-          "score",
-          "band",
-          "factors"
-        ]
+        "required": ["success", "userId", "score", "band", "factors"]
       },
       "ScoreUpdateResponse": {
         "type": "object",
@@ -754,12 +660,7 @@
           },
           "band": {
             "type": "string",
-            "enum": [
-              "Excellent",
-              "Good",
-              "Fair",
-              "Poor"
-            ]
+            "enum": ["Excellent", "Good", "Fair", "Poor"]
           }
         },
         "required": [
@@ -826,11 +727,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "date",
-          "score",
-          "event"
-        ]
+        "required": ["date", "score", "event"]
       },
       "ScoreBreakdownResponse": {
         "type": "object",
@@ -847,12 +744,7 @@
           },
           "band": {
             "type": "string",
-            "enum": [
-              "Excellent",
-              "Good",
-              "Fair",
-              "Poor"
-            ]
+            "enum": ["Excellent", "Good", "Fair", "Poor"]
           },
           "breakdown": {
             "$ref": "#/components/schemas/ScoreBreakdownMetrics"
@@ -864,14 +756,7 @@
             }
           }
         },
-        "required": [
-          "success",
-          "userId",
-          "score",
-          "band",
-          "breakdown",
-          "history"
-        ]
+        "required": ["success", "userId", "score", "band", "breakdown", "history"]
       },
       "RemittanceHistoryEntry": {
         "type": "object",
@@ -884,17 +769,10 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "Completed",
-              "Defaulted"
-            ]
+            "enum": ["Completed", "Defaulted"]
           }
         },
-        "required": [
-          "month",
-          "amount",
-          "status"
-        ]
+        "required": ["month", "amount", "status"]
       },
       "RemittanceHistory": {
         "type": "object",
@@ -915,12 +793,7 @@
             }
           }
         },
-        "required": [
-          "userId",
-          "score",
-          "streak",
-          "history"
-        ]
+        "required": ["userId", "score", "streak", "history"]
       },
       "SimulatePaymentResponse": {
         "type": "object",
@@ -936,11 +809,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "success",
-          "message",
-          "newScore"
-        ]
+        "required": ["success", "message", "newScore"]
       },
       "Remittance": {
         "type": "object",
@@ -975,12 +844,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "processing",
-              "completed",
-              "failed"
-            ]
+            "enum": ["pending", "processing", "completed", "failed"]
           },
           "transactionHash": {
             "type": "string",
@@ -1029,12 +893,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "next_cursor",
-          "snapshot_seq",
-          "total_at_snapshot",
-          "limit"
-        ]
+        "required": ["next_cursor", "snapshot_seq", "total_at_snapshot", "limit"]
       },
       "RemittanceListData": {
         "type": "object",
@@ -1049,10 +908,7 @@
             "$ref": "#/components/schemas/RemittancePage"
           }
         },
-        "required": [
-          "data",
-          "page"
-        ]
+        "required": ["data", "page"]
       },
       "RemittanceSubmitData": {
         "type": "object",
@@ -1063,11 +919,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "processing",
-              "completed",
-              "failed"
-            ]
+            "enum": ["processing", "completed", "failed"]
           },
           "txHash": {
             "type": "string"
@@ -1076,12 +928,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "status",
-          "txHash",
-          "message"
-        ]
+        "required": ["id", "status", "txHash", "message"]
       },
       "LoanDispute": {
         "type": "object",
@@ -1101,11 +948,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "open",
-              "resolved",
-              "rejected"
-            ]
+            "enum": ["open", "resolved", "rejected"]
           },
           "admin_note": {
             "type": "string",
@@ -1128,36 +971,21 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "loan_id",
-          "borrower",
-          "reason",
-          "status",
-          "created_at",
-          "seq"
-        ]
+        "required": ["id", "loan_id", "borrower", "reason", "status", "created_at", "seq"]
       },
       "KycScreeningData": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "approved",
-              "review",
-              "rejected"
-            ]
+            "enum": ["approved", "review", "rejected"]
           },
           "providerReference": {
             "type": "string",
             "nullable": true
           }
         },
-        "required": [
-          "status",
-          "providerReference"
-        ]
+        "required": ["status", "providerReference"]
       },
       "KycScreeningResponse": {
         "type": "object",
@@ -1170,10 +998,7 @@
             "$ref": "#/components/schemas/KycScreeningData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "Notification": {
         "type": "object",
@@ -1216,15 +1041,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "id",
-          "userId",
-          "type",
-          "title",
-          "message",
-          "read",
-          "createdAt"
-        ]
+        "required": ["id", "userId", "type", "title", "message", "read", "createdAt"]
       },
       "NotificationsData": {
         "type": "object",
@@ -1239,10 +1056,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "notifications",
-          "unreadCount"
-        ]
+        "required": ["notifications", "unreadCount"]
       },
       "NotificationsResponse": {
         "type": "object",
@@ -1255,10 +1069,7 @@
             "$ref": "#/components/schemas/NotificationsData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "NotificationPreferences": {
         "type": "object",
@@ -1283,12 +1094,7 @@
             }
           }
         },
-        "required": [
-          "emailEnabled",
-          "smsEnabled",
-          "phone",
-          "perTypeOverrides"
-        ]
+        "required": ["emailEnabled", "smsEnabled", "phone", "perTypeOverrides"]
       },
       "EventConnectionCounts": {
         "type": "object",
@@ -1303,11 +1109,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "borrower",
-          "admin",
-          "total"
-        ]
+        "required": ["borrower", "admin", "total"]
       },
       "EventStreamStatusResponse": {
         "type": "object",
@@ -1320,10 +1122,7 @@
             "$ref": "#/components/schemas/EventConnectionCounts"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "LoanEventRecord": {
         "type": "object",
@@ -1386,14 +1185,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "eventId",
-          "eventType",
-          "borrower",
-          "ledger",
-          "ledgerClosedAt",
-          "txHash"
-        ]
+        "required": ["eventId", "eventType", "borrower", "ledger", "ledgerClosedAt", "txHash"]
       },
       "Pagination": {
         "description": "Cursor-based pagination envelope. See the [pagination contract](../../../docs/pagination-contract.md) for the full contract: offset semantics, maximum limit cap, and total count behaviour.",
@@ -1409,11 +1201,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "total",
-          "limit",
-          "offset"
-        ]
+        "required": ["total", "limit", "offset"]
       },
       "BorrowerEventsData": {
         "type": "object",
@@ -1428,10 +1216,7 @@
             "$ref": "#/components/schemas/Pagination"
           }
         },
-        "required": [
-          "events",
-          "pagination"
-        ]
+        "required": ["events", "pagination"]
       },
       "BorrowerEventsResponse": {
         "type": "object",
@@ -1444,10 +1229,7 @@
             "$ref": "#/components/schemas/BorrowerEventsData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "LoanEventsData": {
         "type": "object",
@@ -1462,10 +1244,7 @@
             }
           }
         },
-        "required": [
-          "loanId",
-          "events"
-        ]
+        "required": ["loanId", "events"]
       },
       "LoanEventsResponse": {
         "type": "object",
@@ -1478,10 +1257,7 @@
             "$ref": "#/components/schemas/LoanEventsData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "RecentEventsData": {
         "type": "object",
@@ -1493,9 +1269,7 @@
             }
           }
         },
-        "required": [
-          "events"
-        ]
+        "required": ["events"]
       },
       "RecentEventsResponse": {
         "type": "object",
@@ -1508,10 +1282,7 @@
             "$ref": "#/components/schemas/RecentEventsData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "IndexerStatusData": {
         "type": "object",
@@ -1556,10 +1327,7 @@
             "$ref": "#/components/schemas/IndexerStatusData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "WebhookSubscription": {
         "type": "object",
@@ -1602,14 +1370,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "id",
-          "callbackUrl",
-          "eventTypes",
-          "isActive",
-          "createdAt",
-          "updatedAt"
-        ]
+        "required": ["id", "callbackUrl", "eventTypes", "isActive", "createdAt", "updatedAt"]
       },
       "WebhookSubscriptionListData": {
         "type": "object",
@@ -1621,9 +1382,7 @@
             }
           }
         },
-        "required": [
-          "subscriptions"
-        ]
+        "required": ["subscriptions"]
       },
       "WebhookSubscriptionListResponse": {
         "type": "object",
@@ -1636,10 +1395,7 @@
             "$ref": "#/components/schemas/WebhookSubscriptionListData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "WebhookSubscriptionData": {
         "type": "object",
@@ -1648,9 +1404,7 @@
             "$ref": "#/components/schemas/WebhookSubscription"
           }
         },
-        "required": [
-          "subscription"
-        ]
+        "required": ["subscription"]
       },
       "WebhookSubscriptionResponse": {
         "type": "object",
@@ -1663,10 +1417,7 @@
             "$ref": "#/components/schemas/WebhookSubscriptionData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "WebhookDelivery": {
         "type": "object",
@@ -1738,10 +1489,7 @@
             }
           }
         },
-        "required": [
-          "subscriptionId",
-          "deliveries"
-        ]
+        "required": ["subscriptionId", "deliveries"]
       },
       "WebhookDeliveriesResponse": {
         "type": "object",
@@ -1754,10 +1502,7 @@
             "$ref": "#/components/schemas/WebhookDeliveriesData"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "ReindexResult": {
         "type": "object",
@@ -1797,10 +1542,7 @@
             "$ref": "#/components/schemas/ReindexResult"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "DefaultCheckBatchResult": {
         "type": "object",
@@ -1825,9 +1567,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "loanIds"
-        ]
+        "required": ["loanIds"]
       },
       "DefaultCheckRunResult": {
         "type": "object",
@@ -1857,13 +1597,7 @@
             }
           }
         },
-        "required": [
-          "runId",
-          "currentLedger",
-          "termLedgers",
-          "overdueCount",
-          "batches"
-        ]
+        "required": ["runId", "currentLedger", "termLedgers", "overdueCount", "batches"]
       },
       "DefaultCheckResponse": {
         "type": "object",
@@ -1876,10 +1610,7 @@
             "$ref": "#/components/schemas/DefaultCheckRunResult"
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       },
       "ErrorCode": {
         "type": "string",
@@ -1936,10 +1667,7 @@
             "description": "Additional error details (if applicable)"
           }
         },
-        "required": [
-          "code",
-          "message"
-        ]
+        "required": ["code", "message"]
       },
       "StructuredErrorResponse": {
         "type": "object",
@@ -1965,10 +1693,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "success",
-          "error"
-        ]
+        "required": ["success", "error"]
       }
     }
   },
@@ -1976,9 +1701,7 @@
     "/admin/loan-disputes": {
       "get": {
         "summary": "List open loan disputes",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -1994,9 +1717,7 @@
     "/admin/loan-disputes/{disputeId}/resolve": {
       "post": {
         "summary": "Resolve a loan dispute (confirm or reverse default)",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2018,20 +1739,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "action",
-                  "resolution"
-                ],
+                "required": ["action", "resolution"],
                 "properties": {
                   "action": {
                     "type": "string",
-                    "enum": [
-                      "uphold",
-                      "overturn",
-                      "settle",
-                      "confirm",
-                      "reverse"
-                    ],
+                    "enum": ["uphold", "overturn", "settle", "confirm", "reverse"],
                     "description": "Action to take on the dispute"
                   },
                   "resolution": {
@@ -2064,9 +1776,7 @@
       "get": {
         "summary": "List loan disputes",
         "description": "Returns a keyset-paginated list of loan disputes, optionally filtered by status (`open`, `resolved`, `rejected`, or `all`). Admin only.\n",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "BearerAuth": []
@@ -2078,14 +1788,7 @@
             "name": "status",
             "schema": {
               "type": "string",
-              "enum": [
-                "open",
-                "resolved",
-                "rejected",
-                "all",
-                "pending",
-                "dismissed"
-              ]
+              "enum": ["open", "resolved", "rejected", "all", "pending", "dismissed"]
             },
             "description": "Filter by dispute status (default `open`)"
           },
@@ -2122,11 +1825,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "data",
-                    "page"
-                  ],
+                  "required": ["success", "data", "page"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -2134,9 +1833,7 @@
                     },
                     "data": {
                       "type": "object",
-                      "required": [
-                        "items"
-                      ],
+                      "required": ["items"],
                       "properties": {
                         "items": {
                           "type": "array",
@@ -2148,12 +1845,7 @@
                     },
                     "page": {
                       "type": "object",
-                      "required": [
-                        "next_cursor",
-                        "snapshot_seq",
-                        "total_at_snapshot",
-                        "limit"
-                      ],
+                      "required": ["next_cursor", "snapshot_seq", "total_at_snapshot", "limit"],
                       "properties": {
                         "next_cursor": {
                           "type": "string",
@@ -2191,9 +1883,7 @@
       "get": {
         "summary": "Get a single loan dispute",
         "description": "Returns a dispute together with its joined loan record. Admin only.\n",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "BearerAuth": []
@@ -2217,10 +1907,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "dispute"
-                  ],
+                  "required": ["success", "dispute"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -2233,9 +1920,7 @@
                         },
                         {
                           "type": "object",
-                          "required": [
-                            "loan"
-                          ],
+                          "required": ["loan"],
                           "properties": {
                             "loan": {
                               "type": "object",
@@ -2266,9 +1951,7 @@
       "post": {
         "summary": "Resolve a loan dispute",
         "description": "Resolves an open dispute. `action` of `confirm` keeps the loan as defaulted (writes a `DefaultConfirmed` event) while `reverse` marks the loan active again (writes a `DefaultReversed` event). Admin only.\n",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "BearerAuth": []
@@ -2291,20 +1974,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "action",
-                  "resolution"
-                ],
+                "required": ["action", "resolution"],
                 "properties": {
                   "action": {
                     "type": "string",
-                    "enum": [
-                      "uphold",
-                      "overturn",
-                      "settle",
-                      "confirm",
-                      "reverse"
-                    ]
+                    "enum": ["uphold", "overturn", "settle", "confirm", "reverse"]
                   },
                   "resolution": {
                     "type": "string",
@@ -2350,9 +2024,7 @@
       "post": {
         "summary": "Reject a loan dispute",
         "description": "Rejects an open dispute, marking it `rejected` with an optional admin note. Admin only.\n",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "BearerAuth": []
@@ -2416,9 +2088,7 @@
       "get": {
         "summary": "Get the pending governance proposal",
         "description": "Returns the currently pending multisig governance proposal (proposed admin, signer approvals, timelock) as well as the current admin and target contract. Admin only.\n",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "BearerAuth": []
@@ -2519,9 +2189,7 @@
       "post": {
         "summary": "Trigger manual on-chain default checks for a set of loans",
         "description": "Calls the LoanManager `check_defaults` contract function for the provided loan IDs (or all overdue loans if IDs are omitted). Bounded to a maximum of 1000 IDs per request for security.\n",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2567,9 +2235,7 @@
     "/admin/reindex": {
       "post": {
         "summary": "Backfill/reindex contract events for a ledger range",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2610,9 +2276,7 @@
     "/admin/quarantine-events": {
       "get": {
         "summary": "List quarantined indexer events",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2647,9 +2311,7 @@
     "/admin/quarantine-events/reprocess": {
       "post": {
         "summary": "Reprocess quarantined indexer events",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2687,9 +2349,7 @@
     "/admin/webhooks": {
       "post": {
         "summary": "Register a webhook subscription",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2701,10 +2361,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "callbackUrl",
-                  "eventTypes"
-                ],
+                "required": ["callbackUrl", "eventTypes"],
                 "properties": {
                   "callbackUrl": {
                     "type": "string"
@@ -2738,9 +2395,7 @@
       },
       "get": {
         "summary": "List webhook subscriptions",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2763,9 +2418,7 @@
     "/admin/webhooks/{id}": {
       "delete": {
         "summary": "Remove a webhook subscription",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2798,9 +2451,7 @@
     "/admin/webhooks/{id}/deliveries": {
       "get": {
         "summary": "View webhook delivery history",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2842,9 +2493,7 @@
     "/admin/webhooks/retry-status": {
       "get": {
         "summary": "Get status of failed webhooks and retry queue",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2860,9 +2509,7 @@
     "/admin/users": {
       "get": {
         "summary": "List users (paginated, filterable)",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2898,10 +2545,7 @@
             "name": "status",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "suspended"
-              ]
+              "enum": ["active", "suspended"]
             }
           },
           {
@@ -2922,9 +2566,7 @@
     "/admin/users/{publicKey}": {
       "get": {
         "summary": "Get a single user's details",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2953,9 +2595,7 @@
     "/admin/users/{publicKey}/status": {
       "patch": {
         "summary": "Suspend or activate a user",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -2967,9 +2607,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "isSuspended"
-                ],
+                "required": ["isSuspended"],
                 "properties": {
                   "isSuspended": {
                     "type": "boolean"
@@ -2989,9 +2627,7 @@
     "/admin/users/{publicKey}/role": {
       "patch": {
         "summary": "Change a user's role",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -3003,20 +2639,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "role"
-                ],
+                "required": ["role"],
                 "properties": {
                   "role": {
                     "type": "string",
-                    "enum": [
-                      "admin",
-                      "super_admin",
-                      "ops",
-                      "support",
-                      "borrower",
-                      "lender"
-                    ]
+                    "enum": ["admin", "super_admin", "ops", "support", "borrower", "lender"]
                   }
                 }
               }
@@ -3033,9 +2660,7 @@
     "/admin/kyc/override": {
       "post": {
         "summary": "Override KYC verification status for a user",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -3047,10 +2672,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "publicKey",
-                  "verified"
-                ],
+                "required": ["publicKey", "verified"],
                 "properties": {
                   "publicKey": {
                     "type": "string"
@@ -3076,9 +2698,7 @@
     "/admin/system/health": {
       "get": {
         "summary": "Get system health status (DB, Redis, Stellar RPC, jobs)",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -3094,9 +2714,7 @@
     "/admin/settlement/trigger": {
       "post": {
         "summary": "Manually trigger batch settlement run",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -3132,9 +2750,7 @@
     "/admin/feature-flags": {
       "get": {
         "summary": "List all feature flags",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -3150,9 +2766,7 @@
     "/admin/feature-flags/{key}": {
       "put": {
         "summary": "Update a feature flag's enabled state or value",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -3199,9 +2813,7 @@
       "get": {
         "summary": "List borrower wallets assigned to the authenticated agent",
         "description": "Returns the borrowers the authenticated agent (or admin) is scoped to under tenant isolation (the `agents:view-assigned` scope). Agents can read but not modify the data of these borrowers on the loan, score and remittance endpoints, enforced both by the RBAC middleware and by RLS.\n",
-        "tags": [
-          "Agents"
-        ],
+        "tags": ["Agents"],
         "security": [
           {
             "BearerAuth": []
@@ -3214,10 +2826,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "data"
-                  ],
+                  "required": ["success", "data"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -3225,10 +2834,7 @@
                     },
                     "data": {
                       "type": "object",
-                      "required": [
-                        "agentPublicKey",
-                        "assignments"
-                      ],
+                      "required": ["agentPublicKey", "assignments"],
                       "properties": {
                         "agentPublicKey": {
                           "type": "string"
@@ -3237,10 +2843,7 @@
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "required": [
-                              "borrowerPublicKey",
-                              "createdAt"
-                            ],
+                            "required": ["borrowerPublicKey", "createdAt"],
                             "properties": {
                               "borrowerPublicKey": {
                                 "type": "string"
@@ -3272,9 +2875,7 @@
       "post": {
         "summary": "Assign a borrower to an agent (admin only)",
         "description": "Grants an agent read access to a borrower's data. Idempotent: assigning the same pair twice returns the existing assignment. Admin only.\n",
-        "tags": [
-          "Agents"
-        ],
+        "tags": ["Agents"],
         "security": [
           {
             "BearerAuth": []
@@ -3297,9 +2898,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "borrowerPublicKey"
-                ],
+                "required": ["borrowerPublicKey"],
                 "properties": {
                   "borrowerPublicKey": {
                     "type": "string",
@@ -3330,9 +2929,7 @@
       "delete": {
         "summary": "Revoke a borrower assignment from an agent (admin only)",
         "description": "Removes the agent's read access to the borrower. Admin only.\n",
-        "tags": [
-          "Agents"
-        ],
+        "tags": ["Agents"],
         "security": [
           {
             "BearerAuth": []
@@ -3378,9 +2975,7 @@
     "/agents/dashboard": {
       "get": {
         "summary": "Get agent dashboard metrics",
-        "tags": [
-          "Agent"
-        ],
+        "tags": ["Agent"],
         "security": [
           {
             "BearerAuth": []
@@ -3403,9 +2998,7 @@
     "/agents/dashboard/cache": {
       "delete": {
         "summary": "Clear agent dashboard cache",
-        "tags": [
-          "Agent"
-        ],
+        "tags": ["Agent"],
         "security": [
           {
             "BearerAuth": []
@@ -3422,9 +3015,7 @@
       "get": {
         "summary": "Get the Merkle inclusion proof for an audit log",
         "description": "Returns the Merkle proof that places the given audit log at position `logId` within the audit Merkle tree, along with the current tree root. Requires an `admin:audit` scoped API key.\n",
-        "tags": [
-          "Audit"
-        ],
+        "tags": ["Audit"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -3449,10 +3040,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "data"
-                  ],
+                  "required": ["success", "data"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -3460,11 +3048,7 @@
                     },
                     "data": {
                       "type": "object",
-                      "required": [
-                        "leaf",
-                        "path",
-                        "root"
-                      ],
+                      "required": ["leaf", "path", "root"],
                       "properties": {
                         "leaf": {
                           "type": "string",
@@ -3474,20 +3058,14 @@
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "required": [
-                              "hash",
-                              "position"
-                            ],
+                            "required": ["hash", "position"],
                             "properties": {
                               "hash": {
                                 "type": "string"
                               },
                               "position": {
                                 "type": "string",
-                                "enum": [
-                                  "left",
-                                  "right"
-                                ]
+                                "enum": ["left", "right"]
                               }
                             }
                           }
@@ -3519,18 +3097,14 @@
       "post": {
         "summary": "Request a sign-in message (public)",
         "description": "Returns a nonce and message for the wallet to sign. No authentication required.",
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "publicKey"
-                ],
+                "required": ["publicKey"],
                 "properties": {
                   "publicKey": {
                     "type": "string",
@@ -3559,20 +3133,14 @@
       "post": {
         "summary": "Exchange signed challenge for JWT (public)",
         "description": "Verifies the Ed25519 signature and returns a Bearer token.",
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "publicKey",
-                  "message",
-                  "signature"
-                ],
+                "required": ["publicKey", "message", "signature"],
                 "properties": {
                   "publicKey": {
                     "type": "string"
@@ -3607,9 +3175,7 @@
       "post": {
         "summary": "Refresh access token using rotated refresh token",
         "description": "Rotates refresh token and returns new access token. Detects token reuse.",
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "requestBody": {
           "required": false,
           "content": {
@@ -3639,9 +3205,7 @@
       "get": {
         "summary": "Retrieve CSRF token",
         "description": "Sets the CSRF cookie with SameSite=Strict and returns the token in response data.",
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "responses": {
           "200": {
             "description": "CSRF token returned"
@@ -3653,9 +3217,7 @@
       "post": {
         "summary": "Submit a KYC screening for the authenticated user",
         "description": "Submits the authenticated user's identity details to the configured screening provider and returns the screening outcome (`approved`, `review`, or `rejected`) with the provider reference.\n",
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "BearerAuth": []
@@ -3667,10 +3229,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "firstName",
-                  "lastName"
-                ],
+                "required": ["firstName", "lastName"],
                 "properties": {
                   "firstName": {
                     "type": "string",
@@ -3721,9 +3280,7 @@
     "/auth/verify": {
       "get": {
         "summary": "Verify JWT and return wallet info",
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "BearerAuth": []
@@ -3750,9 +3307,7 @@
       "post": {
         "summary": "Revoke the current JWT",
         "description": "Blacklists the current token's jti so it is rejected by requireJwtAuth even though it has not yet expired, and clears the auth cookie.\n",
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "bearerAuth": []
@@ -3772,9 +3327,7 @@
       "post": {
         "summary": "Revoke all sessions for the authenticated user",
         "description": "Invalidates all active token families for the current user. Use this after credential compromise to revoke all devices immediately.\n",
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": [
           {
             "bearerAuth": []
@@ -3794,9 +3347,7 @@
       "get": {
         "summary": "SSE stream for real-time loan events",
         "description": "Server-Sent Events endpoint for real-time loan event push. Auth MUST be provided via the Authorization: Bearer <token> header. Borrowers receive only their own events; optional `?borrower=G...` must match the authenticated wallet. Admin users receive all events when borrower is omitted. Supports replay on reconnect via `Last-Event-ID` header. Since native EventSource does not support custom headers, clients should use fetch with ReadableStream to connect.\n",
-        "tags": [
-          "Events"
-        ],
+        "tags": ["Events"],
         "security": [
           {
             "BearerAuth": []
@@ -3841,9 +3392,7 @@
       "get": {
         "summary": "Get SSE connection counts",
         "description": "Returns current SSE connection statistics. Requires an `admin:indexer` scoped API key.\n",
-        "tags": [
-          "Events"
-        ],
+        "tags": ["Events"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -3870,9 +3419,7 @@
       "get": {
         "summary": "Get indexer status",
         "description": "Returns the current state of the event indexer including last indexed ledger and event counts",
-        "tags": [
-          "Indexer"
-        ],
+        "tags": ["Indexer"],
         "responses": {
           "200": {
             "description": "Indexer status retrieved successfully",
@@ -3891,9 +3438,7 @@
       "get": {
         "summary": "Get events for a specific borrower",
         "description": "Returns loan events for the authenticated wallet; `borrower` must match the JWT Stellar public key.\n",
-        "tags": [
-          "Indexer"
-        ],
+        "tags": ["Indexer"],
         "security": [
           {
             "BearerAuth": []
@@ -3950,9 +3495,7 @@
       "get": {
         "summary": "Get events for a specific loan",
         "description": "Returns events only if the authenticated wallet is the borrower for that loan.\n",
-        "tags": [
-          "Indexer"
-        ],
+        "tags": ["Indexer"],
         "security": [
           {
             "BearerAuth": []
@@ -3993,9 +3536,7 @@
       "get": {
         "summary": "Get recent events",
         "description": "Internal/admin use: requires an `admin:indexer` scoped `x-api-key`. Returns the most recent loan events, optionally filtered by event type.\n",
-        "tags": [
-          "Indexer"
-        ],
+        "tags": ["Indexer"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -4015,12 +3556,7 @@
             "name": "eventType",
             "schema": {
               "type": "string",
-              "enum": [
-                "LoanRequested",
-                "LoanApproved",
-                "LoanRepaid",
-                "LoanDefaulted"
-              ]
+              "enum": ["LoanRequested", "LoanApproved", "LoanRepaid", "LoanDefaulted"]
             }
           }
         ],
@@ -4044,9 +3580,7 @@
     "/indexer/webhooks": {
       "get": {
         "summary": "List webhook subscriptions",
-        "tags": [
-          "Indexer"
-        ],
+        "tags": ["Indexer"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -4070,9 +3604,7 @@
       },
       "post": {
         "summary": "Register a webhook subscription",
-        "tags": [
-          "Indexer"
-        ],
+        "tags": ["Indexer"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -4084,10 +3616,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "callbackUrl",
-                  "eventTypes"
-                ],
+                "required": ["callbackUrl", "eventTypes"],
                 "properties": {
                   "callbackUrl": {
                     "type": "string"
@@ -4096,12 +3625,7 @@
                     "type": "array",
                     "items": {
                       "type": "string",
-                      "enum": [
-                        "LoanRequested",
-                        "LoanApproved",
-                        "LoanRepaid",
-                        "LoanDefaulted"
-                      ]
+                      "enum": ["LoanRequested", "LoanApproved", "LoanRepaid", "LoanDefaulted"]
                     }
                   },
                   "secret": {
@@ -4132,9 +3656,7 @@
     "/indexer/webhooks/{subscriptionId}": {
       "delete": {
         "summary": "Delete a webhook subscription",
-        "tags": [
-          "Indexer"
-        ],
+        "tags": ["Indexer"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -4171,9 +3693,7 @@
       "get": {
         "summary": "Retrieve the active loan configuration",
         "description": "Returns the current underwriting configuration used when pricing and approving loans: the minimum credit score required, maximum principal, annual interest rate, and the credit score threshold. Read-only and public.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "responses": {
           "200": {
             "description": "Loan configuration retrieved successfully.",
@@ -4181,10 +3701,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "data"
-                  ],
+                  "required": ["success", "data"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -4231,9 +3748,7 @@
     "/loans/{loanId}/build-cancel": {
       "post": {
         "summary": "Build cancel loan transaction",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "bearerAuth": []
@@ -4259,9 +3774,7 @@
     "/admin/loans/{loanId}/build-reject": {
       "post": {
         "summary": "Build reject loan transaction",
-        "tags": [
-          "Admin Loans"
-        ],
+        "tags": ["Admin Loans"],
         "security": [
           {
             "bearerAuth": []
@@ -4273,9 +3786,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "reason"
-                ],
+                "required": ["reason"],
                 "properties": {
                   "reason": {
                     "type": "string",
@@ -4298,9 +3809,7 @@
       "post": {
         "summary": "Preview a loan's amortization schedule",
         "description": "Computes the amortization schedule (principal/interest split and due dates) for a prospective loan without persisting anything. Useful before the borrower confirms a loan request.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -4312,10 +3821,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "amount",
-                  "termDays"
-                ],
+                "required": ["amount", "termDays"],
                 "properties": {
                   "amount": {
                     "type": "integer",
@@ -4324,11 +3830,7 @@
                   },
                   "termDays": {
                     "type": "integer",
-                    "enum": [
-                      30,
-                      60,
-                      90
-                    ]
+                    "enum": [30, 60, 90]
                   }
                 }
               }
@@ -4342,10 +3844,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "amortization"
-                  ],
+                  "required": ["success", "amortization"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -4428,9 +3927,7 @@
       "post": {
         "summary": "Contest a defaulted loan",
         "description": "Allows a borrower to contest a defaulted loan, moving it to disputed status and logging the dispute.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -4453,9 +3950,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "reason"
-                ],
+                "required": ["reason"],
                 "properties": {
                   "reason": {
                     "type": "string",
@@ -4489,9 +3984,7 @@
       "get": {
         "summary": "Get loans for a specific borrower",
         "description": "Returns cursor-paginated loans for the authenticated wallet. `borrower` must match the JWT Stellar public key. Supports filtering by `status` and an approved-at date range (`from` / `to`).\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -4512,14 +4005,7 @@
             "name": "status",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "repaid",
-                "defaulted",
-                "liquidated",
-                "pending",
-                "all"
-              ]
+              "enum": ["active", "repaid", "defaulted", "liquidated", "pending", "all"]
             },
             "description": "Filter by loan status (omit or \"all\" to return every status)"
           },
@@ -4588,9 +4074,7 @@
       "get": {
         "summary": "Get loan details",
         "description": "Returns loan details only if the authenticated wallet is the borrower for that loan.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -4634,9 +4118,7 @@
       "get": {
         "summary": "Get the amortization schedule for a loan",
         "description": "Returns the computed amortization schedule for an approved loan of the authenticated borrower. Mirrors the shape produced by `/loans/amortization-preview` and includes the loan id.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -4660,11 +4142,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "loanId",
-                    "amortization"
-                  ],
+                  "required": ["success", "loanId", "amortization"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -4753,9 +4231,7 @@
       "get": {
         "summary": "Get loan repayment preview",
         "description": "Returns exact repayment schedule before committing. Includes amortization table with principal, interest, fees, remaining balance per period.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -4778,11 +4254,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "loanId",
-                    "preview"
-                  ],
+                  "required": ["success", "loanId", "preview"],
                   "properties": {
                     "success": {
                       "type": "boolean"
@@ -4873,9 +4345,7 @@
       "get": {
         "summary": "Get events for a specific loan",
         "description": "Returns chronological loan events for the authenticated borrower.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -4924,9 +4394,7 @@
       "post": {
         "summary": "Build an unsigned loan request transaction",
         "description": "Builds an unsigned Soroban `request_loan(borrower, amount)` transaction XDR. The frontend signs it with the user's wallet and submits via POST /api/loans/submit.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -4938,10 +4406,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "amount",
-                  "borrowerPublicKey"
-                ],
+                "required": ["amount", "borrowerPublicKey"],
                 "properties": {
                   "amount": {
                     "type": "number",
@@ -4981,9 +4446,7 @@
       "post": {
         "summary": "Build an unsigned deposit_collateral transaction",
         "description": "Builds an unsigned Soroban `deposit_collateral(loan_id, amount)` transaction XDR. The borrower signs it and submits via POST /api/loans/submit.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -5006,10 +4469,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "amount",
-                  "borrowerPublicKey"
-                ],
+                "required": ["amount", "borrowerPublicKey"],
                 "properties": {
                   "amount": {
                     "type": "integer",
@@ -5044,9 +4504,7 @@
       "post": {
         "summary": "Build an unsigned release_collateral transaction",
         "description": "Builds an unsigned Soroban `release_collateral(loan_id)` transaction XDR. The borrower signs it and submits via POST /api/loans/submit.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -5069,9 +4527,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "borrowerPublicKey"
-                ],
+                "required": ["borrowerPublicKey"],
                 "properties": {
                   "borrowerPublicKey": {
                     "type": "string",
@@ -5102,9 +4558,7 @@
       "post": {
         "summary": "Build an unsigned refinance_loan transaction",
         "description": "Builds an unsigned Soroban `refinance_loan(loan_id, new_amount, new_term)` transaction XDR. Both the admin and borrower must sign.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -5127,11 +4581,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "newAmount",
-                  "newTerm",
-                  "borrowerPublicKey"
-                ],
+                "required": ["newAmount", "newTerm", "borrowerPublicKey"],
                 "properties": {
                   "newAmount": {
                     "type": "integer",
@@ -5170,9 +4620,7 @@
       "post": {
         "summary": "Build an unsigned extend_loan transaction",
         "description": "Builds an unsigned Soroban `extend_loan(borrower, loan_id, extra_ledgers)` transaction XDR. The borrower signs it and submits via POST /api/loans/submit.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -5195,10 +4643,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "extraLedgers",
-                  "borrowerPublicKey"
-                ],
+                "required": ["extraLedgers", "borrowerPublicKey"],
                 "properties": {
                   "extraLedgers": {
                     "type": "integer",
@@ -5233,9 +4678,7 @@
       "post": {
         "summary": "Build an unsigned liquidate transaction",
         "description": "Builds an unsigned Soroban `liquidate(liquidator, loan_id)` transaction XDR. The liquidator signs it and submits via POST /api/loans/submit.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -5258,9 +4701,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "liquidatorPublicKey"
-                ],
+                "required": ["liquidatorPublicKey"],
                 "properties": {
                   "liquidatorPublicKey": {
                     "type": "string",
@@ -5291,9 +4732,7 @@
       "post": {
         "summary": "Submit a signed loan request transaction",
         "description": "Submits a signed transaction XDR to the Stellar network for a loan request.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -5305,9 +4744,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "signedTxXdr"
-                ],
+                "required": ["signedTxXdr"],
                 "properties": {
                   "signedTxXdr": {
                     "type": "string",
@@ -5342,9 +4779,7 @@
       "post": {
         "summary": "Build an unsigned repayment transaction",
         "description": "Builds an unsigned Soroban `repay(borrower, loan_id, amount)` transaction XDR. The frontend signs it with the user's wallet and submits via POST /api/loans/{loanId}/submit.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -5367,10 +4802,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "amount",
-                  "borrowerPublicKey"
-                ],
+                "required": ["amount", "borrowerPublicKey"],
                 "properties": {
                   "amount": {
                     "type": "number",
@@ -5416,9 +4848,7 @@
       "post": {
         "summary": "Submit a signed repayment transaction",
         "description": "Submits a signed transaction XDR to the Stellar network for a loan repayment.\n",
-        "tags": [
-          "Loans"
-        ],
+        "tags": ["Loans"],
         "security": [
           {
             "BearerAuth": []
@@ -5441,9 +4871,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "signedTxXdr"
-                ],
+                "required": ["signedTxXdr"],
                 "properties": {
                   "signedTxXdr": {
                     "type": "string",
@@ -5484,9 +4912,7 @@
       "get": {
         "summary": "Get notifications for the authenticated user",
         "description": "Returns a paginated list of notifications for the authenticated user. Supports filtering by type, status, and date range.\n",
-        "tags": [
-          "Notifications"
-        ],
+        "tags": ["Notifications"],
         "security": [
           {
             "BearerAuth": []
@@ -5522,11 +4948,7 @@
             "name": "status",
             "schema": {
               "type": "string",
-              "enum": [
-                "unread",
-                "read",
-                "archived"
-              ]
+              "enum": ["unread", "read", "archived"]
             },
             "description": "Filter by notification status"
           },
@@ -5566,9 +4988,7 @@
     "/notifications/preferences": {
       "get": {
         "summary": "Get notification delivery preferences for the authenticated user",
-        "tags": [
-          "Notifications"
-        ],
+        "tags": ["Notifications"],
         "security": [
           {
             "BearerAuth": []
@@ -5589,9 +5009,7 @@
       },
       "put": {
         "summary": "Update notification delivery preferences for the authenticated user",
-        "tags": [
-          "Notifications"
-        ],
+        "tags": ["Notifications"],
         "security": [
           {
             "BearerAuth": []
@@ -5625,9 +5043,7 @@
       "get": {
         "summary": "SSE stream for real-time notification push",
         "description": "Server-Sent Events stream for pushing real-time notifications to the client. Auth MUST be provided via the Authorization: Bearer <token> header. Frontend should use fetch with ReadableStream to support headers.\n",
-        "tags": [
-          "Notifications"
-        ],
+        "tags": ["Notifications"],
         "security": [
           {
             "BearerAuth": []
@@ -5650,9 +5066,7 @@
     "/notifications/mark-read": {
       "post": {
         "summary": "Mark specific notifications as read",
-        "tags": [
-          "Notifications"
-        ],
+        "tags": ["Notifications"],
         "security": [
           {
             "BearerAuth": []
@@ -5693,9 +5107,7 @@
     "/notifications/mark-all-read": {
       "post": {
         "summary": "Mark all notifications as read",
-        "tags": [
-          "Notifications"
-        ],
+        "tags": ["Notifications"],
         "security": [
           {
             "BearerAuth": []
@@ -5719,9 +5131,7 @@
       "get": {
         "summary": "Get aggregate pool analytics",
         "description": "Returns high-level lending-pool analytics: total deposits and withdrawals, yield distributed, loans issued, total volume and the number of active agents. Public endpoint; cached for 300 seconds.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "responses": {
           "200": {
             "description": "Pool analytics retrieved successfully.",
@@ -5729,11 +5139,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "analytics",
-                    "source"
-                  ],
+                  "required": ["success", "analytics", "source"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -5777,10 +5183,7 @@
                     },
                     "source": {
                       "type": "string",
-                      "enum": [
-                        "cache",
-                        "database"
-                      ]
+                      "enum": ["cache", "database"]
                     }
                   }
                 }
@@ -5797,9 +5200,7 @@
       "get": {
         "summary": "Get an agent's lending dashboard",
         "description": "Returns a single agent's float balance, collateral balance, active state, and number of active loans. Restricted to the dashboard owner (agent/lender), admins and auditors under tenant isolation; cached for the active scope for 30 seconds.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -5823,11 +5224,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "dashboard",
-                    "source"
-                  ],
+                  "required": ["success", "dashboard", "source"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -5867,10 +5264,7 @@
                     },
                     "source": {
                       "type": "string",
-                      "enum": [
-                        "cache",
-                        "database"
-                      ]
+                      "enum": ["cache", "database"]
                     }
                   }
                 }
@@ -5887,9 +5281,7 @@
       "get": {
         "summary": "Get aggregate lending pool statistics",
         "description": "Returns total deposits, utilization rate, current APY, and the number of active loans. Intended for the lender dashboard.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -5916,9 +5308,7 @@
       "get": {
         "summary": "Get depositor portfolio for a wallet address",
         "description": "Returns deposit amount, pool share percentage, and estimated yield for the authenticated depositor. `address` must match the JWT wallet.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -5959,9 +5349,7 @@
       "get": {
         "summary": "Get per-depositor yield history",
         "description": "Returns a bounded time series of deposited value, current share value, and net yield for the authenticated depositor. Supports `days` query param (7, 30, or 90).\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -5981,11 +5369,7 @@
             "name": "days",
             "schema": {
               "type": "integer",
-              "enum": [
-                7,
-                30,
-                90
-              ],
+              "enum": [7, 30, 90],
               "default": 30
             }
           },
@@ -6014,9 +5398,7 @@
       "get": {
         "summary": "Get current on-chain share price for a pool token",
         "description": "Returns the current share price from the LendingPool contract. The value is scaled by 1,000,000 (e.g. 1,050,000 = 1.05 ratio). Cached briefly to absorb burst requests.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -6047,9 +5429,7 @@
       "post": {
         "summary": "Build an unsigned deposit transaction",
         "description": "Builds an unsigned Soroban `deposit(provider, token, amount)` transaction XDR against the LendingPool contract. The frontend signs it with the user's wallet and submits via POST /api/pool/submit.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -6061,11 +5441,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "depositorPublicKey",
-                  "token",
-                  "amount"
-                ],
+                "required": ["depositorPublicKey", "token", "amount"],
                 "properties": {
                   "depositorPublicKey": {
                     "type": "string",
@@ -6109,9 +5485,7 @@
       "post": {
         "summary": "Build an unsigned withdraw transaction",
         "description": "Builds an unsigned Soroban `withdraw(provider, token, shares)` transaction XDR against the LendingPool contract. The frontend signs it with the user's wallet and submits via POST /api/pool/submit.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -6123,11 +5497,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "depositorPublicKey",
-                  "token",
-                  "amount"
-                ],
+                "required": ["depositorPublicKey", "token", "amount"],
                 "properties": {
                   "depositorPublicKey": {
                     "type": "string",
@@ -6171,9 +5541,7 @@
       "post": {
         "summary": "Build an unsigned emergency withdraw transaction",
         "description": "Builds an unsigned Soroban `emergency_withdraw(provider, token, shares)` transaction XDR against the LendingPool contract. Bypasses the withdrawal cooldown. The frontend signs it with the user's wallet and submits via POST /api/pool/submit.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -6185,11 +5553,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "depositorPublicKey",
-                  "token",
-                  "shares"
-                ],
+                "required": ["depositorPublicKey", "token", "shares"],
                 "properties": {
                   "depositorPublicKey": {
                     "type": "string",
@@ -6225,9 +5589,7 @@
       "post": {
         "summary": "Submit a signed pool transaction",
         "description": "Submits a signed transaction XDR to the Stellar network for a pool deposit or withdrawal.\n",
-        "tags": [
-          "Pool"
-        ],
+        "tags": ["Pool"],
         "security": [
           {
             "BearerAuth": []
@@ -6239,9 +5601,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "signedTxXdr"
-                ],
+                "required": ["signedTxXdr"],
                 "properties": {
                   "signedTxXdr": {
                     "type": "string",
@@ -6276,9 +5636,7 @@
       "post": {
         "summary": "Request a copy of your data (DSAR - Data Subject Access Request)",
         "description": "GDPR Art. 15 / CCPA right-to-know. Creates a DSAR access request.\nThe platform will prepare an export of all your data within 30 days.\n",
-        "tags": [
-          "Privacy"
-        ],
+        "tags": ["Privacy"],
         "security": [
           {
             "BearerAuth": []
@@ -6290,10 +5648,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "publicKey",
-                  "reason"
-                ],
+                "required": ["publicKey", "reason"],
                 "properties": {
                   "publicKey": {
                     "type": "string"
@@ -6324,9 +5679,7 @@
       "post": {
         "summary": "Request deletion of your data (Right to be Forgotten)",
         "description": "GDPR Art. 17 / CCPA right-to-delete. Removes PII while preserving\nanonymized financial records for accounting compliance.\n",
-        "tags": [
-          "Privacy"
-        ],
+        "tags": ["Privacy"],
         "security": [
           {
             "BearerAuth": []
@@ -6338,11 +5691,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "publicKey",
-                  "reason",
-                  "confirmDeletion"
-                ],
+                "required": ["publicKey", "reason", "confirmDeletion"],
                 "properties": {
                   "publicKey": {
                     "type": "string"
@@ -6353,9 +5702,7 @@
                   },
                   "confirmDeletion": {
                     "type": "boolean",
-                    "enum": [
-                      true
-                    ]
+                    "enum": [true]
                   }
                 }
               }
@@ -6379,9 +5726,7 @@
       "post": {
         "summary": "Anonymize your data for analytics",
         "description": "Replaces PII with consistent hashes while preserving behavioral\npatterns for aggregate analytics.\n",
-        "tags": [
-          "Privacy"
-        ],
+        "tags": ["Privacy"],
         "security": [
           {
             "BearerAuth": []
@@ -6393,10 +5738,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "publicKey",
-                  "reason"
-                ],
+                "required": ["publicKey", "reason"],
                 "properties": {
                   "publicKey": {
                     "type": "string"
@@ -6427,9 +5769,7 @@
       "get": {
         "summary": "Export all your data",
         "description": "Returns all data associated with the given public key in JSON format.\nIncludes profile, scores, loan events, remittances, and audit logs.\n",
-        "tags": [
-          "Privacy"
-        ],
+        "tags": ["Privacy"],
         "security": [
           {
             "BearerAuth": []
@@ -6461,9 +5801,7 @@
     "/privacy/dsar/{dsarId}": {
       "get": {
         "summary": "Check DSAR request status",
-        "tags": [
-          "Privacy"
-        ],
+        "tags": ["Privacy"],
         "security": [
           {
             "BearerAuth": []
@@ -6492,9 +5830,7 @@
     "/privacy/dsar/pending": {
       "get": {
         "summary": "List pending DSAR requests (admin only)",
-        "tags": [
-          "Privacy"
-        ],
+        "tags": ["Privacy"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -6511,9 +5847,7 @@
       "post": {
         "summary": "Create a new remittance",
         "description": "Creates a new remittance record and generates an unsigned XDR transaction for the user to sign with their Stellar wallet (Freighter).\n",
-        "tags": [
-          "Remittances"
-        ],
+        "tags": ["Remittances"],
         "security": [
           {
             "BearerAuth": []
@@ -6525,12 +5859,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "recipientAddress",
-                  "amount",
-                  "fromCurrency",
-                  "toCurrency"
-                ],
+                "required": ["recipientAddress", "amount", "fromCurrency", "toCurrency"],
                 "properties": {
                   "recipientAddress": {
                     "type": "string",
@@ -6542,19 +5871,11 @@
                   },
                   "fromCurrency": {
                     "type": "string",
-                    "enum": [
-                      "USDC",
-                      "EURC",
-                      "PHP"
-                    ]
+                    "enum": ["USDC", "EURC", "PHP"]
                   },
                   "toCurrency": {
                     "type": "string",
-                    "enum": [
-                      "USDC",
-                      "EURC",
-                      "PHP"
-                    ]
+                    "enum": ["USDC", "EURC", "PHP"]
                   },
                   "memo": {
                     "type": "string",
@@ -6584,10 +5905,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "success",
-                    "data"
-                  ]
+                  "required": ["success", "data"]
                 }
               }
             }
@@ -6603,9 +5921,7 @@
       "get": {
         "summary": "Get user's remittances",
         "description": "Returns a paginated list of remittances for the authenticated user. Supports filtering by status, date range, and search by recipient address or reference.\n",
-        "tags": [
-          "Remittances"
-        ],
+        "tags": ["Remittances"],
         "security": [
           {
             "BearerAuth": []
@@ -6634,12 +5950,7 @@
             "name": "status",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "processing",
-                "completed",
-                "failed"
-              ]
+              "enum": ["pending", "processing", "completed", "failed"]
             },
             "description": "Filter by remittance status"
           },
@@ -6693,11 +6004,7 @@
                       "$ref": "#/components/schemas/RemittancePage"
                     }
                   },
-                  "required": [
-                    "success",
-                    "data",
-                    "page"
-                  ]
+                  "required": ["success", "data", "page"]
                 }
               }
             }
@@ -6712,9 +6019,7 @@
       "get": {
         "summary": "Get a specific remittance",
         "description": "Returns details of a specific remittance. User must be the sender.\n",
-        "tags": [
-          "Remittances"
-        ],
+        "tags": ["Remittances"],
         "security": [
           {
             "BearerAuth": []
@@ -6767,9 +6072,7 @@
       "post": {
         "summary": "Submit a signed remittance transaction",
         "description": "Submits a signed XDR transaction to the Stellar network. The XDR must be signed using Freighter wallet.\n",
-        "tags": [
-          "Remittances"
-        ],
+        "tags": ["Remittances"],
         "security": [
           {
             "BearerAuth": []
@@ -6792,9 +6095,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "signedXdr"
-                ],
+                "required": ["signedXdr"],
                 "properties": {
                   "signedXdr": {
                     "type": "string",
@@ -6821,10 +6122,7 @@
                       "$ref": "#/components/schemas/RemittanceSubmitData"
                     }
                   },
-                  "required": [
-                    "success",
-                    "data"
-                  ]
+                  "required": ["success", "data"]
                 }
               }
             }
@@ -6848,9 +6146,7 @@
       "get": {
         "summary": "Retrieve the credit score leaderboard",
         "description": "Returns the top 50 credit scores ordered descending. Public endpoint; cached for 60 seconds. Each entry contains the wallet address, its current score, and the corresponding band.\n",
-        "tags": [
-          "Score"
-        ],
+        "tags": ["Score"],
         "responses": {
           "200": {
             "description": "Leaderboard retrieved successfully.",
@@ -6858,11 +6154,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "leaderboard",
-                    "source"
-                  ],
+                  "required": ["success", "leaderboard", "source"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -6872,11 +6164,7 @@
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "required": [
-                          "userId",
-                          "score",
-                          "band"
-                        ],
+                        "required": ["userId", "score", "band"],
                         "properties": {
                           "userId": {
                             "type": "string",
@@ -6888,22 +6176,14 @@
                           },
                           "band": {
                             "type": "string",
-                            "enum": [
-                              "Excellent",
-                              "Good",
-                              "Fair",
-                              "Poor"
-                            ]
+                            "enum": ["Excellent", "Good", "Fair", "Poor"]
                           }
                         }
                       }
                     },
                     "source": {
                       "type": "string",
-                      "enum": [
-                        "cache",
-                        "database"
-                      ]
+                      "enum": ["cache", "database"]
                     }
                   }
                 }
@@ -6920,9 +6200,7 @@
       "get": {
         "summary": "Retrieve a user's credit score",
         "description": "Returns the current credit score for the authenticated wallet, or for a borrower explicitly assigned to an agent. Admin and auditor roles may read any wallet's score; borrowers may only read their own.\n",
-        "tags": [
-          "Score"
-        ],
+        "tags": ["Score"],
         "security": [
           {
             "BearerAuth": []
@@ -6973,9 +6251,7 @@
       "get": {
         "summary": "Retrieve a user's on-chain credit score history",
         "description": "Queries the RemittanceNFT contract for the score history vector and returns a chronologically sorted timeline. Cached for 60 seconds to avoid spamming the Soroban RPC. Tenant scope: own wallet for borrowers, assigned borrowers for agents, any wallet for admins/auditors.\n",
-        "tags": [
-          "Score"
-        ],
+        "tags": ["Score"],
         "security": [
           {
             "BearerAuth": []
@@ -7009,9 +6285,7 @@
       "get": {
         "summary": "Retrieve a wallet's on-chain credit score NFT metadata",
         "description": "Queries the RemittanceNFT contract and returns the on-chain metadata backing a wallet's credit score NFT: the current score, a history digest hash, metadata URI, default counter, transfer cooldown and the ledger of the last update. Returns `null` for the `nft` field when no NFT exists. Tenant scope: own wallet for borrowers, assigned borrowers for agents, any wallet for admins/auditors.\n",
-        "tags": [
-          "Score"
-        ],
+        "tags": ["Score"],
         "security": [
           {
             "BearerAuth": []
@@ -7035,11 +6309,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "walletAddress",
-                    "nft"
-                  ],
+                  "required": ["success", "walletAddress", "nft"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -7099,9 +6369,7 @@
       "get": {
         "summary": "Get a detailed credit score breakdown",
         "description": "Returns the user's credit score along with a detailed breakdown of contributing factors (repayment history, streaks, defaults) and a score history timeline. Derived from loan_events and scores tables. Tenant scope: own wallet for borrowers, assigned borrowers for agents, any wallet for admins/auditors.\n",
-        "tags": [
-          "Score"
-        ],
+        "tags": ["Score"],
         "security": [
           {
             "BearerAuth": []
@@ -7142,9 +6410,7 @@
       "post": {
         "summary": "Update a user's credit score based on repayment history",
         "description": "Adjusts the user's credit score by +15 for on-time repayments or −30 for late payments. Requires an `admin:loans` scoped API key or a legacy internal API key.\n",
-        "tags": [
-          "Score"
-        ],
+        "tags": ["Score"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -7156,11 +6422,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "userId",
-                  "repaymentAmount",
-                  "onTime"
-                ],
+                "required": ["userId", "repaymentAmount", "onTime"],
                 "properties": {
                   "userId": {
                     "type": "string"
@@ -7216,9 +6478,7 @@
       "get": {
         "summary": "Get remittance history for a user",
         "description": "Retrieve the remittance history for the authenticated user. The userId path parameter must match the JWT wallet (or an assigned borrower for agents).",
-        "tags": [
-          "Simulation"
-        ],
+        "tags": ["Simulation"],
         "security": [
           {
             "BearerAuth": []
@@ -7282,9 +6542,7 @@
       "post": {
         "summary": "Simulate a remittance payment",
         "description": "Simulate a remittance payment for the authenticated user and return the projected score change.",
-        "tags": [
-          "Simulation"
-        ],
+        "tags": ["Simulation"],
         "security": [
           {
             "BearerAuth": []
@@ -7302,9 +6560,7 @@
                     "description": "Amount to simulate remittance for."
                   }
                 },
-                "required": [
-                  "amount"
-                ]
+                "required": ["amount"]
               }
             }
           }
@@ -7347,9 +6603,7 @@
       "post": {
         "summary": "Simulate a Soroban transaction (dry-run)",
         "description": "Pre-execution validation: dry-runs a Soroban contract call, returns gas\nestimation, predicted return value, failure reason (if any), and warnings.\nSimulations are cached for 30 seconds.\n",
-        "tags": [
-          "Simulation"
-        ],
+        "tags": ["Simulation"],
         "security": [
           {
             "BearerAuth": []
@@ -7361,11 +6615,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "contractId",
-                  "function",
-                  "sourceAccount"
-                ],
+                "required": ["contractId", "function", "sourceAccount"],
                 "properties": {
                   "contractId": {
                     "type": "string",
@@ -7473,9 +6723,7 @@
       "get": {
         "summary": "List the authenticated user's transactions",
         "description": "Returns a paginated list of transactions for the authenticated wallet, including the type, amount, currency, counterparty and on-chain status (or `null` when not yet submitted).\n",
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "security": [
           {
             "BearerAuth": []
@@ -7507,11 +6755,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "success",
-                    "transactions",
-                    "page"
-                  ],
+                  "required": ["success", "transactions", "page"],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -7608,9 +6852,7 @@
     "/user/profile": {
       "get": {
         "summary": "Get the authenticated user's profile",
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "security": [
           {
             "BearerAuth": []
@@ -7627,9 +6869,7 @@
       },
       "patch": {
         "summary": "Update the authenticated user's profile",
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "security": [
           {
             "BearerAuth": []
@@ -7687,9 +6927,7 @@
     "/admin/audit-logs": {
       "get": {
         "summary": "Get audit logs",
-        "tags": [
-          "Admin"
-        ],
+        "tags": ["Admin"],
         "security": [
           {
             "bearerAuth": []

@@ -11,7 +11,9 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 // ---- mock db/connection so webhookService can be imported ----
-const mockQuery = jest.fn<() => Promise<{ rows: unknown[]; rowCount?: number }>>().mockResolvedValue({ rows: [] });
+const mockQuery = jest
+  .fn<() => Promise<{ rows: unknown[]; rowCount?: number }>>()
+  .mockResolvedValue({ rows: [] });
 
 jest.unstable_mockModule('../../db/connection.js', () => ({
   default: { query: mockQuery },

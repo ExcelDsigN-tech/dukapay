@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import {
   Asset,
   FeeBumpTransaction,
@@ -423,7 +423,11 @@ export const remittanceService = {
     try {
       tx = TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
     } catch {
-      throw AppError.badRequest('signedXdr is not a valid transaction envelope', undefined, 'signedXdr');
+      throw AppError.badRequest(
+        'signedXdr is not a valid transaction envelope',
+        undefined,
+        'signedXdr',
+      );
     }
     if (tx instanceof FeeBumpTransaction) {
       tx = tx.innerTransaction;

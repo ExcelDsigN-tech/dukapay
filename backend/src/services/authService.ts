@@ -108,7 +108,10 @@ function getChallengeKey(publicKey: string, message: string): string | null {
   return `${AUTH_CHALLENGE_PREFIX}${publicKey}:${nonceMatch[1]}`;
 }
 
-export async function storeChallenge(publicKey: string, challenge: ChallengeMessage): Promise<void> {
+export async function storeChallenge(
+  publicKey: string,
+  challenge: ChallengeMessage,
+): Promise<void> {
   const stored: StoredChallenge = {
     publicKey,
     message: challenge.message,
