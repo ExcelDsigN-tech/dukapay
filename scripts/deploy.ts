@@ -296,6 +296,10 @@ async function main() {
         passphrase,
     );
 
+    // Let the pool accept yield/loss accounting updates only from this manager.
+    console.log('  LendingPool.set_loan_manager(LoanManager)');
+    await invoke(server, poolContractId, 'set_loan_manager', [managerContractId], account, passphrase);
+
     // Governance — target is LoanManager (the core protocol contract).
     console.log('  Governance.initialize(target=LoanManager)');
     await invoke(server, govContractId, 'initialize', [adminAddr, managerContractId], account, passphrase);

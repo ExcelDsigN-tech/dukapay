@@ -2238,6 +2238,51 @@ fn test_reentrancy_guard_blocks_reentrant_withdraw() {
 }
 
 #[test]
+fn test_loan_manager_yield_and_loss_update_share_nav() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let manager = Address::generate(&env);
+    let (token, stellar, _) = create_token_contract(&env, &admin);
+    let pool_id = env.register(LendingPool, ());
+    let pool = LendingPoolClient::new(&env, &pool_id);
+    pool.initialize(&admin);
+    pool.set_loan_manager(&manager);
+
+    let provider = Address::generate(&env);
+    stellar.mint(&provider, &1_000);
+    pool.deposit(&provider, &token, &1_000, &0);
+
+    pool.record_loan_yield(&token, &100);
+    assert_eq!(pool.get_pool_stats(&token).total_managed_assets, 1_100);
+    assert_eq!(pool.get_pool_stats(&token).total_yield_distributed, 100);
+
+    pool.record_loan_loss(&token, &200);
+    assert_eq!(pool.get_pool_stats(&token).total_managed_assets, 900);
+}
+
+#[test]
+fn test_only_configured_loan_manager_can_report_yield() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let manager = Address::generate(&env);
+    let (token, _, _) = create_token_contract(&env, &admin);
+    let pool_id = env.register(LendingPool, ());
+    let pool = LendingPoolClient::new(&env, &pool_id);
+    pool.initialize(&admin);
+    pool.set_loan_manager(&manager);
+
+    // Drop the permissive test authorizer: only the configured manager may
+    // satisfy the explicit require_auth in the reporting entrypoint.
+    env.mock_auths(&[]);
+    assert!(pool.try_record_loan_yield(&token, &100).is_err());
+    assert_eq!(pool.get_pool_stats(&token).total_managed_assets, 0);
+}
+
+#[test]
 fn test_reentrancy_guard_blocks_reentrant_deposit() {
     let env = Env::default();
     env.mock_all_auths();

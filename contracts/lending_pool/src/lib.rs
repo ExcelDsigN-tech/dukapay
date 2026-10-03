@@ -65,6 +65,7 @@ pub enum DataKey {
     /// Optional address of the DukaPay CircuitBreaker contract. When set, the
     /// pool consults it before executing value-moving operations.
     CircuitBreaker,
+    LoanManager,
     WithdrawalCooldown,
     /// token → max pool size cap (0 = unlimited)
     MaxPoolSize(Address),
@@ -82,7 +83,7 @@ pub enum DataKey {
     /// token → internally tracked total assets (idle + outstanding) backing
     /// outstanding shares. This is the sole input to share pricing
     /// (`calc_shares_to_mint` / `calc_assets_to_redeem`) and is mutated only
-    /// by `deposit`, `redeem`/`withdraw`, and `distribute_yield`. It is
+    /// by `deposit`, `redeem`/`withdraw`, and loan accounting callbacks. It is
     /// never derived from `token::Client::balance`, so an unsolicited
     /// direct transfer to the pool's address ("donation") cannot move the
     /// share price.
@@ -99,8 +100,6 @@ pub enum DataKey {
     ReentrancyLock,
     /// Cross-contract call depth counter
     CallDepth,
-    /// Address authorized to trigger disbursements (the loan_manager)
-    LoanManager,
 }
 
 #[contracttype]
@@ -547,6 +546,67 @@ impl LendingPool {
             .set(&DataKey::Version, &Self::CURRENT_VERSION);
         Self::bump_instance_ttl(&env);
         Ok(())
+    }
+
+    fn require_loan_manager(env: &Env) -> Result<(), PoolError> {
+        let loan_manager = env
+            .storage()
+            .instance()
+            .get::<_, Address>(&DataKey::LoanManager)
+            .ok_or(PoolError::NotInitialized)?;
+        loan_manager.require_auth();
+        Ok(())
+    }
+
+    /// Recognize interest and fees already transferred into the pool by the
+    /// configured loan manager. Principal repayments are conversions of an
+    /// existing loan receivable and do not change net assets.
+    pub fn record_loan_yield(env: Env, token: Address, amount: i128) {
+        Self::require_loan_manager(&env).unwrap_or_else(|_| panic!("unauthorized loan manager"));
+        if amount < 0 {
+            panic!("invalid loan yield");
+        }
+        if amount == 0 {
+            return;
+        }
+        let updated = Self::total_managed_assets(&env, &token)
+            .checked_add(amount)
+            .expect("total managed assets overflow");
+        Self::set_total_managed_assets(&env, &token, updated);
+        Self::bump_instance_ttl(&env);
+        yield_distributed(&env, token.clone(), amount);
+        price_updated(
+            &env,
+            token.clone(),
+            env.ledger().sequence(),
+            updated,
+            Self::total_shares(&env, &token),
+        );
+    }
+
+    /// Write off an irrecoverable loan-principal loss reported by the loan
+    /// manager, reducing share NAV without relying on raw token balances.
+    pub fn record_loan_loss(env: Env, token: Address, amount: i128) {
+        Self::require_loan_manager(&env).unwrap_or_else(|_| panic!("unauthorized loan manager"));
+        if amount < 0 {
+            panic!("invalid loan loss");
+        }
+        if amount == 0 {
+            return;
+        }
+        let updated = Self::total_managed_assets(&env, &token)
+            .checked_sub(amount)
+            .filter(|assets| *assets >= 0)
+            .expect("loan loss exceeds managed assets");
+        Self::set_total_managed_assets(&env, &token, updated);
+        Self::bump_instance_ttl(&env);
+        price_updated(
+            &env,
+            token.clone(),
+            env.ledger().sequence(),
+            updated,
+            Self::total_shares(&env, &token),
+        );
     }
 
     pub fn version(env: Env) -> u32 {
